@@ -1,0 +1,10 @@
+{
+  "extends": "@commit/tsconfig/base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/**/*", "tests/**/*", "vitest.config.ts"]
+}

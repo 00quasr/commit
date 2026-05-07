@@ -1,0 +1,14 @@
+{
+  "name": "@commit/tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "base.json",
+    "react-native.json",
+    "nextjs.json",
+    "node.json"
+  ],
+  "scripts": {
+    "typecheck": "echo \"no typecheck for tsconfig package\""
+  }
+}
