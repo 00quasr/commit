@@ -19,14 +19,19 @@
     "dev": "convex dev",
     "deploy": "convex deploy",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@commit/domain": "workspace:*",
     "convex": "^1.17.4"
   },
   "devDependencies": {
     "@commit/eslint-config": "workspace:*",
     "@commit/tsconfig": "workspace:*",
-    "typescript": "^5.7.2"
+    "@edge-runtime/vm": "^5.0.0",
+    "convex-test": "^0.0.51",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.9"
   }
 }

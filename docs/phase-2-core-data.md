@@ -52,7 +52,24 @@ Mobile UI does NOT import `@commit/domain` directly in Phase 2 — it consumes d
 
 ## Schema additions
 
-Extends `packages/convex/convex/schema.ts`. Existing `profiles` table is unchanged.
+Extends `packages/convex/convex/schema.ts`. The existing `profiles` table gains a `usernameLower` field and a `by_username_lower` index to support public profile URLs (`commit.app/{username}`) with case-insensitive uniqueness — see [Profiles modification](#profiles-modification-username-uniqueness) below.
+
+### `profiles` modification (username uniqueness)
+
+```ts
+profiles: defineTable({
+  clerkUserId: v.string(),
+  username: v.string(),
+  usernameLower: v.string(), // ✨ new — case-insensitive uniqueness key
+  avatarUrl: v.optional(v.string()),
+  timezone: v.string(),
+  createdAt: v.number(),
+})
+  .index("by_clerk_user_id", ["clerkUserId"])
+  .index("by_username_lower", ["usernameLower"]); // ✨ new — public profile lookup + uniqueness check
+```
+
+`profiles.upsert` mutation gains a collision check: before insert/patch, query `by_username_lower` for the lowercased candidate; if a row exists with a different `clerkUserId`, throw `"username already taken"`. The `username` field preserves original casing for display; `usernameLower` is what queries match against.
 
 ### `todos`
 
@@ -102,8 +119,8 @@ drops: defineTable({
   // Timezone-stable day key, used by the reciprocity-lock query.
   dayKey: v.string(), // "YYYY-MM-DD" in owner's timezone at drop time
   createdAt: v.number(), // unix ms
-  // Privacy. Phase 1 ships only "circle" and "just_me"; "public" deferred to V2.
-  visibility: v.union(v.literal("circle"), v.literal("just_me")),
+  // Privacy. Three tiers in V1 (public app, mutual-accept friends).
+  visibility: v.union(v.literal("public"), v.literal("friends"), v.literal("private")),
   // Aggregates kept on the row to avoid extra queries on each feed render.
   reactionCount: v.number(), // updated by reactions mutations atomically
   viewCount: v.number(), // updated by views mutations atomically
@@ -262,7 +279,7 @@ drops.create(args: {
   caption: string;                  // max 100
   tags: string[];                   // normalized to lowercase, deduped, max 5
   difficulty: "easy"|"medium"|"hard";
-  visibility: "circle"|"just_me";
+  visibility: "public"|"friends"|"private";
   photoFileId?: Id<"_storage">;     // optional in Phase 2 (text-only via dashboard for testing)
   voiceFileId?: Id<"_storage">;
 }) → Id<"drops">
@@ -483,7 +500,7 @@ Through the Convex dashboard, this scenario passes end-to-end:
 3. B calls `friendships.accept({ friendshipId })` → row in `accepted`. Activity events for both.
 4. B calls `drops.feedForUser()` → `{ locked: true, blurredCount: 0 }` (no friends have dropped today).
 5. A calls `todos.create({ text: "ship the schema", difficulty: "hard" })` then `todos.complete({ todoId })`.
-6. A calls `drops.create({ todoId, caption: "shipped Phase 2", tags: ["@build"], difficulty: "hard", visibility: "circle" })`. `xpAwarded === 120`. `userStats.streak === 1`. `lastDropDayKey === today`.
+6. A calls `drops.create({ todoId, caption: "shipped Phase 2", tags: ["@build"], difficulty: "hard", visibility: "friends" })`. `xpAwarded === 120`. `userStats.streak === 1`. `lastDropDayKey === today`.
 7. B calls `drops.feedForUser()` → still `{ locked: true, blurredCount: 1 }` (A dropped, but B hasn't).
 8. B creates and completes a todo, drops on it.
 9. B calls `drops.feedForUser()` → `{ locked: false, drops: [A's drop] }`. **The lock just unlocked exactly when it should.**

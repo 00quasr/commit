@@ -8,7 +8,14 @@
  * @module
  */
 
+import type * as _helpers from "../_helpers.js";
+import type * as drops from "../drops.js";
+import type * as friendships from "../friendships.js";
 import type * as profiles from "../profiles.js";
+import type * as reactions from "../reactions.js";
+import type * as todos from "../todos.js";
+import type * as userStats from "../userStats.js";
+import type * as views from "../views.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +24,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  _helpers: typeof _helpers;
+  drops: typeof drops;
+  friendships: typeof friendships;
   profiles: typeof profiles;
+  reactions: typeof reactions;
+  todos: typeof todos;
+  userStats: typeof userStats;
+  views: typeof views;
 }>;
 
 /**
