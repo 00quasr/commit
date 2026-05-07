@@ -9,9 +9,9 @@
 
 ## 1. The One-Sentence Pitch
 
-**commit is a daily-feed app where indie builders post photo+voice proof of what they shipped today, see what their building-circle did, and react — with a hard rule: no proof, no feed access.**
+**commit is a publicly available daily-feed app where indie builders post photo+voice proof of what they shipped today, see what their accepted friends did, and react — with a hard rule: no proof, no feed access. Anyone can sign up; profiles are public for discoverability, but real visibility runs through mutual-accept friendships.**
 
-Think Strava for knowledge work and life goals, with BeReal's authenticity mechanic.
+Think Strava for knowledge work and life goals, with BeReal's authenticity mechanic and mutual-friend social graph, distributed openly via the App Store.
 
 ---
 
@@ -43,7 +43,7 @@ That is the gap. commit closes it.
 
 ### 3.1 What commit is
 
-A mobile-first social app where every entry is a **drop**: a small public proof that you did the thing you said you would do today. A drop contains:
+A publicly distributed mobile-first social app where every entry is a **drop**: a small proof that you did the thing you said you would do today. A drop contains:
 
 - A short text (what you committed to and finished)
 - A dual-camera photo (front + back, simultaneously, BeReal-style)
@@ -51,10 +51,13 @@ A mobile-first social app where every entry is a **drop**: a small public proof 
 - Tags (`@build`, `@health`, `@create`, etc.)
 - Time spent and XP earned
 - A timestamp and optional location
+- A visibility level: `public` (anyone with the profile URL), `friends` (accepted friends only — the default), or `private` (just-me, counts for streak/XP)
 
-Drops appear in a vertical feed visible to your **build-circle** (your accepted friends). Friends can react with selfie-videos or short voice notes.
+Drops appear in your home feed, populated by your **accepted friends** — people you've mutually friended (request → accept, BeReal-style). Friends react with selfie-videos or short voice notes.
 
-The product has **one hard rule**: _if you have not dropped today, you cannot see what your circle dropped today_. The feed is locked behind your own commitment. This is the reciprocity-lock mechanic that BeReal proved works.
+Each user has a public profile page at `commit.app/{username}` that shows display name, avatar, current streak, total XP, and **public** drops only — friends-only and private drops are not exposed to non-friends. This is what makes `commit` a public app: anyone can sign up, browse profiles, and request friendships, even before sending their first drop.
+
+The product has **one hard rule**: _if you have not dropped today, you cannot see your home feed of friends' drops today_. The feed is locked behind your own commitment. Public profile pages remain browsable regardless. This is the reciprocity-lock mechanic that BeReal proved works.
 
 ### 3.2 What commit is NOT
 
@@ -62,9 +65,9 @@ This is as important as what it is. The following are explicitly out of scope, b
 
 - **Not a todo app for organizing your week.** No projects, no Kanban, no Eisenhower matrices. You write a todo this morning, you finish it, you drop. That is the scope of "todo" in commit. Use Things or paper for serious planning.
 - **Not a chat / DM platform.** Reactions yes. Conversations no. Kept friction in the right places.
-- **Not a public social network.** No Discover-the-world feed in V1. Your circle, your accepted friends, that is it. Locked-down by default.
+- **Not an open social network.** The social graph is mutual-accept friendships, not one-way follows. Public profiles exist for discoverability, but real content visibility runs through accepted friendships. No "discover-the-world" algorithmic feed in V1.
 - **Not for teams or work.** No org accounts, no manager dashboards, no Jira integrations. This is personal.
-- **Not free forever.** V1 is free. Once retention is proven, $5/month soft paywall on circle size > 8 friends. Revenue model is intentional simplicity.
+- **Not free forever.** V1 is free. Once retention is proven, $5/month soft paywall on friend cap > 8 (free tier) and advanced stats / AI weekly review. Revenue model is intentional simplicity.
 
 ### 3.3 The mechanic, end-to-end
 
@@ -75,10 +78,10 @@ A typical day for a user:
 3. **App prompts: "Drop it. 60 seconds."** A countdown starts. Camera opens, front+back simultaneously. User takes the proof.
 4. **Optional 30-second voice memo.** "Just shipped this thing, here is why I am stoked."
 5. **Caption + tags.** 100 character limit. Auto-suggested tags by Claude.
-6. **Drop posts to circle.** Push notifications fire to friends.
+6. **Drop posts to accepted friends.** Push notifications fire to friends. If the drop is marked `public`, it is also visible on the user's profile page at `commit.app/{username}` to anyone with the URL.
 7. **Friends see the drop.** They react with selfie-video or voice. User gets a notification per reaction.
 8. **End of day.** User has dropped 1-3 times. Streak continues.
-9. **If user did not drop today.** Their feed is locked tomorrow morning until they drop something. Streak breaks at midnight (in their timezone).
+9. **If user did not drop today.** Their home feed of friends' drops is locked tomorrow morning until they drop something. Public profile pages remain browsable. Streak breaks at midnight (in their timezone).
 
 That is the loop. Everything else in the product is in service of this loop.
 
@@ -190,21 +193,23 @@ Friends can react to a drop. Reactions are not emoji.
 
 **V3 reactions:** Voice-note replies (5-second max).
 
-### 5.6 The build circle
+### 5.6 Friendships
 
-Each user has a "circle" — their accepted friends. Friendship is bidirectional and explicit (request → accept).
+Each user has accepted friends. Friendship is bidirectional and explicit (request → accept) — BeReal-style, not Twitter-style follow. Mutual accept is the gate that controls visibility of `friends`-tier drops.
 
-**Beta cap:** 8 friends per circle. This forces tight, accountable groups instead of follower-style hoarding. Larger circles dilute the social pressure that makes the product work.
+**Free tier soft cap:** 8 friends. This nudges toward tight, accountable groups instead of follower-style hoarding — larger circles dilute the social pressure that makes the product work. The cap is a soft default: users can request to be excluded; the V2 Pro tier formalizes a higher cap (e.g. 30 friends).
 
-**V2:** Optional larger "extended circle" of up to 30 with a different privacy setting.
+**Public profiles** at `commit.app/{username}` are browsable by anyone, signed-in or not — this is what makes `commit` "publicly available." The profile page shows display name, avatar, current streak, total XP, and the user's `public`-tier drops only. Friends-only and private drops are not exposed.
 
 ### 5.7 Privacy levels per drop
 
-Each drop has a visibility setting at creation time:
+Each drop has a visibility setting at creation time. **Three tiers, V1 default:**
 
-- **Circle (default):** Visible to your accepted friends only.
-- **Just me:** The drop counts for streaks and XP but is not visible to anyone else. For days where you finished something private.
-- **Public (V2):** Visible to anyone. Reserved for opt-in users who want a public profile (`commit.app/keanu`).
+- **`public`:** Visible to anyone with the profile URL (`commit.app/{username}`), signed-in or not. Use for drops you're proud to share publicly. Indexable by search engines.
+- **`friends` (default):** Visible to your accepted friends only. The most common choice — the social-pressure mechanic happens here.
+- **`private`:** The drop counts for streaks and XP but is not visible to anyone else. For days you finished something private and don't want to share.
+
+A drop's visibility is locked at creation time and cannot be changed afterward — keeps the data model honest and removes a class of user mistakes.
 
 ---
 
@@ -273,16 +278,16 @@ commit/
 
 The schema centers on these core entities:
 
-- **profiles** — extends Clerk user with username, avatar, timezone, bio
-- **friendships** — bidirectional, with status (pending / accepted)
+- **profiles** — extends Clerk user with username, `usernameLower` (case-insensitive uniqueness for public URLs), avatar, timezone, bio. Indexed by `clerkUserId` and `usernameLower`.
+- **friendships** — bidirectional mutual-accept, with status (pending / accepted). Stored as a single canonical row per pair (`pairLow < pairHigh`).
 - **todos** — private daily commitments, owned by one user
-- **drops** — the public proof posts; reference todo, photo, voice memo, tags
+- **drops** — the proof posts; reference todo, photo, voice memo, tags. Three visibility tiers: `public`, `friends`, `private`.
 - **reactions** — emoji or selfie-video reaction on a drop
 - **views** — who has viewed which drop (BeReal-style "seen by" list)
 - **userStats** — denormalized streak, XP, level for fast reads
 - **activityEvents** — audit log of XP gains, level-ups, streak milestones
 
-Full schema lives in `/packages/convex/schema.ts` once built.
+Full schema lives in `/packages/convex/convex/schema.ts`.
 
 ### 6.5 The reciprocity-lock implementation
 
@@ -350,15 +355,15 @@ The product week. Camera screen with `expo-camera`, voice memo recorder with `ex
 
 ### Phase 4 — Social layer (Days 20-26)
 
-Reactions (V1 emoji-style), Expo push notifications with deep links, streak counter UI, XP / level display, basic onboarding (3 screens), friend invite via SMS share-link. End state: a stranger could install the app, complete onboarding, and use it without a manual.
+Reactions (V1 emoji-style), Expo push notifications with deep links, streak counter UI, XP / level display, basic onboarding (3 screens), friend invite via SMS share-link, and the **public profile route** on `apps/web` at `/{username}` (server-rendered, indexable, shows public drops + streak). End state: a stranger could install the app, complete onboarding, and use it without a manual; profile URLs are shareable to the open web.
 
-### Phase 5 — Polish & TestFlight (Days 27-33)
+### Phase 5 — Polish & App Store submission (Days 27-33)
 
-Performance optimization (optimistic UI, image caching, feed pagination), edge-case handling (no friends, camera-denied, connection-loss retries), settings + profile screen, GDPR-compliant delete-account flow, marketing landing finalized. EAS Build → TestFlight Internal Testing. End state: 5-10 personal beta testers using the app on TestFlight.
+Performance optimization (optimistic UI, image caching, feed pagination), edge-case handling (no friends, camera-denied, connection-loss retries), settings + profile screen, GDPR-compliant delete-account flow, marketing landing finalized. EAS Build → **App Store submission** as the primary distribution channel. TestFlight Internal Testing as a stepping stone, not the endpoint. End state: 5-10 personal beta testers on TestFlight, App Store submission in review.
 
-### Phase 6 — Public Beta (Weeks 5-6)
+### Phase 6 — Public Beta and App Store Launch (Weeks 5-6)
 
-TestFlight Public Link. X build-in-public launch with daily drop screenshots. Indie Hackers + r/SideProject + Hacker News Show HN. Discord server for beta feedback. **No new features in this phase.** Listening mode only. End state: 50-100 beta users, qualitative + quantitative signals on whether the mechanic works.
+App Store listing live (the app is now publicly available). TestFlight Public Link as a fallback while review is pending. X build-in-public launch with daily drop screenshots and shareable profile URLs (`commit.app/{username}`). Indie Hackers + r/SideProject + Hacker News Show HN. Discord server for beta feedback. **No new features in this phase.** Listening mode only. End state: 50-100 beta users with the app freely installable from the App Store, qualitative + quantitative signals on whether the mechanic works.
 
 ---
 
@@ -374,11 +379,13 @@ Two weeks before public beta, identify 5 close friends who agree to start using 
 - 4 others from Keanu's existing X / build-in-public network
 - All commit to dropping daily for 14 days minimum
 
-**This is not marketing, this is product launch.** Without a tight initial cluster, the app feels dead, the lock feels punishing, and retention dies. Every BeReal-style app that failed cold-started solo or in too-loose a network.
+**This is not marketing, this is product launch.** Without a tight initial cluster, the app feels dead, the lock feels punishing, and retention dies. Every BeReal-style app that failed cold-started solo or in too-loose a network. Mutual-accept friendships make this even more critical: both sides must sign up and accept for content to flow.
+
+The public App Store distribution accelerates density once the cluster is seeded — casual signups can find and request friendship with the founder cluster via shareable profile URLs (`commit.app/keanu`), accelerating the network past its critical mass faster than a closed-beta would.
 
 ### 9.2 The X build-in-public funnel
 
-Keanu drops daily. The drop gets crossposted to X with a screenshot. Caption: "shipped X today on commit.app, beta is open." Direct DMs to interested replies offering TestFlight invite.
+Keanu drops daily. The drop gets crossposted to X with a screenshot and the public profile URL (`commit.app/keanu`). Caption: "shipped X today on commit.app — install from the App Store, friend me, drop tomorrow." Direct DMs to interested replies offering App Store link + a friend-request preflight.
 
 This is high-effort but produces ultra-targeted users (people who already understand the wedge and convert to drops at high rates). Estimated 2-5 new users per day during launch month.
 
@@ -436,8 +443,10 @@ Free for everyone. The goal is mechanic validation, not revenue.
 
 ### 11.2 V2 ($5/month soft paywall)
 
-- Free: circles up to 8 friends, full drop functionality
-- Pro ($5/mo): circles up to 30 friends, public profile, advanced stats, AI-powered weekly review, priority support
+Public profile pages are V1 (free, default) — no longer behind a paywall. Pro tier instead bundles cap-raising and power-user features.
+
+- Free: up to 8 accepted friends, full drop functionality, public profile page, all three visibility tiers
+- Pro ($5/mo): up to 30 accepted friends, advanced stats, AI-powered weekly review, custom tag colors, priority support
 
 ### 11.3 Why not ads
 
@@ -447,7 +456,7 @@ Free for everyone. The goal is mechanic validation, not revenue.
 
 ### 11.4 Why not freemium-with-limits
 
-Users hate per-feature paywalls in social apps. The only reasonable gating is circle size, because that scales with cost (more friends = more storage, more notifications).
+Users hate per-feature paywalls in social apps. The only reasonable gating is the friend cap, because that scales with cost (more friends = more storage, more notifications).
 
 ### 11.5 Costs at scale (estimated)
 

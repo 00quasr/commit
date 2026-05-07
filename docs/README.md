@@ -4,15 +4,15 @@ Lightweight phase roadmap for `commit`. Source of truth for product scope is [VI
 
 ## Status
 
-| Phase                                                     | Status     | Goal                                             | Days      |
-| --------------------------------------------------------- | ---------- | ------------------------------------------------ | --------- |
-| [0 — Preflight](./phase-0-preflight.md)                   | ✅ Done    | Accounts, integrations, decisions                | 1–2       |
-| [1 — Foundation](./phase-1-foundation.md)                 | ✅ Done    | Monorepo + auth + Convex + dev loop on iPhone    | 3–7       |
-| [2 — Core data & friendships](./phase-2-core-data.md)     | ⏳ Next    | Schema, mutations, queries, domain logic — no UI | 8–12      |
-| [3 — The drop flow](./phase-3-drop-flow.md)               | ⏳ Planned | Camera, voice memo, feed with reciprocity-lock   | 13–19     |
-| [4 — Social layer](./phase-4-social-layer.md)             | ⏳ Planned | Reactions, push, streaks, onboarding, invites    | 20–26     |
-| [5 — Polish & TestFlight](./phase-5-polish-testflight.md) | ⏳ Planned | Perf, edge cases, EAS Build, TestFlight          | 27–33     |
-| [6 — Public Beta](./phase-6-public-beta.md)               | ⏳ Planned | Launch, listening mode, retention metrics        | Weeks 5–6 |
+| Phase                                                    | Status     | Goal                                              | Days      |
+| -------------------------------------------------------- | ---------- | ------------------------------------------------- | --------- |
+| [0 — Preflight](./phase-0-preflight.md)                  | ✅ Done    | Accounts, integrations, decisions                 | 1–2       |
+| [1 — Foundation](./phase-1-foundation.md)                | ✅ Done    | Monorepo + auth + Convex + dev loop on iPhone     | 3–7       |
+| [2 — Core data & friendships](./phase-2-core-data.md)    | ⏳ Next    | Schema, mutations, queries, domain logic — no UI  | 8–12      |
+| [3 — The drop flow](./phase-3-drop-flow.md)              | ⏳ Planned | Camera, voice memo, feed with reciprocity-lock    | 13–19     |
+| [4 — Social layer](./phase-4-social-layer.md)            | ⏳ Planned | Reactions, push, streaks, onboarding, invites     | 20–26     |
+| [5 — Polish & App Store](./phase-5-polish-testflight.md) | ⏳ Planned | Perf, edge cases, EAS Build, App Store submission | 27–33     |
+| [6 — Public Beta + App Store](./phase-6-public-beta.md)  | ⏳ Planned | App Store live, listening mode, retention metrics | Weeks 5–6 |
 
 ## How to use these docs
 
