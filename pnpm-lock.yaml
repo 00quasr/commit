@@ -188,9 +188,18 @@ importers:
       '@commit/tsconfig':
         specifier: workspace:*
         version: link:../config/tsconfig
+      '@edge-runtime/vm':
+        specifier: ^5.0.0
+        version: 5.0.0
+      convex-test:
+        specifier: ^0.0.51
+        version: 0.0.51(convex@1.37.0(@clerk/clerk-react@5.61.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(bufferutil@4.1.0)(react@19.2.5)(utf-8-validate@6.0.6))
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.9
+        version: 2.1.9(@edge-runtime/vm@5.0.0)(@types/node@22.19.17)(lightningcss@1.32.0)(terser@5.46.2)
 
   packages/domain:
     devDependencies:
@@ -205,7 +214,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.19.17)(lightningcss@1.32.0)(terser@5.46.2)
+        version: 2.1.9(@edge-runtime/vm@5.0.0)(@types/node@22.19.17)(lightningcss@1.32.0)(terser@5.46.2)
 
   packages/ui-tokens:
     devDependencies:
@@ -810,6 +819,14 @@ packages:
 
   '@coinbase/wallet-sdk@4.3.0':
     resolution: {integrity: sha512-T3+SNmiCw4HzDm4we9wCHCxlP0pqCiwKe4sOwPH3YAK2KSKjxPRydKu6UQJrdONFVLG7ujXvbd/6ZqmvJb8rkw==}
+
+  '@edge-runtime/primitives@6.0.0':
+    resolution: {integrity: sha512-FqoxaBT+prPBHBwE1WXS1ocnu/VLTQyZ6NMUBAdbP7N2hsFTTxMC/jMu2D/8GAlMQfxeuppcPuCUk/HO3fpIvA==}
+    engines: {node: '>=18'}
+
+  '@edge-runtime/vm@5.0.0':
+    resolution: {integrity: sha512-NKBGBSIKUG584qrS1tyxVpX/AKJKQw5HgjYEnPLC0QsTw79JrGn+qUr8CXFb955Iy7GUdiiUv1rJ6JBGvaKb6w==}
+    engines: {node: '>=18'}
 
   '@egjs/hammerjs@2.0.17':
     resolution: {integrity: sha512-XQsZgjm2EcVUiZQf11UBJQfmZeEmOW8DpI1gsFeln6w0ae0ii4dMQEQ0kjl6DspdWX1aGY1/loyXnP0JS06e/A==}
@@ -3067,6 +3084,11 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
+
+  convex-test@0.0.51:
+    resolution: {integrity: sha512-J+4YRpKGXJDfnQqiWUUT+ylNmNO36MpkuwqG3JG4ld+7QtroZGF8HqO4qzMmfv5ltm71rPbkBvi//MoMHjnVvQ==}
+    peerDependencies:
+      convex: ^1.32.0
 
   convex@1.37.0:
     resolution: {integrity: sha512-xGSx5edIsXCEex3OU2U2N0oyB/cOa9qGwKiImF9yOWqjqZgOkx39idtpdlwNBTBSt4S30oAvs4yeXY5xxPIX3A==}
@@ -6365,6 +6387,12 @@ snapshots:
       eventemitter3: 5.0.4
       preact: 10.29.1
 
+  '@edge-runtime/primitives@6.0.0': {}
+
+  '@edge-runtime/vm@5.0.0':
+    dependencies:
+      '@edge-runtime/primitives': 6.0.0
+
   '@egjs/hammerjs@2.0.17':
     dependencies:
       '@types/hammerjs': 2.0.46
@@ -8857,6 +8885,10 @@ snapshots:
   convert-source-map@1.9.0: {}
 
   convert-source-map@2.0.0: {}
+
+  convex-test@0.0.51(convex@1.37.0(@clerk/clerk-react@5.61.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(bufferutil@4.1.0)(react@19.2.5)(utf-8-validate@6.0.6)):
+    dependencies:
+      convex: 1.37.0(@clerk/clerk-react@5.61.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(bufferutil@4.1.0)(react@19.2.5)(utf-8-validate@6.0.6)
 
   convex@1.37.0(@clerk/clerk-react@5.61.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@6.0.6):
     dependencies:
@@ -11401,7 +11433,7 @@ snapshots:
       lightningcss: 1.32.0
       terser: 5.46.2
 
-  vitest@2.1.9(@types/node@22.19.17)(lightningcss@1.32.0)(terser@5.46.2):
+  vitest@2.1.9(@edge-runtime/vm@5.0.0)(@types/node@22.19.17)(lightningcss@1.32.0)(terser@5.46.2):
     dependencies:
       '@vitest/expect': 2.1.9
       '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.17)(lightningcss@1.32.0)(terser@5.46.2))
@@ -11424,6 +11456,7 @@ snapshots:
       vite-node: 2.1.9(@types/node@22.19.17)(lightningcss@1.32.0)(terser@5.46.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
+      '@edge-runtime/vm': 5.0.0
       '@types/node': 22.19.17
     transitivePeerDependencies:
       - less
