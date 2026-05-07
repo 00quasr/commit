@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 const difficulty = v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"));
 
-const visibility = v.union(v.literal("circle"), v.literal("just_me"));
+const visibility = v.union(v.literal("public"), v.literal("friends"), v.literal("private"));
 
 const reactionEmoji = v.union(v.literal("🔥"), v.literal("💪"), v.literal("👀"), v.literal("💯"));
 
@@ -23,10 +23,15 @@ export default defineSchema({
   profiles: defineTable({
     clerkUserId: v.string(),
     username: v.string(),
+    // Optional in schema so existing pre-pivot rows still validate. Always written
+    // by `profiles.upsert`, so new + re-signed-in rows have it populated.
+    usernameLower: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
     timezone: v.string(),
     createdAt: v.number(),
-  }).index("by_clerk_user_id", ["clerkUserId"]),
+  })
+    .index("by_clerk_user_id", ["clerkUserId"])
+    .index("by_username_lower", ["usernameLower"]),
 
   todos: defineTable({
     ownerId: v.id("profiles"),
