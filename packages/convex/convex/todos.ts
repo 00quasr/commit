@@ -1,8 +1,19 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { dayKeyForCaller, requireCallerProfile } from "./_helpers";
 
 const MAX_TEXT = 280;
+
+const todoShape = v.object({
+  _id: v.id("todos"),
+  _creationTime: v.number(),
+  ownerId: v.id("profiles"),
+  text: v.string(),
+  difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
+  dayKey: v.string(),
+  completedAt: v.optional(v.number()),
+  dropId: v.optional(v.id("drops")),
+});
 
 export const create = mutation({
   args: {
@@ -47,5 +58,23 @@ export const complete = mutation({
     }
     await ctx.db.patch(args.todoId, { completedAt: Date.now() });
     return null;
+  },
+});
+
+/**
+ * Returns today's todos for the caller, newest first. Open and completed
+ * todos are mixed in the result; the UI groups them as needed.
+ */
+export const todayForUser = query({
+  args: {},
+  returns: v.array(todoShape),
+  handler: async (ctx) => {
+    const me = await requireCallerProfile(ctx);
+    const today = dayKeyForCaller(me);
+    return await ctx.db
+      .query("todos")
+      .withIndex("by_owner_day", (q) => q.eq("ownerId", me._id).eq("dayKey", today))
+      .order("desc")
+      .collect();
   },
 });
