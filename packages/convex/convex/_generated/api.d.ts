@@ -9,8 +9,10 @@
  */
 
 import type * as _helpers from "../_helpers.js";
+import type * as drops from "../drops.js";
 import type * as friendships from "../friendships.js";
 import type * as profiles from "../profiles.js";
+import type * as todos from "../todos.js";
 
 import type {
   ApiFromModules,
@@ -20,8 +22,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   _helpers: typeof _helpers;
+  drops: typeof drops;
   friendships: typeof friendships;
   profiles: typeof profiles;
+  todos: typeof todos;
 }>;
 
 /**

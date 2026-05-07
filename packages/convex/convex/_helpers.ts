@@ -1,3 +1,4 @@
+import { dayKeyInTimezone } from "@commit/domain";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -23,14 +24,9 @@ export async function requireCallerProfile(ctx: QueryCtx | MutationCtx): Promise
 
 /**
  * Today's `dayKey` ("YYYY-MM-DD") in the caller's timezone.
- * Implementation lands in commit 2 once `dayKeyInTimezone` is available
- * in `@commit/domain`.
  */
-export async function dayKeyForCaller(
-  _ctx: QueryCtx | MutationCtx,
-  _profile: Doc<"profiles">,
-): Promise<string> {
-  throw new Error("not implemented — wired up in commit 3");
+export function dayKeyForCaller(profile: Doc<"profiles">): string {
+  return dayKeyInTimezone(Date.now(), profile.timezone);
 }
 
 /**
@@ -38,11 +34,15 @@ export async function dayKeyForCaller(
  * Uses the `by_owner_day` index on `drops`.
  */
 export async function hasDroppedToday(
-  _ctx: QueryCtx | MutationCtx,
-  _profileId: Id<"profiles">,
-  _dayKey: string,
+  ctx: QueryCtx | MutationCtx,
+  profileId: Id<"profiles">,
+  dayKey: string,
 ): Promise<boolean> {
-  throw new Error("not implemented — wired up in commit 5");
+  const row = await ctx.db
+    .query("drops")
+    .withIndex("by_owner_day", (q) => q.eq("ownerId", profileId).eq("dayKey", dayKey))
+    .first();
+  return row !== null;
 }
 
 /**
@@ -54,7 +54,7 @@ export async function countTodaysFriendDrops(
   _callerId: Id<"profiles">,
   _dayKey: string,
 ): Promise<number> {
-  throw new Error("not implemented — wired up in commit 5");
+  throw new Error("not implemented — wired up in commit 7");
 }
 
 /**
@@ -66,5 +66,5 @@ export async function fetchFriendDropsToday(
   _callerId: Id<"profiles">,
   _dayKey: string,
 ): Promise<Doc<"drops">[]> {
-  throw new Error("not implemented — wired up in commit 5");
+  throw new Error("not implemented — wired up in commit 7");
 }
