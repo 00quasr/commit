@@ -46,25 +46,63 @@ export async function hasDroppedToday(
 }
 
 /**
- * Count of drops created by the caller's friends today, regardless of whether
- * the caller has dropped. Used for the locked-feed "blurredCount" payload.
+ * IDs of profiles the caller has accepted as friends. Both directions of the
+ * canonical pair are merged.
  */
-export async function countTodaysFriendDrops(
-  _ctx: QueryCtx | MutationCtx,
-  _callerId: Id<"profiles">,
-  _dayKey: string,
-): Promise<number> {
-  throw new Error("not implemented — wired up in commit 7");
+export async function getAcceptedFriendIds(
+  ctx: QueryCtx | MutationCtx,
+  callerId: Id<"profiles">,
+): Promise<Id<"profiles">[]> {
+  const [lowSide, highSide] = await Promise.all([
+    ctx.db
+      .query("friendships")
+      .withIndex("by_low", (q) => q.eq("pairLow", callerId).eq("status", "accepted"))
+      .collect(),
+    ctx.db
+      .query("friendships")
+      .withIndex("by_high", (q) => q.eq("pairHigh", callerId).eq("status", "accepted"))
+      .collect(),
+  ]);
+  const out: Id<"profiles">[] = [];
+  for (const f of lowSide) out.push(f.pairHigh);
+  for (const f of highSide) out.push(f.pairLow);
+  return out;
 }
 
 /**
- * The caller's friends' drops for the given dayKey, only callable when the
- * caller has dropped today (enforced one level up in the query handler).
+ * Drops by the caller's accepted friends with the given dayKey, excluding
+ * `private` drops (those count for streak/XP only — never visible to others).
+ * Sorted by createdAt descending so newest drops appear first in the feed.
  */
 export async function fetchFriendDropsToday(
-  _ctx: QueryCtx | MutationCtx,
-  _callerId: Id<"profiles">,
-  _dayKey: string,
+  ctx: QueryCtx | MutationCtx,
+  callerId: Id<"profiles">,
+  dayKey: string,
 ): Promise<Doc<"drops">[]> {
-  throw new Error("not implemented — wired up in commit 7");
+  const friendIds = await getAcceptedFriendIds(ctx, callerId);
+  const drops: Doc<"drops">[] = [];
+  for (const friendId of friendIds) {
+    const friendDrops = await ctx.db
+      .query("drops")
+      .withIndex("by_owner_day", (q) => q.eq("ownerId", friendId).eq("dayKey", dayKey))
+      .collect();
+    for (const d of friendDrops) {
+      if (d.visibility !== "private") drops.push(d);
+    }
+  }
+  drops.sort((a, b) => b.createdAt - a.createdAt);
+  return drops;
+}
+
+/**
+ * Count of drops that would appear in the feed if it were unlocked. Used by
+ * the locked-feed payload so the UI can render "12 friends dropped today".
+ */
+export async function countTodaysFriendDrops(
+  ctx: QueryCtx | MutationCtx,
+  callerId: Id<"profiles">,
+  dayKey: string,
+): Promise<number> {
+  const drops = await fetchFriendDropsToday(ctx, callerId, dayKey);
+  return drops.length;
 }

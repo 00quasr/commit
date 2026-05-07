@@ -1,7 +1,47 @@
-import { calculateXP, levelFromXP, streakAfterDrop } from "@commit/domain";
+import { calculateXP, levelFromXP, shouldLockFeed, streakAfterDrop } from "@commit/domain";
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
-import { dayKeyForCaller, requireCallerProfile } from "./_helpers";
+import { mutation, query } from "./_generated/server";
+import {
+  countTodaysFriendDrops,
+  dayKeyForCaller,
+  fetchFriendDropsToday,
+  hasDroppedToday,
+  requireCallerProfile,
+} from "./_helpers";
+
+const dropShape = v.object({
+  _id: v.id("drops"),
+  _creationTime: v.number(),
+  ownerId: v.id("profiles"),
+  todoId: v.optional(v.id("todos")),
+  caption: v.string(),
+  tags: v.array(v.string()),
+  difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
+  xpAwarded: v.number(),
+  photoFileId: v.optional(v.id("_storage")),
+  voiceFileId: v.optional(v.id("_storage")),
+  dayKey: v.string(),
+  createdAt: v.number(),
+  visibility: v.union(v.literal("public"), v.literal("friends"), v.literal("private")),
+  reactionCount: v.number(),
+  viewCount: v.number(),
+});
+
+const profileShape = v.object({
+  _id: v.id("profiles"),
+  _creationTime: v.number(),
+  clerkUserId: v.string(),
+  username: v.string(),
+  usernameLower: v.optional(v.string()),
+  avatarUrl: v.optional(v.string()),
+  timezone: v.string(),
+  createdAt: v.number(),
+});
+
+const enrichedDropShape = v.object({
+  drop: dropShape,
+  author: profileShape,
+});
 
 const MAX_CAPTION = 100;
 const MAX_TAGS = 5;
@@ -180,5 +220,51 @@ export const create = mutation({
     }
 
     return dropId;
+  },
+});
+
+/**
+ * The reciprocity-locked home feed (VISION §5.1).
+ *
+ * Returns one of:
+ *   - { locked: true, blurredCount }  — caller hasn't dropped today; show blur screen.
+ *   - { locked: false, drops }        — caller has dropped (or is in the 24h grace
+ *                                        window for new users); render friends' drops.
+ *
+ * Server-enforced: a hostile client cannot bypass the lock — when locked, this
+ * query never returns the actual drop rows, only the count.
+ */
+export const feedForUser = query({
+  args: { dayKey: v.optional(v.string()) },
+  returns: v.union(
+    v.object({ locked: v.literal(true), blurredCount: v.number() }),
+    v.object({ locked: v.literal(false), drops: v.array(enrichedDropShape) }),
+  ),
+  handler: async (ctx, args) => {
+    const me = await requireCallerProfile(ctx);
+    const today = args.dayKey ?? dayKeyForCaller(me);
+
+    const callerDroppedToday = await hasDroppedToday(ctx, me._id, today);
+    const locked = shouldLockFeed({
+      callerHasDroppedToday: callerDroppedToday,
+      callerCreatedAtMs: me.createdAt,
+      nowMs: Date.now(),
+    });
+
+    if (locked) {
+      const blurredCount = await countTodaysFriendDrops(ctx, me._id, today);
+      return { locked: true as const, blurredCount };
+    }
+
+    const drops = await fetchFriendDropsToday(ctx, me._id, today);
+    const enriched = await Promise.all(
+      drops.map(async (drop) => {
+        const author = await ctx.db.get(drop.ownerId);
+        if (!author) return null;
+        return { drop, author };
+      }),
+    );
+    const filtered = enriched.filter((e): e is NonNullable<typeof e> => e !== null);
+    return { locked: false as const, drops: filtered };
   },
 });
