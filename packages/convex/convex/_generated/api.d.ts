@@ -9,6 +9,7 @@
  */
 
 import type * as _helpers from "../_helpers.js";
+import type * as friendships from "../friendships.js";
 import type * as profiles from "../profiles.js";
 
 import type {
@@ -19,6 +20,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   _helpers: typeof _helpers;
+  friendships: typeof friendships;
   profiles: typeof profiles;
 }>;
 

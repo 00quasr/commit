@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@commit/domain": "workspace:*",
     "convex": "^1.17.4"
   },
   "devDependencies": {
