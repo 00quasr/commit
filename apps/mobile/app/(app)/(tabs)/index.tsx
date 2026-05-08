@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Swipeable from "react-native-gesture-handler/Swipeable";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
 import { HabitRow } from "@/components/HabitRow";
@@ -30,6 +31,7 @@ export default function Today() {
   const dueHabits = useQuery(api.habits.dueToday, {});
   const allHabits = useQuery(api.habits.list, {});
   const createHabit = useMutation(api.habits.create);
+  const archiveHabit = useMutation(api.habits.archive);
   const startDropTimer = useDropTimer((s) => s.start);
 
   const [showAdd, setShowAdd] = useState(false);
@@ -104,17 +106,30 @@ export default function Today() {
             const doneToday =
               section.title === "Not due today" && item.lastDropDayKey !== undefined;
             return (
-              <HabitRow
-                text={item.text}
-                difficulty={item.difficulty}
-                cycleDays={item.cycleDays}
-                doneToday={doneToday}
-                onPress={() => {
-                  if (section.title !== "Due today") return;
-                  startDropTimer(item._id, item.difficulty);
-                  router.push("/drop/countdown");
+              <Swipeable
+                renderRightActions={() => (
+                  <View style={styles.archiveAction}>
+                    <Text style={styles.archiveText}>Archive</Text>
+                  </View>
+                )}
+                onSwipeableRightOpen={() => {
+                  void archiveHabit({ habitId: item._id });
                 }}
-              />
+                rightThreshold={48}
+                friction={1.6}
+              >
+                <HabitRow
+                  text={item.text}
+                  difficulty={item.difficulty}
+                  cycleDays={item.cycleDays}
+                  doneToday={doneToday}
+                  onPress={() => {
+                    if (section.title !== "Due today") return;
+                    startDropTimer(item._id, item.difficulty);
+                    router.push("/drop/countdown");
+                  }}
+                />
+              </Swipeable>
             );
           }}
           ItemSeparatorComponent={() => <View style={styles.sep} />}
@@ -217,6 +232,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sep: { height: 1, backgroundColor: semantic.divide, marginLeft: 56 },
+  archiveAction: {
+    backgroundColor: "#1a0e0e",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    borderLeftWidth: 1,
+    borderLeftColor: "#3a1414",
+  },
+  archiveText: {
+    color: "#ff8a8a",
+    fontSize: 13,
+    fontFamily: fonts.mono,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
   emptyWrap: {
     flex: 1,
     alignItems: "center",
