@@ -14,7 +14,7 @@ export default function Countdown() {
   useEffect(() => {
     if (remainingMs !== null && remainingMs <= 0) {
       cancel();
-      router.dismissAll();
+      router.replace("/(tabs)");
     }
   }, [remainingMs, cancel]);
 
@@ -26,7 +26,7 @@ export default function Countdown() {
 
   const onCancel = () => {
     cancel();
-    router.dismissAll();
+    router.replace("/(tabs)");
   };
 
   return (
