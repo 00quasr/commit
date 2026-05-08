@@ -58,6 +58,10 @@ const profileShape = v.object({
 const enrichedDropShape = v.object({
   drop: dropShape,
   author: profileShape,
+  // Resolved Convex storage URLs. Server-side resolution avoids N+1 round-trips
+  // from the mobile client; URLs are signed and expire (Convex default ~1h).
+  photoUrl: v.union(v.string(), v.null()),
+  voiceUrl: v.union(v.string(), v.null()),
 });
 
 const MAX_CAPTION = 100;
@@ -279,7 +283,9 @@ export const feedForUser = query({
       drops.map(async (drop) => {
         const author = await ctx.db.get(drop.ownerId);
         if (!author) return null;
-        return { drop, author };
+        const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
+        const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
+        return { drop, author, photoUrl, voiceUrl };
       }),
     );
     const filtered = enriched.filter((e): e is NonNullable<typeof e> => e !== null);
