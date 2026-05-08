@@ -13,7 +13,7 @@ const dropShape = v.object({
   _id: v.id("drops"),
   _creationTime: v.number(),
   ownerId: v.id("profiles"),
-  todoId: v.optional(v.id("todos")),
+  habitId: v.optional(v.id("habits")),
   caption: v.string(),
   tags: v.array(v.string()),
   difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
@@ -60,7 +60,7 @@ function normalizeTags(input: string[]): string[] {
 
 export const create = mutation({
   args: {
-    todoId: v.optional(v.id("todos")),
+    habitId: v.optional(v.id("habits")),
     caption: v.string(),
     tags: v.array(v.string()),
     difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
@@ -83,11 +83,12 @@ export const create = mutation({
       throw new Error(`too many tags (max ${MAX_TAGS})`);
     }
 
-    // Verify linked todo if provided.
-    if (args.todoId) {
-      const todo = await ctx.db.get(args.todoId);
-      if (!todo) throw new Error("Todo not found");
-      if (todo.ownerId !== me._id) throw new Error("Not your todo");
+    // Verify linked habit if provided.
+    if (args.habitId) {
+      const habit = await ctx.db.get(args.habitId);
+      if (!habit) throw new Error("Habit not found");
+      if (habit.ownerId !== me._id) throw new Error("Not your habit");
+      if (habit.archived) throw new Error("Habit is archived");
     }
 
     const dayKey = dayKeyForCaller(me);
@@ -135,7 +136,7 @@ export const create = mutation({
     // Insert the drop.
     const dropId = await ctx.db.insert("drops", {
       ownerId: me._id,
-      ...(args.todoId !== undefined ? { todoId: args.todoId } : {}),
+      ...(args.habitId !== undefined ? { habitId: args.habitId } : {}),
       caption: args.caption,
       tags,
       difficulty: args.difficulty,
@@ -149,9 +150,9 @@ export const create = mutation({
       viewCount: 0,
     });
 
-    // Link the todo back to the drop (so UI can render "completed → dropped").
-    if (args.todoId) {
-      await ctx.db.patch(args.todoId, { dropId });
+    // Update habit.lastDropDayKey so the next dueToday query reflects this drop.
+    if (args.habitId) {
+      await ctx.db.patch(args.habitId, { lastDropDayKey: dayKey });
     }
 
     // Upsert userStats (denormalized for fast feed/profile reads).

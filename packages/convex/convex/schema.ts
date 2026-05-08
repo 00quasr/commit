@@ -33,20 +33,28 @@ export default defineSchema({
     .index("by_clerk_user_id", ["clerkUserId"])
     .index("by_username_lower", ["usernameLower"]),
 
-  todos: defineTable({
+  // Habits are recurring commitment definitions, not day-scoped instances.
+  // A habit is "due today" iff (today - lastDropDayKey) >= cycleDays calendar
+  // days, or it has never been dropped on. See @commit/domain.isDueToday.
+  habits: defineTable({
     ownerId: v.id("profiles"),
     text: v.string(),
     difficulty,
-    dayKey: v.string(),
-    completedAt: v.optional(v.number()),
-    dropId: v.optional(v.id("drops")),
-  })
-    .index("by_owner_day", ["ownerId", "dayKey"])
-    .index("by_owner_completed", ["ownerId", "completedAt"]),
+    cycleDays: v.number(), // 1 = daily, 2 = every 2 days, ... 31 = monthly
+    // dayKey at habit creation in the owner's timezone. Stored explicitly so
+    // dueToday queries don't depend on _creationTime (which can drift from
+    // vi.useFakeTimers in tests, and whose timezone interpretation could
+    // change if the owner moves regions).
+    createdDayKey: v.string(),
+    // Denormalized "last drop day" for fast dueToday queries — updated by
+    // drops.create when a drop is linked to this habit.
+    lastDropDayKey: v.optional(v.string()),
+    archived: v.boolean(),
+  }).index("by_owner_archived", ["ownerId", "archived"]),
 
   drops: defineTable({
     ownerId: v.id("profiles"),
-    todoId: v.optional(v.id("todos")),
+    habitId: v.optional(v.id("habits")), // optional: ad-hoc drops without a habit are allowed
     caption: v.string(),
     tags: v.array(v.string()),
     difficulty,
