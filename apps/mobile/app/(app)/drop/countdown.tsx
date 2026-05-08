@@ -28,7 +28,7 @@ export default function Countdown() {
   const seconds = remainingMs === null ? 0 : Math.ceil(remainingMs / 1000);
 
   const onContinue = () => {
-    router.push("/drop/compose");
+    router.push("/drop/camera");
   };
 
   const onCancel = () => {

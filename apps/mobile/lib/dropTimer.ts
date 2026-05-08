@@ -10,7 +10,9 @@ interface DropTimerState {
   habitId: Id<"habits"> | null;
   difficulty: DropDifficulty | null;
   expiresAt: number | null;
+  photoUri: string | null;
   start: (habitId: Id<"habits">, difficulty: DropDifficulty, durationMs?: number) => void;
+  setPhoto: (uri: string | null) => void;
   cancel: () => void;
 }
 
@@ -19,14 +21,19 @@ interface DropTimerState {
  * `expiresAt` timestamp (Date.now()-based, NOT setInterval-based) so the
  * countdown survives the user backgrounding the app — VISION §5.2 demands
  * the time pressure can't be paused by switching apps.
+ *
+ * `photoUri` is the local file:// URI captured by the camera screen. It's
+ * uploaded to Convex File Storage at submit time on the compose screen.
  */
 export const useDropTimer = create<DropTimerState>((set) => ({
   habitId: null,
   difficulty: null,
   expiresAt: null,
+  photoUri: null,
   start: (habitId, difficulty, durationMs = DROP_WINDOW_MS) =>
-    set({ habitId, difficulty, expiresAt: Date.now() + durationMs }),
-  cancel: () => set({ habitId: null, difficulty: null, expiresAt: null }),
+    set({ habitId, difficulty, expiresAt: Date.now() + durationMs, photoUri: null }),
+  setPhoto: (uri) => set({ photoUri: uri }),
+  cancel: () => set({ habitId: null, difficulty: null, expiresAt: null, photoUri: null }),
 }));
 
 /**

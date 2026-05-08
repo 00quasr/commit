@@ -9,6 +9,23 @@ import {
   requireCallerProfile,
 } from "./_helpers";
 
+/**
+ * Returns a one-time signed URL the client can POST a file to, getting back
+ * a `{ storageId }` payload. The storageId becomes `photoFileId` (or
+ * `voiceFileId`) on the subsequent `drops.create` call.
+ *
+ * Auth-gated: only signed-in profiles can request upload URLs. Each URL is
+ * single-use and expires server-side after upload.
+ */
+export const generateUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    await requireCallerProfile(ctx);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 const dropShape = v.object({
   _id: v.id("drops"),
   _creationTime: v.number(),

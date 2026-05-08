@@ -1,10 +1,12 @@
 import { api } from "@commit/convex/api";
+import type { Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation } from "convex/react";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -24,15 +26,18 @@ type Visibility = "public" | "friends" | "private";
 export default function Compose() {
   const habitId = useDropTimer((s) => s.habitId);
   const difficulty = useDropTimer((s) => s.difficulty);
+  const photoUri = useDropTimer((s) => s.photoUri);
   const cancel = useDropTimer((s) => s.cancel);
   const remainingMs = useTimerRemaining();
 
+  const generateUploadUrl = useMutation(api.drops.generateUploadUrl);
   const createDrop = useMutation(api.drops.create);
 
   const [caption, setCaption] = useState("");
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [visibility, setVisibility] = useState<Visibility>("friends");
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<"idle" | "uploading" | "creating">("idle");
   const [error, setError] = useState<string | null>(null);
 
   // Window expired → close modal.
@@ -65,12 +70,33 @@ export default function Compose() {
     setBusy(true);
     setError(null);
     try {
+      let photoFileId: Id<"_storage"> | undefined;
+
+      if (photoUri) {
+        setStage("uploading");
+        const uploadUrl = await generateUploadUrl();
+        const fileResp = await fetch(photoUri);
+        const blob = await fileResp.blob();
+        const uploadResp = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": blob.type || "image/jpeg" },
+          body: blob,
+        });
+        if (!uploadResp.ok) {
+          throw new Error(`Upload failed: ${uploadResp.status}`);
+        }
+        const json = (await uploadResp.json()) as { storageId: Id<"_storage"> };
+        photoFileId = json.storageId;
+      }
+
+      setStage("creating");
       await createDrop({
         habitId,
         caption,
         tags: [...selectedTags],
         difficulty,
         visibility,
+        ...(photoFileId !== undefined ? { photoFileId } : {}),
       });
       cancel();
       router.dismissAll();
@@ -78,17 +104,20 @@ export default function Compose() {
       setError(err instanceof Error ? err.message : "Drop failed");
     } finally {
       setBusy(false);
+      setStage("idle");
     }
   };
 
   const seconds = remainingMs === null ? 0 : Math.ceil(remainingMs / 1000);
   const captionOver = caption.length > MAX_CAPTION;
+  const submitLabel =
+    stage === "uploading" ? "Uploading…" : stage === "creating" ? "Submitting…" : "Drop";
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+        <Pressable onPress={() => router.back()} disabled={busy}>
+          <Text style={[styles.backText, busy && { opacity: 0.4 }]}>← Back</Text>
         </Pressable>
         <Text style={styles.timer}>{seconds}s</Text>
       </View>
@@ -98,6 +127,12 @@ export default function Compose() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          {photoUri && (
+            <View style={styles.photoWrap}>
+              <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+            </View>
+          )}
+
           <Text style={styles.fieldLabel}>Caption</Text>
           <TextInput
             style={styles.input}
@@ -105,7 +140,7 @@ export default function Compose() {
             onChangeText={setCaption}
             placeholder="What did you do?"
             placeholderTextColor="#555"
-            autoFocus
+            autoFocus={!photoUri}
             maxLength={MAX_CAPTION + 20}
             multiline
           />
@@ -155,7 +190,10 @@ export default function Compose() {
           disabled={busy || captionOver}
         >
           {busy ? (
-            <ActivityIndicator color={colors.bg} />
+            <View style={styles.submitBusy}>
+              <ActivityIndicator color={colors.bg} />
+              <Text style={styles.submitText}>{submitLabel}</Text>
+            </View>
           ) : (
             <Text style={styles.submitText}>Drop</Text>
           )}
@@ -185,6 +223,15 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   scroll: { padding: 20 },
+  photoWrap: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#0a0a0a",
+    marginBottom: 8,
+  },
+  photo: { width: "100%", height: "100%" },
   fieldLabel: {
     color: "#666",
     fontSize: 11,
@@ -227,5 +274,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   submitDisabled: { opacity: 0.4 },
+  submitBusy: { flexDirection: "row", alignItems: "center", gap: 8 },
   submitText: { color: colors.bg, fontSize: 17, fontFamily: fonts.sans, fontWeight: "700" },
 });

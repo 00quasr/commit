@@ -11,6 +11,7 @@ export default function DropLayout() {
       }}
     >
       <Stack.Screen name="countdown" />
+      <Stack.Screen name="camera" />
       <Stack.Screen name="compose" />
     </Stack>
   );
