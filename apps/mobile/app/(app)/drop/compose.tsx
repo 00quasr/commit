@@ -43,20 +43,16 @@ export default function Compose() {
   const [stage, setStage] = useState<"idle" | "uploading" | "creating">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  // Window expired → close modal.
+  // Window expired → close modal. We do NOT also key on habitId/difficulty
+  // becoming null, because cancel() in onSubmit deliberately sets them null
+  // and re-firing dismiss() after we already dismissed produces a noisy
+  // POP_TO_TOP warning from react-navigation.
   useEffect(() => {
     if (remainingMs !== null && remainingMs <= 0) {
       cancel();
-      router.dismissAll();
+      router.dismiss();
     }
   }, [remainingMs, cancel]);
-
-  // No active context → bail.
-  useEffect(() => {
-    if (habitId === null || difficulty === null) {
-      router.dismissAll();
-    }
-  }, [habitId, difficulty]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) => {
@@ -113,7 +109,7 @@ export default function Compose() {
         ...(voiceFileId !== undefined ? { voiceFileId } : {}),
       });
       cancel();
-      router.dismissAll();
+      router.dismiss();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Drop failed");
     } finally {

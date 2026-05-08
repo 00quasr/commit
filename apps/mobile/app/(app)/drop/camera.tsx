@@ -7,7 +7,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropTimer, useTimerRemaining } from "@/lib/dropTimer";
 
 export default function CameraScreen() {
-  const habitId = useDropTimer((s) => s.habitId);
   const photoUri = useDropTimer((s) => s.photoUri);
   const setPhoto = useDropTimer((s) => s.setPhoto);
   const cancel = useDropTimer((s) => s.cancel);
@@ -17,18 +16,13 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView | null>(null);
   const [capturing, setCapturing] = useState(false);
 
-  // No active timer — bounce.
-  useEffect(() => {
-    if (habitId === null) {
-      router.dismissAll();
-    }
-  }, [habitId]);
-
-  // Window expired — abort.
+  // Window expired — abort. (No separate `habitId === null` effect: cancel()
+  // sets habitId null and we don't want a second dismiss() to fire after
+  // we've already dismissed — that produces a POP_TO_TOP warning.)
   useEffect(() => {
     if (remainingMs !== null && remainingMs <= 0) {
       cancel();
-      router.dismissAll();
+      router.dismiss();
     }
   }, [remainingMs, cancel]);
 
@@ -65,7 +59,7 @@ export default function CameraScreen() {
 
   const onCancel = () => {
     cancel();
-    router.dismissAll();
+    router.dismiss();
   };
 
   const seconds = remainingMs === null ? 0 : Math.ceil(remainingMs / 1000);

@@ -8,22 +8,15 @@ import { useDropTimer, useTimerRemaining } from "@/lib/dropTimer";
 export default function Countdown() {
   const remainingMs = useTimerRemaining();
   const cancel = useDropTimer((s) => s.cancel);
-  const habitId = useDropTimer((s) => s.habitId);
 
-  // Window expired or never started → bounce out.
+  // Window expired → close the modal stack. Single dismiss(), no separate
+  // habitId-watch effect, to avoid double-fire POP_TO_TOP warnings.
   useEffect(() => {
     if (remainingMs !== null && remainingMs <= 0) {
       cancel();
-      router.back();
+      router.dismiss();
     }
   }, [remainingMs, cancel]);
-
-  // No active timer (e.g. opened directly via deep link) → bounce.
-  useEffect(() => {
-    if (habitId === null) {
-      router.back();
-    }
-  }, [habitId]);
 
   const seconds = remainingMs === null ? 0 : Math.ceil(remainingMs / 1000);
 
@@ -33,7 +26,7 @@ export default function Countdown() {
 
   const onCancel = () => {
     cancel();
-    router.back();
+    router.dismiss();
   };
 
   return (
