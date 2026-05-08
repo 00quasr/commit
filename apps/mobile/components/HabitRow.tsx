@@ -1,4 +1,5 @@
-import { fonts, semantic } from "@commit/ui-tokens";
+import { fonts } from "@commit/ui-tokens";
+import { theme } from "@/lib/theme";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export interface HabitRowProps {
@@ -47,39 +48,39 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     gap: 14,
-    backgroundColor: semantic.bg,
+    backgroundColor: theme.bg,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: semantic.text.muted,
+    borderColor: theme.text.muted,
     alignItems: "center",
     justifyContent: "center",
   },
   checkboxDone: {
-    backgroundColor: semantic.text.primary,
-    borderColor: semantic.text.primary,
+    backgroundColor: theme.text.primary,
+    borderColor: theme.text.primary,
   },
   check: {
-    color: semantic.bg,
+    color: theme.bg,
     fontSize: 14,
     fontWeight: "700",
   },
   body: { flex: 1 },
   text: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 17,
     fontFamily: fonts.sans,
     lineHeight: 22,
   },
   textDone: {
-    color: semantic.text.tertiary,
+    color: theme.text.tertiary,
     textDecorationLine: "line-through",
   },
   meta: {
-    color: semantic.text.tertiary,
+    color: theme.text.tertiary,
     fontSize: 11,
     fontFamily: fonts.mono,
     marginTop: 4,

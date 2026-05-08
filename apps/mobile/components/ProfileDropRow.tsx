@@ -1,5 +1,6 @@
 import type { Doc } from "@commit/convex/dataModel";
-import { fonts, semantic } from "@commit/ui-tokens";
+import { fonts } from "@commit/ui-tokens";
+import { theme } from "@/lib/theme";
 import { Image } from "expo-image";
 import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -84,25 +85,25 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: semantic.blockElevated,
+    backgroundColor: theme.blockElevated,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   thumbFallback: {
-    color: semantic.text.tertiary,
+    color: theme.text.tertiary,
     fontSize: 18,
     fontFamily: fonts.mono,
     fontWeight: "600",
   },
   body: { flex: 1 },
   caption: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 15,
     fontFamily: fonts.sans,
     lineHeight: 20,
   },
-  placeholder: { color: semantic.text.muted, fontStyle: "italic" },
+  placeholder: { color: theme.text.muted, fontStyle: "italic" },
   metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
-  metaText: { color: semantic.text.tertiary, fontSize: 11, fontFamily: fonts.mono },
+  metaText: { color: theme.text.tertiary, fontSize: 11, fontFamily: fonts.mono },
 });

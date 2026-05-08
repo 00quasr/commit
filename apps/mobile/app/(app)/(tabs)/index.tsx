@@ -1,5 +1,6 @@
 import { api } from "@commit/convex/api";
-import { fonts, semantic } from "@commit/ui-tokens";
+import { fonts } from "@commit/ui-tokens";
+import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
@@ -68,7 +69,7 @@ export default function Today() {
   if (dueHabits === undefined || allHabits === undefined) {
     return (
       <View style={[styles.root, styles.center]}>
-        <ActivityIndicator color={semantic.text.primary} />
+        <ActivityIndicator color={theme.text.primary} />
       </View>
     );
   }
@@ -151,7 +152,7 @@ export default function Today() {
               value={draftText}
               onChangeText={setDraftText}
               placeholder="What do you want to keep doing?"
-              placeholderTextColor={semantic.text.muted}
+              placeholderTextColor={theme.text.muted}
               autoFocus
               maxLength={280}
               multiline
@@ -207,18 +208,18 @@ export default function Today() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: semantic.bg },
+  root: { flex: 1, backgroundColor: theme.bg },
   center: { alignItems: "center", justifyContent: "center" },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
   title: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 36,
     fontFamily: fonts.sans,
     fontWeight: "700",
     letterSpacing: -0.5,
   },
   subtitle: {
-    color: semantic.text.tertiary,
+    color: theme.text.tertiary,
     fontSize: 14,
     fontFamily: fonts.sans,
     marginTop: 4,
@@ -226,12 +227,12 @@ const styles = StyleSheet.create({
   list: { paddingBottom: 120 },
   sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   sectionTitle: {
-    color: semantic.text.muted,
+    color: theme.text.muted,
     fontSize: 11,
     fontFamily: fonts.mono,
     letterSpacing: 1,
   },
-  sep: { height: 1, backgroundColor: semantic.divide, marginLeft: 56 },
+  sep: { height: 1, backgroundColor: theme.divide, marginLeft: 56 },
   archiveAction: {
     backgroundColor: "#1a0e0e",
     justifyContent: "center",
@@ -254,13 +255,13 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   emptyTitle: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 22,
     fontFamily: fonts.sans,
     fontWeight: "600",
   },
   emptyHint: {
-    color: semantic.text.tertiary,
+    color: theme.text.tertiary,
     fontSize: 14,
     fontFamily: fonts.sans,
     marginTop: 8,
@@ -277,25 +278,25 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
   },
   sheetTitle: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 18,
     fontFamily: fonts.sans,
     fontWeight: "600",
     marginBottom: 16,
   },
   input: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 18,
     fontFamily: fonts.sans,
     minHeight: 80,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    backgroundColor: semantic.blockElevated,
+    backgroundColor: theme.blockElevated,
     borderRadius: 12,
     textAlignVertical: "top",
   },
   fieldLabel: {
-    color: semantic.text.tertiary,
+    color: theme.text.tertiary,
     fontSize: 11,
     fontFamily: fonts.mono,
     textTransform: "uppercase",
@@ -309,33 +310,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: semantic.borderHairline,
+    borderColor: theme.borderHairline,
   },
-  chipActive: { backgroundColor: semantic.text.primary, borderColor: semantic.text.primary },
+  chipActive: { backgroundColor: theme.text.primary, borderColor: theme.text.primary },
   chipText: {
-    color: semantic.text.secondary,
+    color: theme.text.secondary,
     fontSize: 14,
     fontFamily: fonts.mono,
     textTransform: "uppercase",
   },
-  chipTextActive: { color: semantic.bg },
+  chipTextActive: { color: theme.bg },
   sheetButtons: { flexDirection: "row", gap: 8, marginTop: 24 },
   cancel: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: semantic.borderHairline,
+    borderColor: theme.borderHairline,
     alignItems: "center",
   },
-  cancelText: { color: semantic.text.secondary, fontSize: 16, fontFamily: fonts.sans },
+  cancelText: { color: theme.text.secondary, fontSize: 16, fontFamily: fonts.sans },
   add: {
     flex: 2,
     paddingVertical: 14,
     borderRadius: 10,
-    backgroundColor: semantic.text.primary,
+    backgroundColor: theme.text.primary,
     alignItems: "center",
   },
   addDisabled: { opacity: 0.4 },
-  addText: { color: semantic.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "600" },
+  addText: { color: theme.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "600" },
 });

@@ -1,4 +1,5 @@
-import { fonts, semantic } from "@commit/ui-tokens";
+import { fonts } from "@commit/ui-tokens";
+import { theme } from "@/lib/theme";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -44,8 +45,8 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: semantic.blockGlass,
-    borderColor: semantic.borderHairline,
+    backgroundColor: theme.blockGlass,
+    borderColor: theme.borderHairline,
     borderWidth: 1,
     borderRadius: 28,
     paddingHorizontal: 6,
@@ -60,12 +61,12 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.32 },
   plusIcon: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 26,
     lineHeight: 28,
     fontFamily: fonts.sans,
     fontWeight: "300",
   },
   micIcon: { fontSize: 18 },
-  divider: { width: 1, height: 24, backgroundColor: semantic.divide, marginHorizontal: 4 },
+  divider: { width: 1, height: 24, backgroundColor: theme.divide, marginHorizontal: 4 },
 });

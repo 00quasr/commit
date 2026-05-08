@@ -1,7 +1,8 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { api } from "@commit/convex/api";
 import { dayKeyInTimezone } from "@commit/domain";
-import { fonts, semantic } from "@commit/ui-tokens";
+import { fonts } from "@commit/ui-tokens";
+import { theme } from "@/lib/theme";
 import { useQuery } from "convex/react";
 import { Image } from "expo-image";
 import { Fragment, useMemo } from "react";
@@ -27,7 +28,7 @@ export default function Profile() {
   if (me === undefined) {
     return (
       <View style={[styles.root, styles.center]}>
-        <ActivityIndicator color={semantic.text.primary} />
+        <ActivityIndicator color={theme.text.primary} />
       </View>
     );
   }
@@ -75,7 +76,7 @@ export default function Profile() {
 
         <Text style={styles.sectionLabelTop}>Recent drops</Text>
         {recent === undefined ? (
-          <ActivityIndicator color={semantic.text.primary} style={{ marginTop: 16 }} />
+          <ActivityIndicator color={theme.text.primary} style={{ marginTop: 16 }} />
         ) : recent.length === 0 ? (
           <Text style={styles.emptyRecent}>No drops yet — your first drop will show up here.</Text>
         ) : (
@@ -115,10 +116,10 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: semantic.bg },
+  root: { flex: 1, backgroundColor: theme.bg },
   center: { alignItems: "center", justifyContent: "center" },
   scroll: { paddingTop: 16, paddingBottom: 80 },
-  placeholder: { color: semantic.text.muted, fontSize: 14, fontFamily: fonts.mono },
+  placeholder: { color: theme.text.muted, fontSize: 14, fontFamily: fonts.mono },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -126,23 +127,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
   },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: semantic.blockElevated },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: theme.blockElevated },
   avatarFallback: { alignItems: "center", justifyContent: "center" },
   avatarLetter: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 28,
     fontFamily: fonts.sans,
     fontWeight: "600",
   },
   headerText: { flex: 1 },
   username: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 22,
     fontFamily: fonts.sans,
     fontWeight: "700",
     letterSpacing: -0.3,
   },
-  tz: { color: semantic.text.tertiary, fontSize: 13, fontFamily: fonts.mono, marginTop: 2 },
+  tz: { color: theme.text.tertiary, fontSize: 13, fontFamily: fonts.mono, marginTop: 2 },
   statsGrid: {
     flexDirection: "row",
     paddingHorizontal: 20,
@@ -151,20 +152,20 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: semantic.blockElevated,
+    backgroundColor: theme.blockElevated,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },
   statValue: {
-    color: semantic.text.primary,
+    color: theme.text.primary,
     fontSize: 22,
     fontFamily: fonts.sans,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
   },
   statLabel: {
-    color: semantic.text.tertiary,
+    color: theme.text.tertiary,
     fontSize: 11,
     fontFamily: fonts.mono,
     textTransform: "uppercase",
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
   },
   heatmapWrap: { marginBottom: 32 },
   sectionLabelTop: {
-    color: semantic.text.tertiary,
+    color: theme.text.tertiary,
     fontSize: 11,
     fontFamily: fonts.mono,
     textTransform: "uppercase",
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyRecent: {
-    color: semantic.text.tertiary,
+    color: theme.text.tertiary,
     fontSize: 14,
     fontFamily: fonts.sans,
     paddingHorizontal: 20,
@@ -195,17 +196,17 @@ const styles = StyleSheet.create({
   },
   bucketHeaderFirst: { paddingTop: 0 },
   bucketTitle: {
-    color: semantic.text.muted,
+    color: theme.text.muted,
     fontSize: 11,
     fontFamily: fonts.mono,
     letterSpacing: 1,
   },
-  rowDivider: { height: 1, backgroundColor: semantic.divide, marginLeft: 88 },
+  rowDivider: { height: 1, backgroundColor: theme.divide, marginLeft: 88 },
   signOut: {
     alignSelf: "center",
     paddingVertical: 12,
     paddingHorizontal: 24,
     marginTop: 32,
   },
-  signOutText: { color: semantic.text.tertiary, fontSize: 14, fontFamily: fonts.sans },
+  signOutText: { color: theme.text.tertiary, fontSize: 14, fontFamily: fonts.sans },
 });
