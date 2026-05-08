@@ -1,6 +1,7 @@
 import { api } from "@commit/convex/api";
 import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -14,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { HabitRow } from "@/components/HabitRow";
+import { useDropTimer } from "@/lib/dropTimer";
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -27,6 +29,7 @@ export default function Today() {
   const dueHabits = useQuery(api.habits.dueToday, {});
   const allHabits = useQuery(api.habits.list, {});
   const createHabit = useMutation(api.habits.create);
+  const startDropTimer = useDropTimer((s) => s.start);
 
   const [showAdd, setShowAdd] = useState(false);
   const [draftText, setDraftText] = useState("");
@@ -81,7 +84,8 @@ export default function Today() {
             difficulty={item.difficulty}
             cycleDays={item.cycleDays}
             onPress={() => {
-              // Drop composer lands in P3 commit 2; for now this is a no-op.
+              startDropTimer(item._id, item.difficulty);
+              router.push("/drop/countdown");
             }}
           />
         )}
