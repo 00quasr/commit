@@ -65,23 +65,24 @@ describe("drops.create — basic", () => {
     expect(stats?.longestStreak).toBe(1);
   });
 
-  test("links the drop back to its todo and patches todo.dropId", async () => {
+  test("links the drop back to its habit and patches habit.lastDropDayKey", async () => {
     const t = makeTest();
     await seedAlice(t);
     vi.useFakeTimers().setSystemTime(new Date("2026-05-07T12:00:00Z"));
 
-    const todoId = await t.withIdentity(asAlice).mutation(api.todos.create, {
+    const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "ship it",
       difficulty: "medium",
+      cycleDays: 1,
     });
     const dropId = await t
       .withIdentity(asAlice)
-      .mutation(api.drops.create, { ...baseDropArgs, todoId });
+      .mutation(api.drops.create, { ...baseDropArgs, habitId });
 
     const drop = await t.run((ctx) => ctx.db.get(dropId));
-    expect(drop?.todoId).toBe(todoId);
-    const todo = await t.run((ctx) => ctx.db.get(todoId));
-    expect(todo?.dropId).toBe(dropId);
+    expect(drop?.habitId).toBe(habitId);
+    const habit = await t.run((ctx) => ctx.db.get(habitId));
+    expect(habit?.lastDropDayKey).toBe("2026-05-07");
   });
 
   test("normalizes tags: lowercase + dedupe, max 5 enforced", async () => {

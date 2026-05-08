@@ -1,3 +1,5 @@
+import { dayKeyDistance } from "./day-key";
+
 /**
  * Streak rules per VISION §5.3:
  *   - First-ever drop: streak = 1.
@@ -7,9 +9,9 @@
  *     streak += 1 (one missed day forgiven).
  *   - Gap of one or more days, no grace card: streak resets to 1.
  *
- * Gap arithmetic uses the calendar-day distance between two "YYYY-MM-DD"
- * strings, computed via UTC midnight (the strings are already timezone-
- * normalized via `dayKeyInTimezone`, so UTC math here is correct).
+ * Streak is GLOBAL — one streak per user across all drops, regardless of
+ * which habit a drop was on. Per VISION §5.3 (post habit-pivot retained
+ * for simplicity).
  */
 
 export interface StreakInput {
@@ -59,18 +61,4 @@ export function streakAfterDrop(input: StreakInput): StreakOutput {
   }
 
   return { newStreak: 1, consumeGraceCard: false, brokenAndReset: true };
-}
-
-function dayKeyDistance(a: string, b: string): number {
-  const aMs = Date.UTC(...parseDayKey(a));
-  const bMs = Date.UTC(...parseDayKey(b));
-  return Math.round((bMs - aMs) / (1000 * 60 * 60 * 24));
-}
-
-function parseDayKey(key: string): [number, number, number] {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
-  if (!match) {
-    throw new Error(`Invalid dayKey: ${key}`);
-  }
-  return [Number(match[1]), Number(match[2]) - 1, Number(match[3])];
 }

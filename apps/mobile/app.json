@@ -13,7 +13,23 @@
     "android": {
       "package": "app.commit.mobile"
     },
-    "plugins": ["expo-router", "expo-secure-store", "expo-web-browser"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow commit to access your camera so you can take proof photos."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow commit to access your microphone for 30-second voice memos on your drops."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true,
       "tsconfigPaths": true

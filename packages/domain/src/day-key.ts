@@ -24,3 +24,25 @@ export function dayKeyInTimezone(unixMs: number, ianaTz: string): string {
 
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
+
+/**
+ * Calendar-day distance between two "YYYY-MM-DD" strings.
+ * Positive when `b` is after `a`, negative when before, 0 when same day.
+ *
+ * Uses UTC midnight math — both day-keys are already timezone-normalized
+ * via `dayKeyInTimezone`, so subtracting their UTC anchors gives the
+ * correct number of calendar days.
+ */
+export function dayKeyDistance(a: string, b: string): number {
+  const aMs = Date.UTC(...parseDayKey(a));
+  const bMs = Date.UTC(...parseDayKey(b));
+  return Math.round((bMs - aMs) / (1000 * 60 * 60 * 24));
+}
+
+function parseDayKey(key: string): [number, number, number] {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!match) {
+    throw new Error(`Invalid dayKey: ${key}`);
+  }
+  return [Number(match[1]), Number(match[2]) - 1, Number(match[3])];
+}
