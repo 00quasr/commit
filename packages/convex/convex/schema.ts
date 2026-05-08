@@ -110,4 +110,21 @@ export default defineSchema({
     payload: v.any(),
     createdAt: v.number(),
   }).index("by_profile_created", ["profileId", "createdAt"]),
+
+  // Public marketing waitlist for the pre-beta site. Unauthenticated writes
+  // — see waitlist.add. emailLower powers idempotent dedupe.
+  waitlist: defineTable({
+    email: v.string(),
+    emailLower: v.string(),
+    source: v.optional(v.string()),
+    utm: v.optional(
+      v.object({
+        source: v.optional(v.string()),
+        medium: v.optional(v.string()),
+        campaign: v.optional(v.string()),
+      }),
+    ),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_email_lower", ["emailLower"]),
 });

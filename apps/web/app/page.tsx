@@ -1,12 +1,26 @@
+import { Footer } from "../components/sections/Footer";
+import { Hero } from "../components/sections/Hero";
+import { HowItWorks } from "../components/sections/HowItWorks";
+import { Nav } from "../components/sections/Nav";
+import { ProfileFeature } from "../components/sections/ProfileFeature";
+import { ReciprocityFeature } from "../components/sections/ReciprocityFeature";
+import { WaitlistCTA } from "../components/sections/WaitlistCTA";
+
+// LiveCount queries Convex per render; cap to once a minute per region.
+export const revalidate = 60;
+
 export default function Page() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-      <div className="max-w-xl">
-        <h1 className="text-6xl sm:text-7xl font-semibold tracking-tight mb-4">commit</h1>
-        <p className="text-2xl sm:text-3xl text-white/90 mb-2">Stop drifting. Start finishing.</p>
-        <p className="text-base text-white/50 font-mono mt-12">The drop is the proof.</p>
-      </div>
-      <footer className="absolute bottom-8 text-xs text-white/30 font-mono">beta soon</footer>
-    </main>
+    <>
+      <Nav />
+      <main>
+        <Hero />
+        <HowItWorks />
+        <ReciprocityFeature />
+        <ProfileFeature />
+        <WaitlistCTA />
+      </main>
+      <Footer />
+    </>
   );
 }

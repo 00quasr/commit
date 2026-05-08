@@ -3,8 +3,24 @@
 @theme {
   --color-bg: #050505;
   --color-fg: #ffffff;
+
+  /* Semantic text */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.72);
+  --color-text-tertiary: rgba(255, 255, 255, 0.48);
+  --color-text-muted: rgba(255, 255, 255, 0.32);
+
+  /* Surfaces */
+  --color-divide: rgba(255, 255, 255, 0.08);
+  --color-hairline: rgba(255, 255, 255, 0.06);
+  --color-block-elevated: rgba(255, 255, 255, 0.04);
+  --color-block-glass: rgba(255, 255, 255, 0.06);
+
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --tracking-display: -0.035em;
+  --leading-display: 1.08;
 }
 
 html,
@@ -15,6 +31,12 @@ body {
 
 body {
   font-family: var(--font-geist-sans), var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(255, 255, 255, 0.16);
 }
