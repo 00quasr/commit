@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { useDropTimer, useTimerRemaining } from "@/lib/dropTimer";
 
 const MAX_CAPTION = 100;
@@ -27,6 +28,8 @@ export default function Compose() {
   const habitId = useDropTimer((s) => s.habitId);
   const difficulty = useDropTimer((s) => s.difficulty);
   const photoUri = useDropTimer((s) => s.photoUri);
+  const voiceUri = useDropTimer((s) => s.voiceUri);
+  const setVoice = useDropTimer((s) => s.setVoice);
   const cancel = useDropTimer((s) => s.cancel);
   const remainingMs = useTimerRemaining();
 
@@ -64,6 +67,22 @@ export default function Compose() {
     });
   };
 
+  const uploadFile = async (uri: string, contentType: string): Promise<Id<"_storage">> => {
+    const uploadUrl = await generateUploadUrl();
+    const fileResp = await fetch(uri);
+    const blob = await fileResp.blob();
+    const uploadResp = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": blob.type || contentType },
+      body: blob,
+    });
+    if (!uploadResp.ok) {
+      throw new Error(`Upload failed: ${uploadResp.status}`);
+    }
+    const json = (await uploadResp.json()) as { storageId: Id<"_storage"> };
+    return json.storageId;
+  };
+
   const onSubmit = async () => {
     if (!habitId || !difficulty || busy) return;
     if (caption.length > MAX_CAPTION) return;
@@ -71,22 +90,16 @@ export default function Compose() {
     setError(null);
     try {
       let photoFileId: Id<"_storage"> | undefined;
+      let voiceFileId: Id<"_storage"> | undefined;
 
-      if (photoUri) {
+      if (photoUri || voiceUri) {
         setStage("uploading");
-        const uploadUrl = await generateUploadUrl();
-        const fileResp = await fetch(photoUri);
-        const blob = await fileResp.blob();
-        const uploadResp = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": blob.type || "image/jpeg" },
-          body: blob,
-        });
-        if (!uploadResp.ok) {
-          throw new Error(`Upload failed: ${uploadResp.status}`);
+        if (photoUri) {
+          photoFileId = await uploadFile(photoUri, "image/jpeg");
         }
-        const json = (await uploadResp.json()) as { storageId: Id<"_storage"> };
-        photoFileId = json.storageId;
+        if (voiceUri) {
+          voiceFileId = await uploadFile(voiceUri, "audio/m4a");
+        }
       }
 
       setStage("creating");
@@ -97,6 +110,7 @@ export default function Compose() {
         difficulty,
         visibility,
         ...(photoFileId !== undefined ? { photoFileId } : {}),
+        ...(voiceFileId !== undefined ? { voiceFileId } : {}),
       });
       cancel();
       router.dismissAll();
@@ -147,6 +161,9 @@ export default function Compose() {
           <Text style={[styles.charCount, captionOver && styles.charCountOver]}>
             {caption.length}/{MAX_CAPTION}
           </Text>
+
+          <Text style={styles.fieldLabel}>Voice memo</Text>
+          <VoiceRecorder uri={voiceUri} onChange={setVoice} />
 
           <Text style={styles.fieldLabel}>Tags</Text>
           <View style={styles.chipRow}>

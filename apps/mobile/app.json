@@ -22,6 +22,12 @@
         {
           "cameraPermission": "Allow commit to access your camera so you can take proof photos."
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow commit to access your microphone for 30-second voice memos on your drops."
+        }
       ]
     ],
     "experiments": {
