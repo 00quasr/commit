@@ -1,4 +1,10 @@
-import { calculateXP, levelFromXP, shouldLockFeed, streakAfterDrop } from "@commit/domain";
+import {
+  calculateXP,
+  dayKeyInTimezone,
+  levelFromXP,
+  shouldLockFeed,
+  streakAfterDrop,
+} from "@commit/domain";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
@@ -290,5 +296,79 @@ export const feedForUser = query({
     );
     const filtered = enriched.filter((e): e is NonNullable<typeof e> => e !== null);
     return { locked: false as const, drops: filtered };
+  },
+});
+
+/**
+ * Drop counts per dayKey for the last 365 days. Powers the GitHub-contribution-
+ * style heatmap on the profile screen. Returns only days with at least one drop;
+ * the client fills zeros for the remaining cells.
+ *
+ * No friendship gating — heatmaps are public-facing data (anyone with the
+ * profile URL can see the activity pattern). Per-drop visibility is honored
+ * elsewhere; the heatmap shows ALL drops including private (own profile) or
+ * just public + friends-tier (Phase 4 for visiting other profiles).
+ */
+export const heatmapForProfile = query({
+  args: { profileId: v.id("profiles") },
+  returns: v.array(v.object({ dayKey: v.string(), count: v.number() })),
+  handler: async (ctx, args) => {
+    const profile = await ctx.db.get(args.profileId);
+    if (!profile) return [];
+    const sinceMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
+    const sinceDayKey = dayKeyInTimezone(sinceMs, profile.timezone);
+    const drops = await ctx.db
+      .query("drops")
+      .withIndex("by_owner_day", (q) => q.eq("ownerId", args.profileId).gte("dayKey", sinceDayKey))
+      .collect();
+    const counts = new Map<string, number>();
+    for (const d of drops) {
+      counts.set(d.dayKey, (counts.get(d.dayKey) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([dayKey, count]) => ({ dayKey, count }));
+  },
+});
+
+/**
+ * Most recent drops by a profile, newest first. Used by the profile screen's
+ * "recent drops" list. Visibility filter:
+ *   - Caller viewing their own profile: all drops, including private.
+ *   - Caller viewing a friend's profile (Phase 4): public + friends-tier.
+ *   - Caller viewing a stranger: public only.
+ *
+ * Phase 3 ships only the own-profile case (`profileId === me._id`) — the
+ * full friendship-aware filter lands in Phase 4.
+ */
+export const recentForProfile = query({
+  args: { profileId: v.id("profiles"), limit: v.optional(v.number()) },
+  returns: v.array(enrichedDropShape),
+  handler: async (ctx, args) => {
+    const me = await requireCallerProfile(ctx);
+    const isOwnProfile = me._id === args.profileId;
+    const limit = args.limit ?? 20;
+
+    const drops = await ctx.db
+      .query("drops")
+      .withIndex("by_owner_created", (q) => q.eq("ownerId", args.profileId))
+      .order("desc")
+      .take(limit);
+
+    const visible = drops.filter((d) => {
+      if (isOwnProfile) return true;
+      if (d.visibility === "public") return true;
+      // Friends-tier requires friendship lookup — Phase 4.
+      return false;
+    });
+
+    const enriched = await Promise.all(
+      visible.map(async (drop) => {
+        const author = await ctx.db.get(drop.ownerId);
+        if (!author) return null;
+        const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
+        const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
+        return { drop, author, photoUrl, voiceUrl };
+      }),
+    );
+    return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
   },
 });
