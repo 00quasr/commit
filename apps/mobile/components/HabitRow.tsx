@@ -1,10 +1,11 @@
-import { colors, fonts } from "@commit/ui-tokens";
+import { fonts, semantic } from "@commit/ui-tokens";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export interface HabitRowProps {
   text: string;
   difficulty: "easy" | "medium" | "hard";
   cycleDays: number;
+  doneToday?: boolean;
   onPress: () => void;
 }
 
@@ -15,12 +16,20 @@ function cycleLabel(cycleDays: number): string {
   return `every ${cycleDays} days`;
 }
 
-export function HabitRow({ text, difficulty, cycleDays, onPress }: HabitRowProps) {
+export function HabitRow({
+  text,
+  difficulty,
+  cycleDays,
+  doneToday = false,
+  onPress,
+}: HabitRowProps) {
   return (
-    <Pressable style={styles.row} onPress={onPress}>
-      <View style={styles.checkbox} />
+    <Pressable style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]} onPress={onPress}>
+      <View style={[styles.checkbox, doneToday && styles.checkboxDone]}>
+        {doneToday && <Text style={styles.check}>✓</Text>}
+      </View>
       <View style={styles.body}>
-        <Text style={styles.text} numberOfLines={2}>
+        <Text style={[styles.text, doneToday && styles.textDone]} numberOfLines={2}>
           {text}
         </Text>
         <Text style={styles.meta}>
@@ -35,27 +44,42 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     gap: 14,
+    backgroundColor: semantic.bg,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: "#444",
+    borderColor: semantic.text.muted,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  body: {
-    flex: 1,
+  checkboxDone: {
+    backgroundColor: semantic.text.primary,
+    borderColor: semantic.text.primary,
   },
+  check: {
+    color: semantic.bg,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  body: { flex: 1 },
   text: {
-    color: colors.fg,
+    color: semantic.text.primary,
     fontSize: 17,
     fontFamily: fonts.sans,
+    lineHeight: 22,
+  },
+  textDone: {
+    color: semantic.text.tertiary,
+    textDecorationLine: "line-through",
   },
   meta: {
-    color: "#444",
+    color: semantic.text.tertiary,
     fontSize: 11,
     fontFamily: fonts.mono,
     marginTop: 4,

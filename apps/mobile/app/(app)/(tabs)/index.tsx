@@ -1,19 +1,20 @@
 import { api } from "@commit/convex/api";
-import { colors, fonts } from "@commit/ui-tokens";
+import { fonts, semantic } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Modal,
   Pressable,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BottomBar } from "@/components/BottomBar";
 import { HabitRow } from "@/components/HabitRow";
 import { useDropTimer } from "@/lib/dropTimer";
 
@@ -37,6 +38,16 @@ export default function Today() {
   const [draftCycle, setDraftCycle] = useState<number>(1);
   const [busy, setBusy] = useState(false);
 
+  const sections = useMemo(() => {
+    if (!dueHabits || !allHabits) return [];
+    const dueIds = new Set(dueHabits.map((h) => h._id));
+    const notDue = allHabits.filter((h) => !dueIds.has(h._id));
+    return [
+      { title: "Due today", data: dueHabits },
+      { title: "Not due today", data: notDue },
+    ].filter((s) => s.data.length > 0);
+  }, [dueHabits, allHabits]);
+
   const onAdd = async () => {
     const text = draftText.trim();
     if (!text || busy) return;
@@ -55,62 +66,64 @@ export default function Today() {
   if (dueHabits === undefined || allHabits === undefined) {
     return (
       <View style={[styles.root, styles.center]}>
-        <ActivityIndicator color={colors.fg} />
+        <ActivityIndicator color={semantic.text.primary} />
       </View>
     );
   }
 
-  const notDueCount = allHabits.length - dueHabits.length;
+  const isEmpty = allHabits.length === 0;
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Today</Text>
         <Text style={styles.subtitle}>
-          {dueHabits.length === 0
-            ? allHabits.length === 0
-              ? "Add your first commitment."
-              : "All caught up — nothing due today."
-            : `${dueHabits.length} due${notDueCount > 0 ? ` · ${notDueCount} not due today` : ""}`}
+          {isEmpty
+            ? "Add the first thing you want to keep doing."
+            : dueHabits.length === 0
+              ? "Nothing due today. Come back tomorrow."
+              : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
         </Text>
       </View>
 
-      <FlatList
-        data={dueHabits}
-        keyExtractor={(h) => h._id}
-        renderItem={({ item }) => (
-          <HabitRow
-            text={item.text}
-            difficulty={item.difficulty}
-            cycleDays={item.cycleDays}
-            onPress={() => {
-              startDropTimer(item._id, item.difficulty);
-              router.push("/drop/countdown");
-            }}
-          />
-        )}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyWrap}>
-            {allHabits.length === 0 ? (
-              <>
-                <Text style={styles.empty}>Nothing yet.</Text>
-                <Text style={styles.emptyHint}>Tap + to add a habit you want to keep.</Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.empty}>All caught up.</Text>
-                <Text style={styles.emptyHint}>Come back tomorrow.</Text>
-              </>
-            )}
-          </View>
-        )}
-        contentContainerStyle={dueHabits.length === 0 ? styles.listEmpty : styles.list}
-      />
+      {isEmpty ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyTitle}>Quiet start.</Text>
+          <Text style={styles.emptyHint}>Tap + to commit to your first habit.</Text>
+        </View>
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item._id}
+          renderSectionHeader={({ section }) => (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
+            </View>
+          )}
+          renderItem={({ item, section }) => {
+            const doneToday =
+              section.title === "Not due today" && item.lastDropDayKey !== undefined;
+            return (
+              <HabitRow
+                text={item.text}
+                difficulty={item.difficulty}
+                cycleDays={item.cycleDays}
+                doneToday={doneToday}
+                onPress={() => {
+                  if (section.title !== "Due today") return;
+                  startDropTimer(item._id, item.difficulty);
+                  router.push("/drop/countdown");
+                }}
+              />
+            );
+          }}
+          ItemSeparatorComponent={() => <View style={styles.sep} />}
+          contentContainerStyle={styles.list}
+          stickySectionHeadersEnabled={false}
+        />
+      )}
 
-      <Pressable style={styles.fab} onPress={() => setShowAdd(true)}>
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
+      <BottomBar onAdd={() => setShowAdd(true)} />
 
       <Modal visible={showAdd} animationType="slide" transparent>
         <View style={styles.modalRoot}>
@@ -123,7 +136,7 @@ export default function Today() {
               value={draftText}
               onChangeText={setDraftText}
               placeholder="What do you want to keep doing?"
-              placeholderTextColor="#555"
+              placeholderTextColor={semantic.text.muted}
               autoFocus
               maxLength={280}
               multiline
@@ -179,29 +192,52 @@ export default function Today() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: semantic.bg },
   center: { alignItems: "center", justifyContent: "center" },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
-  title: { color: colors.fg, fontSize: 36, fontFamily: fonts.sans, fontWeight: "700" },
-  subtitle: { color: "#666", fontSize: 14, fontFamily: fonts.sans, marginTop: 4 },
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
+  title: {
+    color: semantic.text.primary,
+    fontSize: 36,
+    fontFamily: fonts.sans,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    color: semantic.text.tertiary,
+    fontSize: 14,
+    fontFamily: fonts.sans,
+    marginTop: 4,
+  },
   list: { paddingBottom: 120 },
-  listEmpty: { flex: 1, justifyContent: "center" },
-  sep: { height: 1, backgroundColor: "#111", marginLeft: 58 },
-  emptyWrap: { alignItems: "center", paddingHorizontal: 32 },
-  empty: { color: colors.fg, fontSize: 18, fontFamily: fonts.sans },
-  emptyHint: { color: "#555", fontSize: 14, fontFamily: fonts.sans, marginTop: 8 },
-  fab: {
-    position: "absolute",
-    right: 20,
-    bottom: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.fg,
+  sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
+  sectionTitle: {
+    color: semantic.text.muted,
+    fontSize: 11,
+    fontFamily: fonts.mono,
+    letterSpacing: 1,
+  },
+  sep: { height: 1, backgroundColor: semantic.divide, marginLeft: 56 },
+  emptyWrap: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingBottom: 80,
   },
-  fabText: { color: colors.bg, fontSize: 28, fontWeight: "300", lineHeight: 32 },
+  emptyTitle: {
+    color: semantic.text.primary,
+    fontSize: 22,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+  },
+  emptyHint: {
+    color: semantic.text.tertiary,
+    fontSize: 14,
+    fontFamily: fonts.sans,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  // Sheet
   modalRoot: { flex: 1, justifyContent: "flex-end" },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
   sheet: {
@@ -212,25 +248,25 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
   },
   sheetTitle: {
-    color: colors.fg,
+    color: semantic.text.primary,
     fontSize: 18,
     fontFamily: fonts.sans,
     fontWeight: "600",
     marginBottom: 16,
   },
   input: {
-    color: colors.fg,
+    color: semantic.text.primary,
     fontSize: 18,
     fontFamily: fonts.sans,
     minHeight: 80,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: semantic.blockElevated,
     borderRadius: 12,
     textAlignVertical: "top",
   },
   fieldLabel: {
-    color: "#666",
+    color: semantic.text.tertiary,
     fontSize: 11,
     fontFamily: fonts.mono,
     textTransform: "uppercase",
@@ -244,28 +280,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: semantic.borderHairline,
   },
-  chipActive: { backgroundColor: colors.fg, borderColor: colors.fg },
-  chipText: { color: "#888", fontSize: 14, fontFamily: fonts.mono, textTransform: "uppercase" },
-  chipTextActive: { color: colors.bg },
+  chipActive: { backgroundColor: semantic.text.primary, borderColor: semantic.text.primary },
+  chipText: {
+    color: semantic.text.secondary,
+    fontSize: 14,
+    fontFamily: fonts.mono,
+    textTransform: "uppercase",
+  },
+  chipTextActive: { color: semantic.bg },
   sheetButtons: { flexDirection: "row", gap: 8, marginTop: 24 },
   cancel: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: semantic.borderHairline,
     alignItems: "center",
   },
-  cancelText: { color: "#888", fontSize: 16, fontFamily: fonts.sans },
+  cancelText: { color: semantic.text.secondary, fontSize: 16, fontFamily: fonts.sans },
   add: {
     flex: 2,
     paddingVertical: 14,
     borderRadius: 10,
-    backgroundColor: colors.fg,
+    backgroundColor: semantic.text.primary,
     alignItems: "center",
   },
   addDisabled: { opacity: 0.4 },
-  addText: { color: colors.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "600" },
+  addText: { color: semantic.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "600" },
 });
