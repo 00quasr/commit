@@ -16,6 +16,7 @@ import type * as reactions from "../reactions.js";
 import type * as todos from "../todos.js";
 import type * as userStats from "../userStats.js";
 import type * as views from "../views.js";
+import type * as waitlist from "../waitlist.js";
 
 import type {
   ApiFromModules,
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   todos: typeof todos;
   userStats: typeof userStats;
   views: typeof views;
+  waitlist: typeof waitlist;
 }>;
 
 /**
