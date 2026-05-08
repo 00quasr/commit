@@ -9,9 +9,9 @@
 
 ## 1. The One-Sentence Pitch
 
-**commit is a publicly available daily-feed app where indie builders post photo+voice proof of what they shipped today, see what their accepted friends did, and react — with a hard rule: no proof, no feed access. Anyone can sign up; profiles are public for discoverability, but real visibility runs through mutual-accept friendships.**
+**commit is a publicly available habit-tracker with BeReal-style proof. You set goals — code daily, gym every other day, language practice on weekdays — and prove you did them with a photo+voice drop. See your accepted friends' drops in a reciprocity-locked feed; show up on your own public profile with a GitHub-contribution-style heatmap of every drop you've shipped.**
 
-Think Strava for knowledge work and life goals, with BeReal's authenticity mechanic and mutual-friend social graph, distributed openly via the App Store.
+Think Strava + BeReal for any goal worth committing to. Anyone can sign up — indie builders, fitness people, language learners, students, makers — but real visibility runs through mutual-accept friendships, distributed openly via the App Store.
 
 ---
 
@@ -43,27 +43,30 @@ That is the gap. commit closes it.
 
 ### 3.1 What commit is
 
-A publicly distributed mobile-first social app where every entry is a **drop**: a small proof that you did the thing you said you would do today. A drop contains:
+A publicly distributed mobile-first habit tracker with social proof. The two units of the product:
 
-- A short text (what you committed to and finished)
-- A dual-camera photo (front + back, simultaneously, BeReal-style)
-- An optional 30-second voice memo
-- Tags (`@build`, `@health`, `@create`, etc.)
-- Time spent and XP earned
-- A timestamp and optional location
-- A visibility level: `public` (anyone with the profile URL), `friends` (accepted friends only — the default), or `private` (just-me, counts for streak/XP)
+- A **habit** is a recurring commitment with a cycle: daily ("code 1h"), every-2-days ("gym"), weekly ("call mom"). Each habit has a difficulty (easy / medium / hard) that drives XP. You can have many habits; each has its own cycle but all roll up into one global daily streak.
+- A **drop** is the proof that you did a habit on a given day. A drop contains:
+  - A short caption (what you committed to and finished)
+  - A dual-camera photo (front + back, simultaneously, BeReal-style)
+  - An optional 30-second voice memo
+  - Tags (`@build`, `@health`, `@create`, `@learn`, etc.)
+  - The habit it counts toward (optional — ad-hoc drops without a habit are also fine)
+  - XP earned (scales with difficulty + current streak)
+  - A timestamp and optional location
+  - Visibility: `public` (anyone with the profile URL), `friends` (accepted friends only — the default), or `private` (just-me, counts for streak/XP)
 
 Drops appear in your home feed, populated by your **accepted friends** — people you've mutually friended (request → accept, BeReal-style). Friends react with selfie-videos or short voice notes.
 
-Each user has a public profile page at `commit.app/{username}` that shows display name, avatar, current streak, total XP, and **public** drops only — friends-only and private drops are not exposed to non-friends. This is what makes `commit` a public app: anyone can sign up, browse profiles, and request friendships, even before sending their first drop.
+Each user has a public profile page at `commit.app/{username}` that shows display name, avatar, current streak, total XP, **public** drops only, and a GitHub-contribution-style heatmap of every drop you've shipped. Friends-only and private drops are not exposed to non-friends. This is what makes `commit` a public app: anyone can sign up, browse profiles, and request friendships, even before sending their first drop.
 
-The product has **one hard rule**: _if you have not dropped today, you cannot see your home feed of friends' drops today_. The feed is locked behind your own commitment. Public profile pages remain browsable regardless. This is the reciprocity-lock mechanic that BeReal proved works.
+The product has **one hard rule**: _if you have not dropped today, you cannot see your home feed of friends' drops today_. The feed is locked behind your own commitment. Public profile pages remain browsable regardless. This is the reciprocity-lock mechanic that BeReal proved works — applied to habit accountability.
 
 ### 3.2 What commit is NOT
 
 This is as important as what it is. The following are explicitly out of scope, both for V1 and likely forever:
 
-- **Not a todo app for organizing your week.** No projects, no Kanban, no Eisenhower matrices. You write a todo this morning, you finish it, you drop. That is the scope of "todo" in commit. Use Things or paper for serious planning.
+- **Not a todo app for organizing your week.** No projects, no Kanban, no Eisenhower matrices. Habits are recurring commitments, not one-off tasks. Use Things or paper for serious planning.
 - **Not a chat / DM platform.** Reactions yes. Conversations no. Kept friction in the right places.
 - **Not an open social network.** The social graph is mutual-accept friendships, not one-way follows. Public profiles exist for discoverability, but real content visibility runs through accepted friendships. No "discover-the-world" algorithmic feed in V1.
 - **Not for teams or work.** No org accounts, no manager dashboards, no Jira integrations. This is personal.
@@ -73,15 +76,15 @@ This is as important as what it is. The following are explicitly out of scope, b
 
 A typical day for a user:
 
-1. **Morning, opens app.** Lands on `/today` tab. Writes 3 todos for the day in private. Optionally has Claude break a hard one into subtasks.
-2. **During the day, finishes a todo.** Taps the check.
+1. **Morning, opens app.** Lands on `/today` tab. Sees habits **due today** based on each habit's cycle (daily habits show every day; every-2-days habits show every other day; etc.). Add a new habit at any time with `+`.
+2. **During the day, does the habit.** Taps the habit's checkbox.
 3. **App prompts: "Drop it. 60 seconds."** A countdown starts. Camera opens, front+back simultaneously. User takes the proof.
 4. **Optional 30-second voice memo.** "Just shipped this thing, here is why I am stoked."
 5. **Caption + tags.** 100 character limit. Auto-suggested tags by Claude.
 6. **Drop posts to accepted friends.** Push notifications fire to friends. If the drop is marked `public`, it is also visible on the user's profile page at `commit.app/{username}` to anyone with the URL.
 7. **Friends see the drop.** They react with selfie-video or voice. User gets a notification per reaction.
-8. **End of day.** User has dropped 1-3 times. Streak continues.
-9. **If user did not drop today.** Their home feed of friends' drops is locked tomorrow morning until they drop something. Public profile pages remain browsable. Streak breaks at midnight (in their timezone).
+8. **End of day.** User has dropped 1-3 times across their due habits. Global streak continues.
+9. **If user did not drop today (any habit).** Their home feed of friends' drops is locked tomorrow morning until they drop something. Public profile pages remain browsable. Streak breaks at midnight (in their timezone).
 
 That is the loop. Everything else in the product is in service of this loop.
 
@@ -89,9 +92,11 @@ That is the loop. Everything else in the product is in service of this loop.
 
 ## 4. Target User
 
+The product itself works for **anyone with goals worth committing to** — coders, lifters, language learners, writers, students, founders, anyone with a habit they want to keep. The audience isn't narrow; the cold-start cluster is.
+
 ### 4.1 V1 beta cluster (the first 100 users)
 
-**Indie builders and Builders-in-Public on X (Twitter).** Specifically:
+**Indie builders and Builders-in-Public on X (Twitter).** This is the _seeding_ group, not the _target audience_ — they're who we cold-start with so the network feels alive on day one. Specifically:
 
 - Solo founders shipping side projects
 - Bootstrapped SaaS founders
@@ -99,13 +104,15 @@ That is the loop. Everything else in the product is in service of this loop.
 - Newsletter writers, course creators, info-product builders
 - People with 500-50k followers on X who already post about their daily work
 
-**Why this cluster:**
+**Why this cluster for cold-start:**
 
 - **They already perform the behavior.** They post their day on X. commit gives them a better, more authenticated container for the same impulse.
 - **They are tightly clustered socially.** They all follow each other. They reply to each other. Network effects are local and fast.
 - **They believe in the product wedge.** "Accountability with proof" is a value most of them already hold.
 - **The founder is in the cluster.** Keanu is on X, building in public, with peers like Melwin, Patrick, Tom in the same scene. Initial 20 users come from existing relationships, not paid acquisition.
 - **They evangelize.** Indie builders post about every tool they try. Free distribution.
+
+Once the mechanic is proven here, the same product serves anyone with daily/cyclical commitments — fitness, language, study, creative practice. No re-architecting required: cycles are core, audience is incidental.
 
 ### 4.2 V2+ expansion
 
@@ -280,11 +287,11 @@ The schema centers on these core entities:
 
 - **profiles** — extends Clerk user with username, `usernameLower` (case-insensitive uniqueness for public URLs), avatar, timezone, bio. Indexed by `clerkUserId` and `usernameLower`.
 - **friendships** — bidirectional mutual-accept, with status (pending / accepted). Stored as a single canonical row per pair (`pairLow < pairHigh`).
-- **todos** — private daily commitments, owned by one user
-- **drops** — the proof posts; reference todo, photo, voice memo, tags. Three visibility tiers: `public`, `friends`, `private`.
+- **habits** — recurring commitment definitions. Each has a `cycleDays` (1 = daily, 2 = every other day, 7 = weekly, up to 31), `createdDayKey`, optional `lastDropDayKey` (denormalized for fast dueToday queries), and `archived` (soft delete). Difficulty drives XP per drop.
+- **drops** — the proof posts; optionally reference a habit (ad-hoc drops also allowed), photo, voice memo, tags. Three visibility tiers: `public`, `friends`, `private`. Tied to a `dayKey` in the owner's timezone — that's what the reciprocity-lock check matches against.
 - **reactions** — emoji or selfie-video reaction on a drop
 - **views** — who has viewed which drop (BeReal-style "seen by" list)
-- **userStats** — denormalized streak, XP, level for fast reads
+- **userStats** — denormalized **global** streak, XP, level for fast reads. Streak is one global counter across all drops — not per-habit. Drop on any habit today → streak +1; miss a day with no grace card → reset to 1.
 - **activityEvents** — audit log of XP gains, level-ups, streak milestones
 
 Full schema lives in `/packages/convex/convex/schema.ts`.

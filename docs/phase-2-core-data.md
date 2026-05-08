@@ -1,11 +1,13 @@
 # Phase 2 — Core data & friendships
 
-**Status**: ⏳ Next
+**Status**: ✅ Done (then pivoted in Phase 2.5)
 **Estimated days**: 8–12
 **Depends on**: Phase 1 done (commit `03da8c8`)
 **Goal**: Every Phase 2+ data table, mutation, query, and domain rule exists, is type-safe end-to-end, and is unit-testable through the Convex dashboard. **No mobile UI yet** — that lands in Phase 3.
 
 Maps to VISION.md §6.4 (data model) and §8 Phase 2.
+
+> **⚠️ Post-Phase-2.5 update (2026-05-08).** The `todos` table described below was replaced by `habits` (recurring definitions with `cycleDays` + `createdDayKey` + `archived`), and `drops.todoId` was renamed `drops.habitId`. Streak math is unchanged (still global daily). The original Phase 2 design is preserved below for history; for the current schema and functions, see `packages/convex/convex/{habits,drops}.ts` and `docs/phase-3-drop-flow.md`.
 
 ---
 
