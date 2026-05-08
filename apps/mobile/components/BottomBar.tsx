@@ -1,36 +1,27 @@
 import { fonts } from "@commit/ui-tokens";
-import { theme } from "@/lib/theme";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { theme } from "@/lib/theme";
 
 export interface BottomBarProps {
   onAdd: () => void;
 }
 
 /**
- * Floating bottom-center action bar — replaces the old corner FAB.
- * Two slots:
- *   - "+"   adds a new habit (opens the bottom sheet)
- *   - "🎤"  placeholder for the voice-only quick-drop coming in Phase 4
- *           (rendered dimmed with no handler in V1)
+ * Floating bottom-center "+" button. Single-action V1 — voice-only quick
+ * drop is Phase 4 and will get its own affordance somewhere else.
  */
 export function BottomBar({ onAdd }: BottomBarProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.wrap, { bottom: insets.bottom + 12 }]} pointerEvents="box-none">
-      <View style={styles.bar}>
-        <Pressable
-          style={({ pressed }) => [styles.btn, pressed && { opacity: 0.6 }]}
-          onPress={onAdd}
-          hitSlop={8}
-        >
-          <Text style={styles.plusIcon}>+</Text>
-        </Pressable>
-        <View style={styles.divider} />
-        <View style={[styles.btn, styles.btnDisabled]}>
-          <Text style={styles.micIcon}>🎤</Text>
-        </View>
-      </View>
+      <Pressable
+        style={({ pressed }) => [styles.btn, pressed && { opacity: 0.7 }]}
+        onPress={onAdd}
+        hitSlop={8}
+      >
+        <Text style={styles.plusIcon}>+</Text>
+      </Pressable>
     </View>
   );
 }
@@ -42,31 +33,23 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
   },
-  bar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.blockGlass,
-    borderColor: theme.borderHairline,
-    borderWidth: 1,
-    borderRadius: 28,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-  },
   btn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.text.primary,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
-  btnDisabled: { opacity: 0.32 },
   plusIcon: {
-    color: theme.text.primary,
-    fontSize: 26,
-    lineHeight: 28,
+    color: theme.bg,
+    fontSize: 28,
+    lineHeight: 30,
     fontFamily: fonts.sans,
     fontWeight: "300",
   },
-  micIcon: { fontSize: 18 },
-  divider: { width: 1, height: 24, backgroundColor: theme.divide, marginHorizontal: 4 },
 });

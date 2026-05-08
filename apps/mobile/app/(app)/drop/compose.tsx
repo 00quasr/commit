@@ -50,7 +50,7 @@ export default function Compose() {
   useEffect(() => {
     if (remainingMs !== null && remainingMs <= 0) {
       cancel();
-      router.dismiss();
+      router.dismissAll();
     }
   }, [remainingMs, cancel]);
 
@@ -109,7 +109,7 @@ export default function Compose() {
         ...(voiceFileId !== undefined ? { voiceFileId } : {}),
       });
       cancel();
-      router.dismiss();
+      router.dismissAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Drop failed");
     } finally {

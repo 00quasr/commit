@@ -18,7 +18,6 @@ import Swipeable from "react-native-gesture-handler/Swipeable";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
 import { HabitRow } from "@/components/HabitRow";
-import { useDropTimer } from "@/lib/dropTimer";
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -33,7 +32,6 @@ export default function Today() {
   const allHabits = useQuery(api.habits.list, {});
   const createHabit = useMutation(api.habits.create);
   const archiveHabit = useMutation(api.habits.archive);
-  const startDropTimer = useDropTimer((s) => s.start);
 
   const [showAdd, setShowAdd] = useState(false);
   const [draftText, setDraftText] = useState("");
@@ -124,11 +122,7 @@ export default function Today() {
                   difficulty={item.difficulty}
                   cycleDays={item.cycleDays}
                   doneToday={doneToday}
-                  onPress={() => {
-                    if (section.title !== "Due today") return;
-                    startDropTimer(item._id, item.difficulty);
-                    router.push("/drop/countdown");
-                  }}
+                  onPress={() => router.push(`/habit/${item._id}`)}
                 />
               </Swipeable>
             );

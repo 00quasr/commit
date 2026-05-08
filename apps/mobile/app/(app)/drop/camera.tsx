@@ -22,7 +22,7 @@ export default function CameraScreen() {
   useEffect(() => {
     if (remainingMs !== null && remainingMs <= 0) {
       cancel();
-      router.dismiss();
+      router.dismissAll();
     }
   }, [remainingMs, cancel]);
 
@@ -59,7 +59,7 @@ export default function CameraScreen() {
 
   const onCancel = () => {
     cancel();
-    router.dismiss();
+    router.dismissAll();
   };
 
   const seconds = remainingMs === null ? 0 : Math.ceil(remainingMs / 1000);
