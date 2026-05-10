@@ -32,7 +32,7 @@ export function HowItWorks() {
           {STEPS.map((s) => (
             <div
               key={s.n}
-              className="flex flex-col gap-4 rounded-2xl border border-hairline bg-block-elevated p-6"
+              className="flex flex-col gap-4 rounded-2xl border border-hairline bg-block-elevated p-6 transition hover:border-white/15 hover:bg-white/[0.06]"
             >
               <Glass className="px-3 py-1">
                 <span className="font-mono text-[11px] text-text-secondary">{s.n}</span>

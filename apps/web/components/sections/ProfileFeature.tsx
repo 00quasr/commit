@@ -1,13 +1,16 @@
 import { Section } from "../Section";
 import { Body, Eyebrow, H2 } from "../Type";
+import { MockFrame } from "../MockFrame";
 import { ProfileMock } from "../mocks/ProfileMock";
 
 export function ProfileFeature() {
   return (
-    <Section>
+    <Section id="profile">
       <div className="grid gap-14 md:grid-cols-[1.1fr_1fr] md:items-center">
         <div className="flex justify-center md:order-1">
-          <ProfileMock />
+          <MockFrame>
+            <ProfileMock />
+          </MockFrame>
         </div>
         <div className="flex max-w-xl flex-col gap-5 md:order-2">
           <Eyebrow>Public proof</Eyebrow>
