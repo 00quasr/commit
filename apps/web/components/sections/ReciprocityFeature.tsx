@@ -1,10 +1,11 @@
 import { Section } from "../Section";
 import { Body, Eyebrow, H2 } from "../Type";
+import { MockFrame } from "../MockFrame";
 import { FeedCardMock } from "../mocks/FeedCardMock";
 
 export function ReciprocityFeature() {
   return (
-    <Section>
+    <Section id="reciprocity">
       <div className="grid gap-14 md:grid-cols-[1fr_1.1fr] md:items-center">
         <div className="flex max-w-xl flex-col gap-5">
           <Eyebrow>The reciprocity lock</Eyebrow>
@@ -18,8 +19,12 @@ export function ReciprocityFeature() {
           </Body>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:gap-6">
-          <FeedCardMock locked username="you" caption="" className="opacity-90" />
-          <FeedCardMock username="riley" caption="finally fixed the migration." />
+          <MockFrame>
+            <FeedCardMock locked username="you" caption="" className="opacity-90" />
+          </MockFrame>
+          <MockFrame>
+            <FeedCardMock username="riley" caption="finally fixed the migration." />
+          </MockFrame>
         </div>
       </div>
     </Section>

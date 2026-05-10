@@ -23,10 +23,16 @@
   --leading-display: 1.08;
 }
 
+html {
+  scroll-padding-top: 4rem;
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   background: var(--color-bg);
   color: var(--color-fg);
+  overflow-x: clip;
 }
 
 body {
@@ -38,5 +44,5 @@ body {
 }
 
 ::selection {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
 }
