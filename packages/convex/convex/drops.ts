@@ -1,10 +1,4 @@
-import {
-  calculateXP,
-  dayKeyInTimezone,
-  levelFromXP,
-  shouldLockFeed,
-  streakAfterDrop,
-} from "@commit/domain";
+import { dayKeyInTimezone, shouldLockFeed, streakAfterDrop } from "@commit/domain";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
@@ -40,7 +34,6 @@ const dropShape = v.object({
   caption: v.string(),
   tags: v.array(v.string()),
   difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
-  xpAwarded: v.number(),
   photoFileId: v.optional(v.id("_storage")),
   voiceFileId: v.optional(v.id("_storage")),
   dayKey: v.string(),
@@ -129,8 +122,6 @@ export const create = mutation({
 
     const previousStreak = stats?.streak ?? 0;
     const previousLongest = stats?.longestStreak ?? 0;
-    const previousTotalXp = stats?.totalXp ?? 0;
-    const previousLevel = stats?.level ?? 0;
     const previousGraceCards = stats?.graceCardsAvailable ?? 0;
     const previousTotalDrops = stats?.totalDrops ?? 0;
     const lastDropDayKey = stats?.lastDropDayKey;
@@ -143,9 +134,6 @@ export const create = mutation({
       graceCardsAvailable: previousGraceCards,
     });
 
-    const xpAwarded = calculateXP(args.difficulty, streakResult.newStreak);
-    const newTotalXp = previousTotalXp + xpAwarded;
-    const newLevel = levelFromXP(newTotalXp);
     const newLongestStreak = Math.max(previousLongest, streakResult.newStreak);
 
     // Grace card economics: hold at most 1; earn at the 6→7 streak transition,
@@ -167,7 +155,6 @@ export const create = mutation({
       caption: args.caption,
       tags,
       difficulty: args.difficulty,
-      xpAwarded,
       ...(args.photoFileId !== undefined ? { photoFileId: args.photoFileId } : {}),
       ...(args.voiceFileId !== undefined ? { voiceFileId: args.voiceFileId } : {}),
       dayKey,
@@ -184,8 +171,6 @@ export const create = mutation({
 
     // Upsert userStats (denormalized for fast feed/profile reads).
     const statsPatch = {
-      totalXp: newTotalXp,
-      level: newLevel,
       streak: streakResult.newStreak,
       longestStreak: newLongestStreak,
       graceCardsAvailable: newGraceCards,
@@ -199,23 +184,14 @@ export const create = mutation({
       await ctx.db.insert("userStats", { profileId: me._id, ...statsPatch });
     }
 
-    // Activity events. Always emit drop_created. Conditionally emit level_up,
+    // Activity events. Always emit drop_created. Conditionally emit
     // streak_milestone, grace_card_earned, grace_card_consumed.
     await ctx.db.insert("activityEvents", {
       profileId: me._id,
       kind: "drop_created",
-      payload: { dropId, xpAwarded, dayKey, streakAfter: streakResult.newStreak },
+      payload: { dropId, dayKey, streakAfter: streakResult.newStreak },
       createdAt: now,
     });
-
-    if (newLevel > previousLevel) {
-      await ctx.db.insert("activityEvents", {
-        profileId: me._id,
-        kind: "level_up",
-        payload: { fromLevel: previousLevel, toLevel: newLevel, totalXp: newTotalXp },
-        createdAt: now,
-      });
-    }
 
     if (
       STREAK_MILESTONES.has(streakResult.newStreak) &&
