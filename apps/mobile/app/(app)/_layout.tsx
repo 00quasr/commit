@@ -10,6 +10,14 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="habit/[id]" options={{ animation: "slide_from_right" }} />
       <Stack.Screen
+        name="profile"
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+          gestureEnabled: true,
+        }}
+      />
+      <Stack.Screen
         name="drop"
         options={{
           presentation: "modal",

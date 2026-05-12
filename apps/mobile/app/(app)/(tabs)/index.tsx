@@ -2,6 +2,7 @@ import { api } from "@commit/convex/api";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -28,6 +29,7 @@ const CYCLE_PRESETS: Array<{ label: string; days: number }> = [
 ];
 
 export default function Today() {
+  const me = useQuery(api.profiles.me);
   const dueHabits = useQuery(api.habits.dueToday, {});
   const allHabits = useQuery(api.habits.list, {});
   const createHabit = useMutation(api.habits.create);
@@ -78,7 +80,24 @@ export default function Today() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Today</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>Today</Text>
+          <Pressable
+            onPress={() => router.push("/profile")}
+            style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
+            hitSlop={8}
+          >
+            {me?.avatarUrl ? (
+              <Image source={{ uri: me.avatarUrl }} style={styles.avatar} contentFit="cover" />
+            ) : (
+              <View style={[styles.avatar, styles.avatarFallback]}>
+                <Text style={styles.avatarLetter}>
+                  {me?.username?.charAt(0).toUpperCase() ?? "?"}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
         <Text style={styles.subtitle}>
           {isEmpty
             ? "Add the first thing you want to keep doing."
@@ -208,6 +227,21 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   center: { alignItems: "center", justifyContent: "center" },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  avatarButton: {},
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.blockElevated },
+  avatarFallback: { alignItems: "center", justifyContent: "center" },
+  avatarLetter: {
+    color: theme.text.primary,
+    fontSize: 15,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+  },
   title: {
     color: theme.text.primary,
     fontSize: 36,

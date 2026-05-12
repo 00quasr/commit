@@ -5,6 +5,7 @@ import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useQuery } from "convex/react";
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { Fragment, useMemo } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -46,6 +47,16 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
+      <View style={styles.topBar}>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.6 }]}
+          hitSlop={12}
+        >
+          <Text style={styles.backText}>✕</Text>
+        </Pressable>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.headerRow}>
           {me.avatarUrl ? (
@@ -114,7 +125,16 @@ function Stat({ label, value }: { label: string; value: number }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   center: { alignItems: "center", justifyContent: "center" },
-  scroll: { paddingTop: 16, paddingBottom: 80 },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  backButton: { padding: 4 },
+  backText: { color: theme.text.tertiary, fontSize: 18 },
+  scroll: { paddingTop: 8, paddingBottom: 80 },
   placeholder: { color: theme.text.muted, fontSize: 14, fontFamily: fonts.mono },
   headerRow: {
     flexDirection: "row",
