@@ -16,18 +16,6 @@ export function ProfileMock({ className = "" }: { className?: string }) {
       </div>
 
       <div>
-        <div className="mb-2 flex items-center justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-text-tertiary">
-            Level 4
-          </span>
-          <span className="font-mono text-[10px] text-text-tertiary">320 / 500 xp</span>
-        </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
-          <div className="h-full w-[64%] rounded-full bg-white/60" />
-        </div>
-      </div>
-
-      <div>
         <div className="mb-3 flex items-center justify-between">
           <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-text-tertiary">
             Last 26 weeks
