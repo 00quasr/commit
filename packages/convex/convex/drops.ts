@@ -11,6 +11,7 @@ import {
   countTodaysFriendDrops,
   dayKeyForCaller,
   fetchFriendDropsToday,
+  fetchHeatmapForProfile,
   hasDroppedToday,
   requireCallerProfile,
 } from "./_helpers";
@@ -63,6 +64,8 @@ const profileShape = v.object({
   createdAt: v.number(),
 });
 
+const heatmapEntryShape = v.object({ dayKey: v.string(), count: v.number() });
+
 const enrichedDropShape = v.object({
   drop: dropShape,
   author: profileShape,
@@ -70,6 +73,8 @@ const enrichedDropShape = v.object({
   // from the mobile client; URLs are signed and expire (Convex default ~1h).
   photoUrl: v.union(v.string(), v.null()),
   voiceUrl: v.union(v.string(), v.null()),
+  // Year-long drop heatmap for the author — powers the MiniHeatmap in DropCard.
+  authorHeatmap: v.array(heatmapEntryShape),
 });
 
 const MAX_CAPTION = 100;
@@ -296,13 +301,29 @@ export const feedForUser = query({
         .collect(),
     ]);
     const allDrops = [...friendDrops, ...ownDrops].sort((a, b) => b.createdAt - a.createdAt);
+
+    // Fetch heatmap once per unique author to avoid redundant DB reads.
+    const authorIds = [...new Set(allDrops.map((d) => d.ownerId))];
+    const heatmapByAuthor = new Map<string, { dayKey: string; count: number }[]>();
+    await Promise.all(
+      authorIds.map(async (authorId) => {
+        const profile = await ctx.db.get(authorId);
+        if (!profile) return;
+        heatmapByAuthor.set(
+          authorId,
+          await fetchHeatmapForProfile(ctx, authorId, profile.timezone),
+        );
+      }),
+    );
+
     const enriched = await Promise.all(
       allDrops.map(async (drop) => {
         const author = await ctx.db.get(drop.ownerId);
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
-        return { drop, author, photoUrl, voiceUrl };
+        const authorHeatmap = heatmapByAuthor.get(drop.ownerId) ?? [];
+        return { drop, author, photoUrl, voiceUrl, authorHeatmap };
       }),
     );
     const filtered = enriched.filter((e): e is NonNullable<typeof e> => e !== null);
@@ -371,13 +392,18 @@ export const recentForProfile = query({
       return false;
     });
 
+    const profileDoc = await ctx.db.get(args.profileId);
+    const authorHeatmap = profileDoc
+      ? await fetchHeatmapForProfile(ctx, args.profileId, profileDoc.timezone)
+      : [];
+
     const enriched = await Promise.all(
       visible.map(async (drop) => {
         const author = await ctx.db.get(drop.ownerId);
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
-        return { drop, author, photoUrl, voiceUrl };
+        return { drop, author, photoUrl, voiceUrl, authorHeatmap };
       }),
     );
     return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
