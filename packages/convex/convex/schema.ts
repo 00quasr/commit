@@ -11,8 +11,6 @@ const friendshipStatus = v.union(v.literal("pending"), v.literal("accepted"));
 
 const activityKind = v.union(
   v.literal("drop_created"),
-  v.literal("xp_gained"),
-  v.literal("level_up"),
   v.literal("streak_milestone"),
   v.literal("grace_card_earned"),
   v.literal("grace_card_consumed"),
@@ -58,7 +56,6 @@ export default defineSchema({
     caption: v.string(),
     tags: v.array(v.string()),
     difficulty,
-    xpAwarded: v.number(),
     photoFileId: v.optional(v.id("_storage")),
     voiceFileId: v.optional(v.id("_storage")),
     dayKey: v.string(),
@@ -102,8 +99,6 @@ export default defineSchema({
 
   userStats: defineTable({
     profileId: v.id("profiles"),
-    totalXp: v.number(),
-    level: v.number(),
     streak: v.number(),
     longestStreak: v.number(),
     graceCardsAvailable: v.number(),

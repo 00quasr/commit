@@ -35,7 +35,7 @@ afterEach(() => {
 });
 
 describe("drops.create — basic", () => {
-  test("first-ever drop: streak=1, xpAwarded=base, userStats inserted", async () => {
+  test("first-ever drop: streak=1, userStats inserted", async () => {
     const t = makeTest();
     const aliceId = await seedAlice(t);
     vi.useFakeTimers().setSystemTime(new Date("2026-05-07T12:00:00Z"));
@@ -45,7 +45,6 @@ describe("drops.create — basic", () => {
     const drop = await t.run((ctx) => ctx.db.get(dropId));
     expect(drop?.ownerId).toBe(aliceId);
     expect(drop?.dayKey).toBe("2026-05-07");
-    expect(drop?.xpAwarded).toBe(60); // medium @ streak 1 → multiplier 1.0
     expect(drop?.visibility).toBe("friends");
     expect(drop?.reactionCount).toBe(0);
     expect(drop?.viewCount).toBe(0);
@@ -57,8 +56,6 @@ describe("drops.create — basic", () => {
         .unique(),
     );
     expect(stats?.streak).toBe(1);
-    expect(stats?.totalXp).toBe(60);
-    expect(stats?.level).toBe(1); // floor(sqrt(60/50)) = 1
     expect(stats?.totalDrops).toBe(1);
     expect(stats?.lastDropDayKey).toBe("2026-05-07");
     expect(stats?.graceCardsAvailable).toBe(0);
@@ -125,8 +122,8 @@ describe("drops.create — basic", () => {
 
     await t.withIdentity(asAlice).mutation(api.drops.create, baseDropArgs);
     const events = await t.run((ctx) => ctx.db.query("activityEvents").collect());
-    expect(events).toHaveLength(2); // drop_created + level_up (60 XP → level 1 from 0)
-    expect(events.map((e) => e.kind).sort()).toEqual(["drop_created", "level_up"]);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("drop_created");
   });
 });
 
@@ -208,8 +205,6 @@ describe("drops.create — streak rules", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("userStats", {
         profileId: aliceId,
-        totalXp: 600,
-        level: 3,
         streak: 10,
         longestStreak: 10,
         graceCardsAvailable: 1,

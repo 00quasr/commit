@@ -2,12 +2,14 @@ import { api } from "@commit/convex/api";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
   Pressable,
+  ScrollView,
   SectionList,
   StyleSheet,
   Text,
@@ -17,6 +19,7 @@ import {
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
+import { Heatmap } from "@/components/Heatmap";
 import { HabitRow } from "@/components/HabitRow";
 
 type Difficulty = "easy" | "medium" | "hard";
@@ -28,6 +31,9 @@ const CYCLE_PRESETS: Array<{ label: string; days: number }> = [
 ];
 
 export default function Today() {
+  const me = useQuery(api.profiles.me);
+  const stats = useQuery(api.userStats.forCaller, {});
+  const heatmapData = useQuery(api.drops.heatmapForProfile, me ? { profileId: me._id } : "skip");
   const dueHabits = useQuery(api.habits.dueToday, {});
   const allHabits = useQuery(api.habits.list, {});
   const createHabit = useMutation(api.habits.create);
@@ -73,29 +79,63 @@ export default function Today() {
   }
 
   const isEmpty = allHabits.length === 0;
+  const atMax = allHabits.length >= 3;
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Today</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>Today</Text>
+          <Pressable
+            onPress={() => router.push("/profile")}
+            style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
+            hitSlop={8}
+          >
+            {me?.avatarUrl ? (
+              <Image source={{ uri: me.avatarUrl }} style={styles.avatar} contentFit="cover" />
+            ) : (
+              <View style={[styles.avatar, styles.avatarFallback]}>
+                <Text style={styles.avatarLetter}>
+                  {me?.username?.charAt(0).toUpperCase() ?? "?"}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
         <Text style={styles.subtitle}>
           {isEmpty
             ? "Add the first thing you want to keep doing."
-            : dueHabits.length === 0
-              ? "Nothing due today. Come back tomorrow."
-              : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
+            : atMax
+              ? "Max. 3 habits. Archive one to add a new one."
+              : dueHabits.length === 0
+                ? "Nothing due today. Come back tomorrow."
+                : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
         </Text>
       </View>
 
       {isEmpty ? (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyTitle}>Quiet start.</Text>
-          <Text style={styles.emptyHint}>Tap + to commit to your first habit.</Text>
-        </View>
+        <ScrollView contentContainerStyle={styles.emptyScroll}>
+          <StatsAndHeatmap
+            stats={stats}
+            heatmapData={heatmapData ?? []}
+            timezone={me?.timezone ?? "UTC"}
+          />
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyTitle}>Quiet start.</Text>
+            <Text style={styles.emptyHint}>Tap + to commit to your first habit.</Text>
+          </View>
+        </ScrollView>
       ) : (
         <SectionList
           sections={sections}
           keyExtractor={(item) => item._id}
+          ListHeaderComponent={
+            <StatsAndHeatmap
+              stats={stats}
+              heatmapData={heatmapData ?? []}
+              timezone={me?.timezone ?? "UTC"}
+            />
+          }
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
@@ -133,7 +173,7 @@ export default function Today() {
         />
       )}
 
-      <BottomBar onAdd={() => setShowAdd(true)} />
+      <BottomBar onAdd={() => setShowAdd(true)} disabled={atMax} />
 
       <Modal visible={showAdd} animationType="slide" transparent>
         <View style={styles.modalRoot}>
@@ -201,10 +241,53 @@ export default function Today() {
   );
 }
 
+function StatsAndHeatmap({
+  stats,
+  heatmapData,
+  timezone,
+}: {
+  stats: { streak: number; totalDrops: number } | null | undefined;
+  heatmapData: { dayKey: string; count: number }[];
+  timezone: string;
+}) {
+  return (
+    <View style={styles.statsSection}>
+      <View style={styles.statsGrid}>
+        <View style={styles.statBox}>
+          <Text style={styles.statValue}>{stats?.totalDrops ?? 0}</Text>
+          <Text style={styles.statLabel}>DROPS</Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statValue}>{stats?.streak ?? 0}</Text>
+          <Text style={styles.statLabel}>STREAK</Text>
+        </View>
+      </View>
+      <View style={styles.heatmapWrap}>
+        <Heatmap data={heatmapData} timezone={timezone} />
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   center: { alignItems: "center", justifyContent: "center" },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  avatarButton: {},
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.blockElevated },
+  avatarFallback: { alignItems: "center", justifyContent: "center" },
+  avatarLetter: {
+    color: theme.text.primary,
+    fontSize: 15,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+  },
   title: {
     color: theme.text.primary,
     fontSize: 36,
@@ -218,6 +301,31 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     marginTop: 4,
   },
+  statsSection: { paddingBottom: 8 },
+  statsGrid: { flexDirection: "row", paddingHorizontal: 20, gap: 8, marginBottom: 16 },
+  statBox: {
+    flex: 1,
+    backgroundColor: theme.blockElevated,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  statValue: {
+    color: theme.text.primary,
+    fontSize: 22,
+    fontFamily: fonts.sans,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+  },
+  statLabel: {
+    color: theme.text.tertiary,
+    fontSize: 11,
+    fontFamily: fonts.mono,
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  heatmapWrap: { marginBottom: 8 },
+  emptyScroll: { flexGrow: 1, paddingBottom: 120 },
   list: { paddingBottom: 120 },
   sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   sectionTitle: {
@@ -242,10 +350,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   emptyWrap: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
+    paddingTop: 48,
     paddingBottom: 80,
   },
   emptyTitle: {

@@ -5,18 +5,16 @@ import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useQuery } from "convex/react";
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { Fragment, useMemo } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Heatmap } from "@/components/Heatmap";
 import { ProfileDropRow } from "@/components/ProfileDropRow";
 import { groupByRelativeDate } from "@/lib/dateGroup";
 
 export default function Profile() {
   const { signOut } = useAuth();
   const me = useQuery(api.profiles.me);
-  const stats = useQuery(api.userStats.forCaller, {});
-  const heatmapData = useQuery(api.drops.heatmapForProfile, me ? { profileId: me._id } : "skip");
   const recent = useQuery(api.drops.recentForProfile, me ? { profileId: me._id } : "skip");
 
   const sections = useMemo(() => {
@@ -41,13 +39,18 @@ export default function Profile() {
     );
   }
 
-  const totalXp = stats?.totalXp ?? 0;
-  const level = stats?.level ?? 0;
-  const streak = stats?.streak ?? 0;
-  const totalDrops = stats?.totalDrops ?? 0;
-
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
+      <View style={styles.topBar}>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.6 }]}
+          hitSlop={12}
+        >
+          <Text style={styles.backText}>✕</Text>
+        </Pressable>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.headerRow}>
           {me.avatarUrl ? (
@@ -61,17 +64,6 @@ export default function Profile() {
             <Text style={styles.username}>{me.username}</Text>
             <Text style={styles.tz}>{me.timezone}</Text>
           </View>
-        </View>
-
-        <View style={styles.statsGrid}>
-          <Stat label="drops" value={totalDrops} />
-          <Stat label="streak" value={streak} />
-          <Stat label="XP" value={totalXp} />
-          <Stat label="level" value={level} />
-        </View>
-
-        <View style={styles.heatmapWrap}>
-          <Heatmap data={heatmapData ?? []} timezone={me.timezone} />
         </View>
 
         <Text style={styles.sectionLabelTop}>Recent drops</Text>
@@ -106,19 +98,19 @@ export default function Profile() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.statBox}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   center: { alignItems: "center", justifyContent: "center" },
-  scroll: { paddingTop: 16, paddingBottom: 80 },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  backButton: { padding: 4 },
+  backText: { color: theme.text.tertiary, fontSize: 18 },
+  scroll: { paddingTop: 8, paddingBottom: 80 },
   placeholder: { color: theme.text.muted, fontSize: 14, fontFamily: fonts.mono },
   headerRow: {
     flexDirection: "row",
@@ -144,35 +136,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   tz: { color: theme.text.tertiary, fontSize: 13, fontFamily: fonts.mono, marginTop: 2 },
-  statsGrid: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 8,
-    marginBottom: 32,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: theme.blockElevated,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  statValue: {
-    color: theme.text.primary,
-    fontSize: 22,
-    fontFamily: fonts.sans,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-  },
-  statLabel: {
-    color: theme.text.tertiary,
-    fontSize: 11,
-    fontFamily: fonts.mono,
-    textTransform: "uppercase",
-    marginTop: 2,
-    letterSpacing: 0.5,
-  },
-  heatmapWrap: { marginBottom: 32 },
   sectionLabelTop: {
     color: theme.text.tertiary,
     fontSize: 11,
