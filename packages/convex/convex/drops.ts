@@ -284,9 +284,16 @@ export const feedForUser = query({
       return { locked: true as const, blurredCount };
     }
 
-    const drops = await fetchFriendDropsToday(ctx, me._id, today);
+    const [friendDrops, ownDrops] = await Promise.all([
+      fetchFriendDropsToday(ctx, me._id, today),
+      ctx.db
+        .query("drops")
+        .withIndex("by_owner_day", (q) => q.eq("ownerId", me._id).eq("dayKey", today))
+        .collect(),
+    ]);
+    const allDrops = [...friendDrops, ...ownDrops].sort((a, b) => b.createdAt - a.createdAt);
     const enriched = await Promise.all(
-      drops.map(async (drop) => {
+      allDrops.map(async (drop) => {
         const author = await ctx.db.get(drop.ownerId);
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
