@@ -51,6 +51,11 @@ export const DropCard = memo(function DropCard({ drop, author, photoUrl }: DropC
           <Text style={styles.username}>{author.username}</Text>
           <Text style={styles.time}>{timeAgo(drop.createdAt)}</Text>
         </View>
+        {drop.streakAtDrop !== undefined && drop.streakAtDrop > 1 && (
+          <View style={styles.streakBadge}>
+            <Text style={styles.streakText}>🔥 {drop.streakAtDrop}</Text>
+          </View>
+        )}
       </View>
 
       {photoUrl && (
@@ -137,4 +142,11 @@ const styles = StyleSheet.create({
   reactionBtn: { paddingVertical: 4 },
   reactionEmoji: { fontSize: 22 },
   counts: { color: "#555", fontSize: 11, fontFamily: fonts.mono },
+  streakBadge: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  streakText: { color: colors.fg, fontSize: 12, fontFamily: fonts.mono },
 });
