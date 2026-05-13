@@ -9,15 +9,12 @@ import { router } from "expo-router";
 import { Fragment, useMemo } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Heatmap } from "@/components/Heatmap";
 import { ProfileDropRow } from "@/components/ProfileDropRow";
 import { groupByRelativeDate } from "@/lib/dateGroup";
 
 export default function Profile() {
   const { signOut } = useAuth();
   const me = useQuery(api.profiles.me);
-  const stats = useQuery(api.userStats.forCaller, {});
-  const heatmapData = useQuery(api.drops.heatmapForProfile, me ? { profileId: me._id } : "skip");
   const recent = useQuery(api.drops.recentForProfile, me ? { profileId: me._id } : "skip");
 
   const sections = useMemo(() => {
@@ -41,9 +38,6 @@ export default function Profile() {
       </View>
     );
   }
-
-  const streak = stats?.streak ?? 0;
-  const totalDrops = stats?.totalDrops ?? 0;
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -70,15 +64,6 @@ export default function Profile() {
             <Text style={styles.username}>{me.username}</Text>
             <Text style={styles.tz}>{me.timezone}</Text>
           </View>
-        </View>
-
-        <View style={styles.statsGrid}>
-          <Stat label="drops" value={totalDrops} />
-          <Stat label="streak" value={streak} />
-        </View>
-
-        <View style={styles.heatmapWrap}>
-          <Heatmap data={heatmapData ?? []} timezone={me.timezone} />
         </View>
 
         <Text style={styles.sectionLabelTop}>Recent drops</Text>
@@ -110,15 +95,6 @@ export default function Profile() {
         </Pressable>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.statBox}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
   );
 }
 
@@ -160,35 +136,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   tz: { color: theme.text.tertiary, fontSize: 13, fontFamily: fonts.mono, marginTop: 2 },
-  statsGrid: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 8,
-    marginBottom: 32,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: theme.blockElevated,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  statValue: {
-    color: theme.text.primary,
-    fontSize: 22,
-    fontFamily: fonts.sans,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-  },
-  statLabel: {
-    color: theme.text.tertiary,
-    fontSize: 11,
-    fontFamily: fonts.mono,
-    textTransform: "uppercase",
-    marginTop: 2,
-    letterSpacing: 0.5,
-  },
-  heatmapWrap: { marginBottom: 32 },
   sectionLabelTop: {
     color: theme.text.tertiary,
     fontSize: 11,
