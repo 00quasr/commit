@@ -48,6 +48,8 @@ const dropShape = v.object({
   visibility: v.union(v.literal("public"), v.literal("friends"), v.literal("private")),
   reactionCount: v.number(),
   viewCount: v.number(),
+  streakAtDrop: v.optional(v.number()),
+  totalDropsAtDrop: v.optional(v.number()),
 });
 
 const profileShape = v.object({
@@ -175,6 +177,8 @@ export const create = mutation({
       visibility: args.visibility,
       reactionCount: 0,
       viewCount: 0,
+      streakAtDrop: streakResult.newStreak,
+      totalDropsAtDrop: previousTotalDrops + 1,
     });
 
     // Update habit.lastDropDayKey so the next dueToday query reflects this drop.
