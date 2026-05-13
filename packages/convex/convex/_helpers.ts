@@ -95,6 +95,29 @@ export async function fetchFriendDropsToday(
 }
 
 /**
+ * Year-long drop heatmap for a profile. Powers the MiniHeatmap in DropCard.
+ * Same logic as the `heatmapForProfile` query, extracted so it can be called
+ * inline from other query handlers.
+ */
+export async function fetchHeatmapForProfile(
+  ctx: QueryCtx | MutationCtx,
+  profileId: Id<"profiles">,
+  timezone: string,
+): Promise<{ dayKey: string; count: number }[]> {
+  const sinceMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
+  const sinceDayKey = dayKeyInTimezone(sinceMs, timezone);
+  const drops = await ctx.db
+    .query("drops")
+    .withIndex("by_owner_day", (q) => q.eq("ownerId", profileId).gte("dayKey", sinceDayKey))
+    .collect();
+  const counts = new Map<string, number>();
+  for (const d of drops) {
+    counts.set(d.dayKey, (counts.get(d.dayKey) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([dayKey, count]) => ({ dayKey, count }));
+}
+
+/**
  * Count of drops that would appear in the feed if it were unlocked. Used by
  * the locked-feed payload so the UI can render "12 friends dropped today".
  */
