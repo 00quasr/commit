@@ -66,6 +66,8 @@ export default defineSchema({
     visibility,
     reactionCount: v.number(),
     viewCount: v.number(),
+    streakAtDrop: v.optional(v.number()),
+    totalDropsAtDrop: v.optional(v.number()),
   })
     .index("by_owner_day", ["ownerId", "dayKey"])
     .index("by_owner_created", ["ownerId", "createdAt"])
