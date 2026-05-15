@@ -4,6 +4,7 @@
 
 # Worktrees
 
+- Always create a dedicated worktree for each ticket before starting implementation, unless explicitly told not to
 - Always create worktrees from the `main` branch unless explicitly told otherwise
 - When creating a worktree, copy all `.env` files and `.claude/settings.json` into it
 - When launching the iOS app from a worktree, run `pod install` with locale env vars to avoid a Ruby encoding error caused by the `+` in the worktree path:
