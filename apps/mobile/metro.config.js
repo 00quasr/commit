@@ -6,11 +6,16 @@ const { getDefaultConfig } = require("expo/metro-config");
 const path = require("path");
 
 const projectRoot = __dirname;
-const monorepoRoot = path.resolve(projectRoot, "../..");
+const isWorktree = projectRoot.includes("/.claude/worktrees/");
+// In a git worktree the real package node_modules live in the main repo root.
+const monorepoRoot = isWorktree
+  ? path.resolve(projectRoot, "../../../../..")
+  : path.resolve(projectRoot, "../..");
+const worktreeRoot = isWorktree ? path.resolve(projectRoot, "../..") : null;
 
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [monorepoRoot];
+config.watchFolders = worktreeRoot ? [monorepoRoot, worktreeRoot] : [monorepoRoot];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(monorepoRoot, "node_modules"),

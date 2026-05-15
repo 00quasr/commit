@@ -49,6 +49,9 @@ const dropShape = v.object({
   visibility: v.union(v.literal("public"), v.literal("friends"), v.literal("private")),
   reactionCount: v.number(),
   viewCount: v.number(),
+  // Fields added by parallel feature branches — optional for dev deployment compat.
+  streakAtDrop: v.optional(v.number()),
+  totalDropsAtDrop: v.optional(v.number()),
 });
 
 const profileShape = v.object({
