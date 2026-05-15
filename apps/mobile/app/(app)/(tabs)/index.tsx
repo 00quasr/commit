@@ -1,5 +1,5 @@
 import { api } from "@commit/convex/api";
-import { fonts } from "@commit/ui-tokens";
+import { fonts, habitColors } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
@@ -37,6 +37,7 @@ export default function Today() {
   const [draftText, setDraftText] = useState("");
   const [draftDifficulty, setDraftDifficulty] = useState<Difficulty>("medium");
   const [draftCycle, setDraftCycle] = useState<number>(1);
+  const [draftColor, setDraftColor] = useState<string>(habitColors[0]);
   const [busy, setBusy] = useState(false);
 
   const sections = useMemo(() => {
@@ -54,10 +55,11 @@ export default function Today() {
     if (!text || busy) return;
     setBusy(true);
     try {
-      await createHabit({ text, difficulty: draftDifficulty, cycleDays: draftCycle });
+      await createHabit({ text, difficulty: draftDifficulty, cycleDays: draftCycle, color: draftColor });
       setDraftText("");
       setDraftDifficulty("medium");
       setDraftCycle(1);
+      setDraftColor(habitColors[0]);
       setShowAdd(false);
     } finally {
       setBusy(false);
@@ -121,6 +123,7 @@ export default function Today() {
                   text={item.text}
                   difficulty={item.difficulty}
                   cycleDays={item.cycleDays}
+                  color={item.color}
                   doneToday={doneToday}
                   onPress={() => router.push(`/habit/${item._id}`)}
                 />
@@ -179,6 +182,21 @@ export default function Today() {
                     {c.label}
                   </Text>
                 </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.fieldLabel}>Color</Text>
+            <View style={styles.colorRow}>
+              {habitColors.map((color) => (
+                <Pressable
+                  key={color}
+                  onPress={() => setDraftColor(color)}
+                  style={[
+                    styles.colorSwatch,
+                    { backgroundColor: color },
+                    draftColor === color && styles.colorSwatchActive,
+                  ]}
+                />
               ))}
             </View>
 
@@ -299,6 +317,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chipRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  colorRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  colorSwatch: { width: 28, height: 28, borderRadius: 14 },
+  colorSwatchActive: { borderWidth: 2.5, borderColor: "#ffffff" },
   chip: {
     paddingVertical: 10,
     paddingHorizontal: 14,

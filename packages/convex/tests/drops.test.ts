@@ -74,6 +74,7 @@ describe("drops.create — basic", () => {
       text: "ship it",
       difficulty: "medium",
       cycleDays: 1,
+      color: "#5590D9",
     });
     const dropId = await t
       .withIdentity(asAlice)
