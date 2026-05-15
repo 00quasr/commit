@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MiniHeatmap } from "@/components/MiniHeatmap";
 import { ProfileDropRow } from "@/components/ProfileDropRow";
 import { useDropTimer } from "@/lib/dropTimer";
 import { theme } from "@/lib/theme";
@@ -35,6 +36,7 @@ export default function HabitDetail() {
     api.drops.recentForProfile,
     me ? { profileId: me._id, limit: 50 } : "skip",
   );
+  const heatmapData = useQuery(api.drops.heatmapForHabit, { habitId });
   const archive = useMutation(api.habits.archive);
   const startDropTimer = useDropTimer((s) => s.start);
 
@@ -105,6 +107,16 @@ export default function HabitDetail() {
           <Stat label="drops" value={totalDrops} />
           <Stat label="last" value={habit.lastDropDayKey ?? "—"} />
         </View>
+
+        {heatmapData && me && (
+          <View style={styles.miniHeatmapWrap}>
+            <MiniHeatmap
+              data={heatmapData}
+              color={habit.color ?? "#444444"}
+              timezone={me.timezone}
+            />
+          </View>
+        )}
 
         <Pressable
           style={({ pressed }) => [styles.dropBtn, pressed && { opacity: 0.7 }]}
@@ -190,6 +202,7 @@ const styles = StyleSheet.create({
   },
   duePill: { color: theme.bg, backgroundColor: theme.text.primary },
   statsGrid: { flexDirection: "row", gap: 8, marginTop: 24 },
+  miniHeatmapWrap: { marginTop: 20, overflow: "hidden" },
   statBox: {
     flex: 1,
     backgroundColor: theme.blockElevated,

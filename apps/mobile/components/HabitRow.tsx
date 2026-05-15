@@ -6,6 +6,7 @@ export interface HabitRowProps {
   text: string;
   difficulty: "easy" | "medium" | "hard";
   cycleDays: number;
+  color?: string;
   doneToday?: boolean;
   onPress: () => void;
 }
@@ -21,12 +22,21 @@ export function HabitRow({
   text,
   difficulty,
   cycleDays,
+  color,
   doneToday = false,
   onPress,
 }: HabitRowProps) {
+  const accentColor = color ?? theme.text.muted;
   return (
     <Pressable style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]} onPress={onPress}>
-      <View style={[styles.checkbox, doneToday && styles.checkboxDone]}>
+      <View
+        style={[
+          styles.checkbox,
+          doneToday
+            ? { backgroundColor: accentColor, borderColor: accentColor }
+            : { borderColor: accentColor },
+        ]}
+      >
         {doneToday && <Text style={styles.check}>✓</Text>}
       </View>
       <View style={styles.body}>
@@ -55,13 +65,8 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: theme.text.muted,
     alignItems: "center",
     justifyContent: "center",
-  },
-  checkboxDone: {
-    backgroundColor: theme.text.primary,
-    borderColor: theme.text.primary,
   },
   check: {
     color: theme.bg,

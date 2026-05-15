@@ -50,6 +50,9 @@ export default defineSchema({
     // drops.create when a drop is linked to this habit.
     lastDropDayKey: v.optional(v.string()),
     archived: v.boolean(),
+    // Hex color from the preset habitColors palette. Optional so existing rows
+    // without a color remain valid; UI falls back to a default.
+    color: v.optional(v.string()),
   }).index("by_owner_archived", ["ownerId", "archived"]),
 
   drops: defineTable({

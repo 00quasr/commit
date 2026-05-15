@@ -6,6 +6,7 @@ import {
   streakAfterDrop,
 } from "@commit/domain";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import {
   countTodaysFriendDrops,
@@ -300,18 +301,25 @@ export const feedForUser = query({
 });
 
 /**
- * Drop counts per dayKey for the last 365 days. Powers the GitHub-contribution-
- * style heatmap on the profile screen. Returns only days with at least one drop;
- * the client fills zeros for the remaining cells.
+ * Per-day habit breakdown for the last 365 days. Powers the heatmap on the
+ * profile screen. Returns only days with at least one drop; the client fills
+ * zeros for remaining cells.
  *
- * No friendship gating — heatmaps are public-facing data (anyone with the
- * profile URL can see the activity pattern). Per-drop visibility is honored
- * elsewhere; the heatmap shows ALL drops including private (own profile) or
- * just public + friends-tier (Phase 4 for visiting other profiles).
+ * Each day entry contains the total drop count and an ordered list of unique
+ * habits completed that day (sorted by first-drop time, earliest first) with
+ * their colors — used to render split colored bands in the heatmap cells.
+ *
+ * No friendship gating — heatmaps are public-facing data.
  */
 export const heatmapForProfile = query({
   args: { profileId: v.id("profiles") },
-  returns: v.array(v.object({ dayKey: v.string(), count: v.number() })),
+  returns: v.array(
+    v.object({
+      dayKey: v.string(),
+      total: v.number(),
+      habits: v.array(v.object({ habitId: v.id("habits"), color: v.string() })),
+    }),
+  ),
   handler: async (ctx, args) => {
     const profile = await ctx.db.get(args.profileId);
     if (!profile) return [];
@@ -321,11 +329,74 @@ export const heatmapForProfile = query({
       .query("drops")
       .withIndex("by_owner_day", (q) => q.eq("ownerId", args.profileId).gte("dayKey", sinceDayKey))
       .collect();
-    const counts = new Map<string, number>();
-    for (const d of drops) {
-      counts.set(d.dayKey, (counts.get(d.dayKey) ?? 0) + 1);
+
+    // Per-day totals and per-day per-habit first drop timestamp
+    const totalByDay = new Map<string, number>();
+    const dayHabitFirstAt = new Map<string, Map<string, number>>();
+
+    for (const drop of drops) {
+      totalByDay.set(drop.dayKey, (totalByDay.get(drop.dayKey) ?? 0) + 1);
+      if (drop.habitId) {
+        if (!dayHabitFirstAt.has(drop.dayKey)) dayHabitFirstAt.set(drop.dayKey, new Map());
+        const dayMap = dayHabitFirstAt.get(drop.dayKey)!;
+        const prev = dayMap.get(drop.habitId);
+        if (prev === undefined || drop.createdAt < prev) dayMap.set(drop.habitId, drop.createdAt);
+      }
     }
-    return [...counts.entries()].map(([dayKey, count]) => ({ dayKey, count }));
+
+    // Fetch colors for all unique habits referenced
+    const seenIds = new Set<string>();
+    const habitColorMap = new Map<string, string>();
+    await Promise.all(
+      drops
+        .filter((d) => {
+          if (!d.habitId || seenIds.has(d.habitId)) return false;
+          seenIds.add(d.habitId);
+          return true;
+        })
+        .map(async (drop) => {
+          const habit = await ctx.db.get(drop.habitId!);
+          if (habit?.color) habitColorMap.set(drop.habitId!, habit.color);
+        }),
+    );
+
+    return [...totalByDay.keys()].map((dayKey) => {
+      const total = totalByDay.get(dayKey)!;
+      const dayMap = dayHabitFirstAt.get(dayKey);
+      const habits = dayMap
+        ? [...dayMap.entries()]
+            .sort((a, b) => a[1] - b[1])
+            .map(([habitId]) => ({
+              habitId: habitId as Id<"habits">,
+              color: habitColorMap.get(habitId) ?? "#444444",
+            }))
+        : [];
+      return { dayKey, total, habits };
+    });
+  },
+});
+
+/**
+ * Per-day activity for a single habit over the last 365 days. Powers the
+ * MiniHeatmap on the habit detail screen.
+ */
+export const heatmapForHabit = query({
+  args: { habitId: v.id("habits") },
+  returns: v.array(v.object({ dayKey: v.string() })),
+  handler: async (ctx, args) => {
+    const me = await requireCallerProfile(ctx);
+    const habit = await ctx.db.get(args.habitId);
+    if (!habit || habit.ownerId !== me._id) return [];
+    const sinceMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
+    const sinceDayKey = dayKeyInTimezone(sinceMs, me.timezone);
+    const drops = await ctx.db
+      .query("drops")
+      .withIndex("by_owner_day", (q) => q.eq("ownerId", me._id).gte("dayKey", sinceDayKey))
+      .collect();
+    const uniqueDays = new Set(
+      drops.filter((d) => d.habitId === args.habitId).map((d) => d.dayKey),
+    );
+    return [...uniqueDays].map((dayKey) => ({ dayKey }));
   },
 });
 

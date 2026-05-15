@@ -54,7 +54,7 @@ describe("drops.heatmapForProfile", () => {
     await t.withIdentity(asAlice).mutation(api.drops.create, baseDropArgs);
 
     const heatmap = await t.query(api.drops.heatmapForProfile, { profileId: aliceId });
-    const map = new Map(heatmap.map((h) => [h.dayKey, h.count]));
+    const map = new Map(heatmap.map((h) => [h.dayKey, h.total]));
     expect(map.get("2026-05-07")).toBe(2);
     expect(map.get("2026-05-08")).toBe(1);
   });
