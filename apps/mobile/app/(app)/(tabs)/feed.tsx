@@ -71,7 +71,7 @@ export default function Feed() {
         <Text style={styles.title}>Feed</Text>
         <Text style={styles.subtitle}>
           {result.drops.length === 0
-            ? "Quiet today — no friends have dropped yet."
+            ? "Quiet today — nothing dropped yet."
             : `${result.drops.length} ${result.drops.length === 1 ? "drop" : "drops"} from your circle`}
         </Text>
       </View>

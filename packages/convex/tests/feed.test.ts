@@ -109,7 +109,7 @@ describe("drops.feedForUser — locked", () => {
 });
 
 describe("drops.feedForUser — unlocked", () => {
-  test("after alice drops, returns locked=false with bob's drops enriched with author", async () => {
+  test("after alice drops, returns locked=false with bob's and alice's own drops enriched with author", async () => {
     const t = makeTest();
     const { bobId } = await seedSocialGraph(t, "2026-05-07T12:00:00Z");
 
@@ -119,13 +119,14 @@ describe("drops.feedForUser — unlocked", () => {
     const result = await t.withIdentity(asAlice).query(api.drops.feedForUser, {});
     expect(result.locked).toBe(false);
     if (!result.locked) {
-      expect(result.drops).toHaveLength(1);
-      expect(result.drops[0]!.drop.ownerId).toBe(bobId);
-      expect(result.drops[0]!.author.username).toBe("bob");
+      expect(result.drops).toHaveLength(2);
+      const ownerIds = result.drops.map((d) => d.drop.ownerId);
+      expect(ownerIds).toContain(bobId);
+      expect(result.drops.find((d) => d.drop.ownerId === bobId)!.author.username).toBe("bob");
     }
   });
 
-  test("alice's own drops are not in her own feed (only friends')", async () => {
+  test("alice's own drops appear in her feed", async () => {
     const t = makeTest();
     await seedSocialGraph(t, "2026-05-07T12:00:00Z");
 
@@ -134,11 +135,12 @@ describe("drops.feedForUser — unlocked", () => {
     const result = await t.withIdentity(asAlice).query(api.drops.feedForUser, {});
     expect(result.locked).toBe(false);
     if (!result.locked) {
-      expect(result.drops).toHaveLength(0);
+      expect(result.drops).toHaveLength(1);
+      expect(result.drops[0]!.author.username).toBe("alice");
     }
   });
 
-  test("public drops from friends are included alongside friends-tier", async () => {
+  test("public drops from friends are included alongside friends-tier and own drops", async () => {
     const t = makeTest();
     await seedSocialGraph(t, "2026-05-07T12:00:00Z");
 
@@ -153,11 +155,11 @@ describe("drops.feedForUser — unlocked", () => {
     const result = await t.withIdentity(asAlice).query(api.drops.feedForUser, {});
     expect(result.locked).toBe(false);
     if (!result.locked) {
-      expect(result.drops).toHaveLength(2);
+      expect(result.drops).toHaveLength(3); // bob's public + bob's friends + alice's own
     }
   });
 
-  test("private drops from friends are NOT in the feed", async () => {
+  test("private drops from friends are NOT in the feed, but own drops are", async () => {
     const t = makeTest();
     await seedSocialGraph(t, "2026-05-07T12:00:00Z");
 
@@ -169,7 +171,8 @@ describe("drops.feedForUser — unlocked", () => {
     const result = await t.withIdentity(asAlice).query(api.drops.feedForUser, {});
     expect(result.locked).toBe(false);
     if (!result.locked) {
-      expect(result.drops).toHaveLength(0);
+      expect(result.drops).toHaveLength(1); // only alice's own; bob's private is excluded
+      expect(result.drops[0]!.author.username).toBe("alice");
     }
   });
 
@@ -182,22 +185,28 @@ describe("drops.feedForUser — unlocked", () => {
       caption: "early",
     });
 
+    vi.setSystemTime(new Date("2026-05-07T12:00:00Z"));
+    await t.withIdentity(asAlice).mutation(api.drops.create, {
+      ...baseDropArgs,
+      caption: "mine",
+    });
+
     vi.setSystemTime(new Date("2026-05-07T18:00:00Z"));
     await t.withIdentity(asBob).mutation(api.drops.create, {
       ...baseDropArgs,
       caption: "late",
     });
 
-    await t.withIdentity(asAlice).mutation(api.drops.create, baseDropArgs);
-
     const result = await t.withIdentity(asAlice).query(api.drops.feedForUser, {});
     if (!result.locked) {
+      expect(result.drops).toHaveLength(3);
       expect(result.drops[0]!.drop.caption).toBe("late");
-      expect(result.drops[1]!.drop.caption).toBe("early");
+      expect(result.drops[1]!.drop.caption).toBe("mine");
+      expect(result.drops[2]!.drop.caption).toBe("early");
     }
   });
 
-  test("non-friend drops are excluded from the unlocked feed", async () => {
+  test("non-friend drops are excluded from the unlocked feed, but own drops are shown", async () => {
     const t = makeTest();
     await seedSocialGraph(t, "2026-05-07T12:00:00Z");
 
@@ -206,7 +215,8 @@ describe("drops.feedForUser — unlocked", () => {
 
     const result = await t.withIdentity(asAlice).query(api.drops.feedForUser, {});
     if (!result.locked) {
-      expect(result.drops).toHaveLength(0);
+      expect(result.drops).toHaveLength(1); // only alice's own; eve (non-friend) excluded
+      expect(result.drops[0]!.author.username).toBe("alice");
     }
   });
 });
