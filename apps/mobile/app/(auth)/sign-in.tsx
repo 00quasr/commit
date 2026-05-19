@@ -1,4 +1,4 @@
-import { useOAuth, useSignIn } from "@clerk/clerk-expo";
+import { useOAuth, useSignIn, useSignUp } from "@clerk/clerk-expo";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
@@ -19,13 +19,16 @@ function useWarmUpBrowser() {
 export default function SignInScreen() {
   useWarmUpBrowser();
   const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
-  const { signIn, setActive, isLoaded } = useSignIn();
+  const { signIn, setActive: setActiveSignIn, isLoaded: signInLoaded } = useSignIn();
+  const { signUp, setActive: setActiveSignUp, isLoaded: signUpLoaded } = useSignUp();
 
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [stage, setStage] = useState<"idle" | "code-sent" | "verifying">("idle");
+  const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const isLoaded = signInLoaded && signUpLoaded;
 
   const onGooglePress = useCallback(async () => {
     setError(null);
@@ -45,10 +48,11 @@ export default function SignInScreen() {
   }, [startOAuthFlow]);
 
   const onSendCode = useCallback(async () => {
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signIn || !signUp) return;
     setError(null);
     setBusy(true);
     try {
+      // Try sign-in first; fall back to sign-up for new users
       const attempt = await signIn.create({ identifier: email });
       const emailFactor = attempt.supportedFirstFactors?.find((f) => f.strategy === "email_code");
       if (!emailFactor || !("emailAddressId" in emailFactor)) {
@@ -58,28 +62,51 @@ export default function SignInScreen() {
         strategy: "email_code",
         emailAddressId: emailFactor.emailAddressId,
       });
+      setIsSignUp(false);
       setStage("code-sent");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send code");
+    } catch (err: unknown) {
+      // Clerk returns this code when the email has no Clerk account yet
+      const clerkErrors = (err as { errors?: { code: string }[] })?.errors;
+      if (clerkErrors?.some((e) => e.code === "form_identifier_not_found")) {
+        try {
+          await signUp.create({ emailAddress: email });
+          await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+          setIsSignUp(true);
+          setStage("code-sent");
+        } catch (signUpErr) {
+          setError(signUpErr instanceof Error ? signUpErr.message : "Could not send code");
+        }
+      } else {
+        setError(err instanceof Error ? err.message : "Could not send code");
+      }
     } finally {
       setBusy(false);
     }
-  }, [email, isLoaded, signIn]);
+  }, [email, isLoaded, signIn, signUp]);
 
   const onVerifyCode = useCallback(async () => {
-    if (!isLoaded || !signIn || !setActive) return;
+    if (!isLoaded) return;
     setError(null);
     setBusy(true);
     setStage("verifying");
     try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: "email_code",
-        code,
-      });
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-      } else {
-        throw new Error(`Sign-in incomplete: ${result.status ?? "unknown"}`);
+      if (isSignUp && signUp && setActiveSignUp) {
+        const result = await signUp.attemptEmailAddressVerification({ code });
+        if (result.status === "complete") {
+          await setActiveSignUp({ session: result.createdSessionId });
+        } else {
+          throw new Error(`Sign-up incomplete: ${result.status ?? "unknown"}`);
+        }
+      } else if (signIn && setActiveSignIn) {
+        const result = await signIn.attemptFirstFactor({
+          strategy: "email_code",
+          code,
+        });
+        if (result.status === "complete") {
+          await setActiveSignIn({ session: result.createdSessionId });
+        } else {
+          throw new Error(`Sign-in incomplete: ${result.status ?? "unknown"}`);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid code");
@@ -87,7 +114,7 @@ export default function SignInScreen() {
     } finally {
       setBusy(false);
     }
-  }, [code, isLoaded, setActive, signIn]);
+  }, [code, isLoaded, isSignUp, signIn, signUp, setActiveSignIn, setActiveSignUp]);
 
   return (
     <View style={styles.root}>
@@ -108,8 +135,6 @@ export default function SignInScreen() {
         <Text style={styles.dividerText}>or</Text>
         <View style={styles.dividerLine} />
       </View>
-
-      {stage === "idle" || stage === "verifying" ? null : null}
 
       {stage === "idle" && (
         <>
