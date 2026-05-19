@@ -18,6 +18,7 @@ const habitShape = v.object({
   createdDayKey: v.string(),
   lastDropDayKey: v.optional(v.string()),
   archived: v.boolean(),
+  color: v.optional(v.string()),
 });
 
 export const create = mutation({
@@ -25,6 +26,7 @@ export const create = mutation({
     text: v.string(),
     difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
     cycleDays: v.number(),
+    color: v.string(),
   },
   returns: v.id("habits"),
   handler: async (ctx, args) => {
@@ -59,6 +61,7 @@ export const create = mutation({
       cycleDays: args.cycleDays,
       createdDayKey: dayKeyForCaller(me),
       archived: false,
+      color: args.color,
     });
   },
 });
