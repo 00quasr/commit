@@ -50,14 +50,7 @@ export default function TabsLayout() {
           tabBarIcon: () => null,
         }}
       />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarLabel: ({ focused }) => <TabLabel focused={focused}>Profile</TabLabel>,
-          tabBarIcon: () => null,
-        }}
-      />
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }
