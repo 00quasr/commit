@@ -6,6 +6,7 @@ import { dayKeyForCaller, requireCallerProfile } from "./_helpers";
 const MAX_TEXT = 280;
 const MIN_CYCLE = 1;
 const MAX_CYCLE = 31;
+const MAX_HABITS = 3;
 
 const habitShape = v.object({
   _id: v.id("habits"),
@@ -41,6 +42,14 @@ export const create = mutation({
       args.cycleDays > MAX_CYCLE
     ) {
       throw new Error(`cycleDays must be an integer in [${MIN_CYCLE}, ${MAX_CYCLE}]`);
+    }
+
+    const existing = await ctx.db
+      .query("habits")
+      .withIndex("by_owner_archived", (q) => q.eq("ownerId", me._id).eq("archived", false))
+      .collect();
+    if (existing.length >= MAX_HABITS) {
+      throw new Error(`habit limit of ${MAX_HABITS} reached`);
     }
 
     return await ctx.db.insert("habits", {

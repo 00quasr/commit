@@ -5,19 +5,24 @@ import { theme } from "@/lib/theme";
 
 export interface BottomBarProps {
   onAdd: () => void;
+  disabled?: boolean;
 }
 
 /**
  * Floating bottom-center "+" button. Single-action V1 — voice-only quick
  * drop is Phase 4 and will get its own affordance somewhere else.
  */
-export function BottomBar({ onAdd }: BottomBarProps) {
+export function BottomBar({ onAdd, disabled }: BottomBarProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.wrap, { bottom: insets.bottom + 12 }]} pointerEvents="box-none">
       <Pressable
-        style={({ pressed }) => [styles.btn, pressed && { opacity: 0.7 }]}
-        onPress={onAdd}
+        style={({ pressed }) => [
+          styles.btn,
+          pressed && !disabled && { opacity: 0.7 },
+          disabled && { opacity: 0.3 },
+        ]}
+        onPress={disabled ? undefined : onAdd}
         hitSlop={8}
       >
         <Text style={styles.plusIcon}>+</Text>

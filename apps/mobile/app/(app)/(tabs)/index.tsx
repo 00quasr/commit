@@ -73,6 +73,7 @@ export default function Today() {
   }
 
   const isEmpty = allHabits.length === 0;
+  const atMax = allHabits.length >= 3;
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -81,9 +82,11 @@ export default function Today() {
         <Text style={styles.subtitle}>
           {isEmpty
             ? "Add the first thing you want to keep doing."
-            : dueHabits.length === 0
-              ? "Nothing due today. Come back tomorrow."
-              : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
+            : atMax
+              ? "Max. 3 habits. Archive one to add a new one."
+              : dueHabits.length === 0
+                ? "Nothing due today. Come back tomorrow."
+                : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
         </Text>
       </View>
 
@@ -133,7 +136,7 @@ export default function Today() {
         />
       )}
 
-      <BottomBar onAdd={() => setShowAdd(true)} />
+      <BottomBar onAdd={() => setShowAdd(true)} disabled={atMax} />
 
       <Modal visible={showAdd} animationType="slide" transparent>
         <View style={styles.modalRoot}>
