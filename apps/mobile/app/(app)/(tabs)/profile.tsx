@@ -41,8 +41,6 @@ export default function Profile() {
     );
   }
 
-  const totalXp = stats?.totalXp ?? 0;
-  const level = stats?.level ?? 0;
   const streak = stats?.streak ?? 0;
   const totalDrops = stats?.totalDrops ?? 0;
 
@@ -66,8 +64,6 @@ export default function Profile() {
         <View style={styles.statsGrid}>
           <Stat label="drops" value={totalDrops} />
           <Stat label="streak" value={streak} />
-          <Stat label="XP" value={totalXp} />
-          <Stat label="level" value={level} />
         </View>
 
         <View style={styles.heatmapWrap}>

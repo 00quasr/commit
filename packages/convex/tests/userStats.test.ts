@@ -55,7 +55,6 @@ describe("userStats.forCaller", () => {
     const stats = await t.withIdentity(asAlice).query(api.userStats.forCaller, {});
     expect(stats).not.toBeNull();
     expect(stats?.streak).toBe(1);
-    expect(stats?.totalXp).toBe(60);
   });
 
   test("rejects unauthenticated caller", async () => {
@@ -82,7 +81,6 @@ describe("userStats.forProfile", () => {
     // Anonymous caller can read alice's public stats.
     const stats = await t.query(api.userStats.forProfile, { profileId: aliceId });
     expect(stats).not.toBeNull();
-    expect(stats?.totalXp).toBe(60);
     expect(stats?.streak).toBe(1);
   });
 

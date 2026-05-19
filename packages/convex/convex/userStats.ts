@@ -6,8 +6,6 @@ const userStatsShape = v.object({
   _id: v.id("userStats"),
   _creationTime: v.number(),
   profileId: v.id("profiles"),
-  totalXp: v.number(),
-  level: v.number(),
   streak: v.number(),
   longestStreak: v.number(),
   graceCardsAvailable: v.number(),
