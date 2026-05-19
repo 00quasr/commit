@@ -4,27 +4,16 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useDropTimer, useTimerRemaining } from "@/lib/dropTimer";
+import { useDropDraft } from "@/lib/dropDraft";
 
 export default function CameraScreen() {
-  const photoUri = useDropTimer((s) => s.photoUri);
-  const setPhoto = useDropTimer((s) => s.setPhoto);
-  const cancel = useDropTimer((s) => s.cancel);
-  const remainingMs = useTimerRemaining();
+  const photoUri = useDropDraft((s) => s.photoUri);
+  const setPhoto = useDropDraft((s) => s.setPhoto);
+  const cancel = useDropDraft((s) => s.cancel);
 
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
   const [capturing, setCapturing] = useState(false);
-
-  // Window expired — abort. (No separate `habitId === null` effect: cancel()
-  // sets habitId null and we don't want a second dismiss() to fire after
-  // we've already dismissed — that produces a POP_TO_TOP warning.)
-  useEffect(() => {
-    if (remainingMs !== null && remainingMs <= 0) {
-      cancel();
-      router.replace("/(tabs)");
-    }
-  }, [remainingMs, cancel]);
 
   // Auto-request permission on mount if undetermined.
   useEffect(() => {
@@ -61,8 +50,6 @@ export default function CameraScreen() {
     cancel();
     router.replace("/(tabs)");
   };
-
-  const seconds = remainingMs === null ? 0 : Math.ceil(remainingMs / 1000);
 
   // Permission states.
   if (!permission) {
@@ -106,9 +93,6 @@ export default function CameraScreen() {
     return (
       <View style={styles.root}>
         <SafeAreaView style={styles.previewWrap} edges={["top", "bottom"]}>
-          <View style={styles.timerPill}>
-            <Text style={styles.timerText}>{seconds}s</Text>
-          </View>
           <View style={styles.previewImageWrap}>
             <Image
               source={{ uri: photoUri }}
@@ -138,9 +122,6 @@ export default function CameraScreen() {
           <Pressable onPress={onCancel} hitSlop={12}>
             <Text style={styles.cancelTop}>Cancel</Text>
           </Pressable>
-          <View style={styles.timerPill}>
-            <Text style={styles.timerText}>{seconds}s</Text>
-          </View>
         </View>
         <View style={styles.captureWrap}>
           <Pressable
@@ -170,18 +151,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   cancelTop: { color: colors.fg, fontSize: 16, fontFamily: fonts.sans },
-  timerPill: {
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  timerText: {
-    color: colors.fg,
-    fontSize: 14,
-    fontFamily: fonts.mono,
-    fontVariant: ["tabular-nums"],
-  },
   captureWrap: { alignItems: "center", paddingBottom: 32 },
   captureBtn: {
     width: 80,

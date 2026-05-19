@@ -9,7 +9,8 @@ import {
 } from "expo-audio";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
-import { VOICE_MAX_MS } from "@/lib/dropTimer";
+
+const VOICE_MAX_MS = 30_000;
 
 interface VoiceRecorderProps {
   uri: string | null;
