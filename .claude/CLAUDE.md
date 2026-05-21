@@ -10,13 +10,9 @@
 - Always create a dedicated worktree for each ticket before starting implementation, unless explicitly told not to
 - Always create worktrees from the `main` branch unless explicitly told otherwise
 - When creating a worktree, copy all `.env` files and `.claude/settings.json` into it
-- After creating a worktree, symlink the workspace packages that pnpm places in the main repo (not the worktree root):
+- After creating a worktree, run `pnpm install` from the worktree root. pnpm uses hardlinks from its content-addressable store (~20s, minimal extra disk space) and correctly sets up both the root `node_modules` and the `apps/mobile/node_modules/@commit` workspace links pointing to the worktree's own packages:
   ```
-  MAIN=$(git worktree list | head -1 | awk '{print $1}')
-  mkdir -p apps/mobile/node_modules/@commit
-  for pkg in $(ls "$MAIN/apps/mobile/node_modules/@commit/"); do
-    ln -sf "$MAIN/apps/mobile/node_modules/@commit/$pkg" "apps/mobile/node_modules/@commit/$pkg"
-  done
+  pnpm install
   ```
 
 # Testing
