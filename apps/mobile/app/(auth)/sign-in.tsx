@@ -2,15 +2,7 @@ import { useOAuth, useSignIn, useSignUp } from "@clerk/clerk-expo";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors, fonts } from "@commit/ui-tokens";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -125,7 +117,7 @@ export default function SignInScreen() {
   }, [code, isLoaded, isSignUp, signIn, signUp, setActiveSignIn, setActiveSignUp]);
 
   return (
-    <ScrollView contentContainerStyle={styles.root} keyboardShouldPersistTaps="handled">
+    <View style={styles.root}>
       <Text style={styles.title}>commit</Text>
       <Text style={styles.subtitle}>Stop drifting. Start finishing.</Text>
 
@@ -223,16 +215,15 @@ export default function SignInScreen() {
 
       {busy && <ActivityIndicator color={colors.fg} style={{ marginTop: 16 }} />}
       {error && <Text style={styles.error}>{error}</Text>}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: colors.bg,
     paddingHorizontal: 24,
-    paddingVertical: 48,
     justifyContent: "center",
   },
   title: {
