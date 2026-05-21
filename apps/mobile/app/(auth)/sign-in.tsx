@@ -150,23 +150,23 @@ export default function SignInScreen() {
       <Text style={styles.title}>commit</Text>
       <Text style={styles.subtitle}>Stop drifting. Start finishing.</Text>
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => void onGooglePress()}
-        disabled={busy}
-        style={({ pressed }) => [styles.button, { opacity: pressed || busy ? 0.7 : 1 }]}
-      >
-        <Text style={styles.buttonText}>Continue with Google</Text>
-      </Pressable>
-
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
       {stage === "idle" && (
         <>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void onGooglePress()}
+            disabled={busy}
+            style={({ pressed }) => [styles.button, { opacity: pressed || busy ? 0.7 : 1 }]}
+          >
+            <Text style={styles.buttonText}>Continue with Google</Text>
+          </Pressable>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <TextInput
             style={styles.input}
             value={email}
