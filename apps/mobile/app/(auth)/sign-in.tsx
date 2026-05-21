@@ -1,7 +1,7 @@
 import { useOAuth, useSignIn, useSignUp } from "@clerk/clerk-expo";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors, fonts } from "@commit/ui-tokens";
 
@@ -30,27 +30,28 @@ export default function SignInScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cooldownEndsAt, setCooldownEndsAt] = useState<number | null>(null);
   const [cooldown, setCooldown] = useState(0);
-  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isLoaded = signInLoaded && signUpLoaded;
 
-  const startCooldown = useCallback(() => {
-    setCooldown(RESEND_COOLDOWN_S);
-    cooldownRef.current = setInterval(() => {
-      setCooldown((s) => {
-        if (s <= 1) {
-          clearInterval(cooldownRef.current!);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-  }, []);
-
   useEffect(() => {
-    return () => {
-      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    if (!cooldownEndsAt) return;
+    const tick = () => {
+      const remaining = Math.ceil((cooldownEndsAt - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setCooldown(0);
+        setCooldownEndsAt(null);
+      } else {
+        setCooldown(remaining);
+      }
     };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [cooldownEndsAt]);
+
+  const startCooldown = useCallback(() => {
+    setCooldownEndsAt(Date.now() + RESEND_COOLDOWN_S * 1000);
   }, []);
 
   const onGooglePress = useCallback(async () => {
