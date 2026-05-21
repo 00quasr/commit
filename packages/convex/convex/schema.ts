@@ -1,8 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-const difficulty = v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"));
-
 const visibility = v.union(v.literal("public"), v.literal("friends"), v.literal("private"));
 
 const reactionEmoji = v.union(v.literal("🔥"), v.literal("💪"), v.literal("👀"), v.literal("💯"));
@@ -37,7 +35,6 @@ export default defineSchema({
   habits: defineTable({
     ownerId: v.id("profiles"),
     text: v.string(),
-    difficulty,
     cycleDays: v.number(), // 1 = daily, 2 = every 2 days, ... 31 = monthly
     // dayKey at habit creation in the owner's timezone. Stored explicitly so
     // dueToday queries don't depend on _creationTime (which can drift from
@@ -58,7 +55,6 @@ export default defineSchema({
     habitId: v.optional(v.id("habits")), // optional: ad-hoc drops without a habit are allowed
     caption: v.string(),
     tags: v.array(v.string()),
-    difficulty,
     photoFileId: v.optional(v.id("_storage")),
     voiceFileId: v.optional(v.id("_storage")),
     dayKey: v.string(),

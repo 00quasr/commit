@@ -2,18 +2,15 @@ import type { Id } from "@commit/convex/dataModel";
 import { useEffect, useState } from "react";
 import { create } from "zustand";
 
-export type DropDifficulty = "easy" | "medium" | "hard";
-
 export const DROP_WINDOW_MS = 60_000;
 export const VOICE_MAX_MS = 30_000;
 
 interface DropTimerState {
   habitId: Id<"habits"> | null;
-  difficulty: DropDifficulty | null;
   expiresAt: number | null;
   photoUri: string | null;
   voiceUri: string | null;
-  start: (habitId: Id<"habits">, difficulty: DropDifficulty, durationMs?: number) => void;
+  start: (habitId: Id<"habits">, durationMs?: number) => void;
   setPhoto: (uri: string | null) => void;
   setVoice: (uri: string | null) => void;
   cancel: () => void;
@@ -31,14 +28,12 @@ interface DropTimerState {
  */
 export const useDropTimer = create<DropTimerState>((set) => ({
   habitId: null,
-  difficulty: null,
   expiresAt: null,
   photoUri: null,
   voiceUri: null,
-  start: (habitId, difficulty, durationMs = DROP_WINDOW_MS) =>
+  start: (habitId, durationMs = DROP_WINDOW_MS) =>
     set({
       habitId,
-      difficulty,
       expiresAt: Date.now() + durationMs,
       photoUri: null,
       voiceUri: null,
@@ -48,7 +43,6 @@ export const useDropTimer = create<DropTimerState>((set) => ({
   cancel: () =>
     set({
       habitId: null,
-      difficulty: null,
       expiresAt: null,
       photoUri: null,
       voiceUri: null,

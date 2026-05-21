@@ -26,7 +26,6 @@ type Visibility = "public" | "friends" | "private";
 
 export default function Compose() {
   const habitId = useDropTimer((s) => s.habitId);
-  const difficulty = useDropTimer((s) => s.difficulty);
   const photoUri = useDropTimer((s) => s.photoUri);
   const voiceUri = useDropTimer((s) => s.voiceUri);
   const setVoice = useDropTimer((s) => s.setVoice);
@@ -43,10 +42,10 @@ export default function Compose() {
   const [stage, setStage] = useState<"idle" | "uploading" | "creating">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  // Window expired → close modal. We do NOT also key on habitId/difficulty
-  // becoming null, because cancel() in onSubmit deliberately sets them null
-  // and re-firing dismiss() after we already dismissed produces a noisy
-  // POP_TO_TOP warning from react-navigation.
+  // Window expired → close modal. We do NOT also key on habitId becoming null,
+  // because cancel() in onSubmit deliberately sets it null and re-firing
+  // dismiss() after we already dismissed produces a noisy POP_TO_TOP warning
+  // from react-navigation.
   useEffect(() => {
     if (remainingMs !== null && remainingMs <= 0) {
       cancel();
@@ -80,7 +79,7 @@ export default function Compose() {
   };
 
   const onSubmit = async () => {
-    if (!habitId || !difficulty || busy) return;
+    if (!habitId || busy) return;
     if (caption.length > MAX_CAPTION) return;
     setBusy(true);
     setError(null);
@@ -103,7 +102,6 @@ export default function Compose() {
         habitId,
         caption,
         tags: [...selectedTags],
-        difficulty,
         visibility,
         ...(photoFileId !== undefined ? { photoFileId } : {}),
         ...(voiceFileId !== undefined ? { voiceFileId } : {}),

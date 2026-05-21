@@ -33,7 +33,6 @@ describe("habits.create", () => {
 
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "code 1h",
-      difficulty: "medium",
       cycleDays: 1,
       color: "#5590D9",
     });
@@ -53,7 +52,6 @@ describe("habits.create", () => {
     await expect(
       t.withIdentity(asAlice).mutation(api.habits.create, {
         text: "   ",
-        difficulty: "easy",
         cycleDays: 1,
         color: "#5590D9",
       }),
@@ -67,7 +65,6 @@ describe("habits.create", () => {
     await expect(
       t.withIdentity(asAlice).mutation(api.habits.create, {
         text: "x".repeat(281),
-        difficulty: "easy",
         cycleDays: 1,
         color: "#5590D9",
       }),
@@ -82,7 +79,6 @@ describe("habits.create", () => {
       await expect(
         t.withIdentity(asAlice).mutation(api.habits.create, {
           text: "x",
-          difficulty: "easy",
           cycleDays: bad,
           color: "#5590D9",
         }),
@@ -93,7 +89,7 @@ describe("habits.create", () => {
   test("rejects unauthenticated caller", async () => {
     const t = makeTest();
     await expect(
-      t.mutation(api.habits.create, { text: "x", difficulty: "easy", cycleDays: 1, color: "#5590D9" }),
+      t.mutation(api.habits.create, { text: "x", cycleDays: 1, color: "#5590D9" }),
     ).rejects.toThrow(/Unauthenticated/);
   });
 });
@@ -104,7 +100,6 @@ describe("habits.archive / unarchive", () => {
     await seedAlice(t);
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "x",
-      difficulty: "easy",
       cycleDays: 1,
       color: "#5590D9",
     });
@@ -124,7 +119,6 @@ describe("habits.archive / unarchive", () => {
     await seedAlice(t);
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "x",
-      difficulty: "easy",
       cycleDays: 1,
       color: "#5590D9",
     });
@@ -140,7 +134,6 @@ describe("habits.archive / unarchive", () => {
     await seedAlice(t);
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "x",
-      difficulty: "easy",
       cycleDays: 1,
       color: "#5590D9",
     });
@@ -168,14 +161,12 @@ describe("habits.list", () => {
 
     await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "first",
-      difficulty: "easy",
       cycleDays: 1,
       color: "#5590D9",
     });
     vi.setSystemTime(new Date("2026-05-07T09:00:00Z"));
     await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "second",
-      difficulty: "easy",
       cycleDays: 2,
       color: "#5590D9",
     });
@@ -190,13 +181,11 @@ describe("habits.list", () => {
 
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "active",
-      difficulty: "easy",
       cycleDays: 1,
       color: "#5590D9",
     });
     await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "to-archive",
-      difficulty: "easy",
       cycleDays: 1,
       color: "#5590D9",
     });
@@ -218,7 +207,6 @@ describe("habits.dueToday", () => {
 
     await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "daily",
-      difficulty: "easy",
       cycleDays: 1,
       color: "#5590D9",
     });
@@ -234,7 +222,6 @@ describe("habits.dueToday", () => {
 
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "daily",
-      difficulty: "easy",
       cycleDays: 1,
       color: "#5590D9",
     });
@@ -242,7 +229,6 @@ describe("habits.dueToday", () => {
       habitId,
       caption: "did it",
       tags: [],
-      difficulty: "easy",
       visibility: "friends",
     });
 
@@ -257,7 +243,6 @@ describe("habits.dueToday", () => {
     vi.useFakeTimers().setSystemTime(new Date("2026-05-05T12:00:00Z"));
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "gym",
-      difficulty: "hard",
       cycleDays: 2,
       color: "#5590D9",
     });
@@ -265,7 +250,6 @@ describe("habits.dueToday", () => {
       habitId,
       caption: "done",
       tags: [],
-      difficulty: "hard",
       visibility: "friends",
     });
 
@@ -287,7 +271,6 @@ describe("habits.dueToday", () => {
 
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "archived",
-      difficulty: "easy",
       cycleDays: 1,
       color: "#5590D9",
     });
@@ -305,7 +288,6 @@ describe("habits.dueToday", () => {
     vi.useFakeTimers().setSystemTime(new Date("2026-04-27T12:00:00Z"));
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "gym",
-      difficulty: "hard",
       cycleDays: 2,
       color: "#5590D9",
     });
@@ -313,7 +295,6 @@ describe("habits.dueToday", () => {
       habitId,
       caption: "first",
       tags: [],
-      difficulty: "hard",
       visibility: "friends",
     });
 
