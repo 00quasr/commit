@@ -9,7 +9,15 @@
 
 - Always create a dedicated worktree for each ticket before starting implementation, unless explicitly told not to
 - Always create worktrees from the `main` branch unless explicitly told otherwise
-- When creating a worktree, copy all `.env` files and `.claude/settings.json` into it
+- When creating a worktree, copy all `.env` files and `.claude/settings.json` into it. The `.env` files live in subdirectories — copy them explicitly:
+  ```
+  WORKTREE=".claude/worktrees/<name>"
+  MAIN=$(git worktree list | head -1 | awk '{print $1}')
+  cp "$MAIN/apps/mobile/.env" "$WORKTREE/apps/mobile/.env"
+  cp "$MAIN/apps/web/.env" "$WORKTREE/apps/web/.env"
+  cp "$MAIN/packages/convex/.env.local" "$WORKTREE/packages/convex/.env.local"
+  cp "$MAIN/.claude/settings.json" "$WORKTREE/.claude/settings.json"
+  ```
 - After creating a worktree, run `pnpm install` from the worktree root. pnpm uses hardlinks from its content-addressable store (~20s, minimal extra disk space) and correctly sets up both the root `node_modules` and the `apps/mobile/node_modules/@commit` workspace links pointing to the worktree's own packages:
   ```
   pnpm install
