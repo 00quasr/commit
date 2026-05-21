@@ -87,7 +87,7 @@ export default function HabitDetail() {
   };
 
   const onDrop = () => {
-    startDropDraft(habit._id, habit.difficulty);
+    startDropDraft(habit._id);
     router.push("/drop/camera");
   };
 
