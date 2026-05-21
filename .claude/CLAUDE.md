@@ -48,5 +48,6 @@
 
 # GitHub
 
-- Branch naming format: `COM-123/short-title`
+- Branch naming format: `COM-123-short-title`
+- Worktree naming format: `COM-123-short-title` (same as branch)
 - PR title format: must end with the ticket ID in square brackets — e.g. `"Add login screen [COM-123]"`
