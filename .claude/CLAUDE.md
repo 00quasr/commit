@@ -7,7 +7,7 @@
 - Always create a dedicated worktree for each ticket before starting implementation, unless explicitly told not to
 - Always create worktrees from the `main` branch unless explicitly told otherwise
 - When creating a worktree, copy all `.env` files and `.claude/settings.json` into it
-- When launching the iOS app from a worktree, run `pod install` with locale env vars to avoid a Ruby encoding error caused by the `+` in the worktree path:
+- When launching the iOS app from a worktree, run `pod install` with locale env vars to avoid Ruby encoding errors:
   ```
   LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install
   ```
@@ -20,5 +20,6 @@
 
 # GitHub
 
-- Branch naming format: `COM-123/short-title`
+- Branch naming format: `COM-123-short-title`
+- Worktree naming format: `COM-123-short-title` (same as branch)
 - PR title format: must end with the ticket ID in square brackets — e.g. `"Add login screen [COM-123]"`
