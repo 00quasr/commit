@@ -7,6 +7,8 @@ import { colors, fonts } from "@commit/ui-tokens";
 
 WebBrowser.maybeCompleteAuthSession();
 
+const RESEND_COOLDOWN_S = 60;
+
 function useWarmUpBrowser() {
   useEffect(() => {
     void WebBrowser.warmUpAsync();
@@ -28,7 +30,29 @@ export default function SignInScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cooldownEndsAt, setCooldownEndsAt] = useState<number | null>(null);
+  const [cooldown, setCooldown] = useState(0);
   const isLoaded = signInLoaded && signUpLoaded;
+
+  useEffect(() => {
+    if (!cooldownEndsAt) return;
+    const tick = () => {
+      const remaining = Math.ceil((cooldownEndsAt - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setCooldown(0);
+        setCooldownEndsAt(null);
+      } else {
+        setCooldown(remaining);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [cooldownEndsAt]);
+
+  const startCooldown = useCallback(() => {
+    setCooldownEndsAt(Date.now() + RESEND_COOLDOWN_S * 1000);
+  }, []);
 
   const onGooglePress = useCallback(async () => {
     setError(null);
@@ -48,7 +72,7 @@ export default function SignInScreen() {
   }, [startOAuthFlow]);
 
   const onSendCode = useCallback(async () => {
-    if (!isLoaded || !signIn || !signUp) return;
+    if (!isLoaded || !signIn || !signUp || cooldown > 0) return;
     setError(null);
     setBusy(true);
     try {
@@ -64,6 +88,7 @@ export default function SignInScreen() {
       });
       setIsSignUp(false);
       setStage("code-sent");
+      startCooldown();
     } catch (err: unknown) {
       // Clerk returns this code when the email has no Clerk account yet
       const clerkErrors = (err as { errors?: { code: string }[] })?.errors;
@@ -73,6 +98,7 @@ export default function SignInScreen() {
           await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
           setIsSignUp(true);
           setStage("code-sent");
+          startCooldown();
         } catch (signUpErr) {
           setError(signUpErr instanceof Error ? signUpErr.message : "Could not send code");
         }
@@ -82,7 +108,7 @@ export default function SignInScreen() {
     } finally {
       setBusy(false);
     }
-  }, [email, isLoaded, signIn, signUp]);
+  }, [cooldown, email, isLoaded, signIn, signUp, startCooldown]);
 
   const onVerifyCode = useCallback(async () => {
     if (!isLoaded) return;
@@ -116,28 +142,32 @@ export default function SignInScreen() {
     }
   }, [code, isLoaded, isSignUp, signIn, signUp, setActiveSignIn, setActiveSignUp]);
 
+  const sendCodeDisabled = busy || cooldown > 0;
+  const sendCodeLabel = cooldown > 0 ? `Resend code (${cooldown}s)` : "Resend code";
+  const emailCodeLabel = cooldown > 0 ? `Email me a code (${cooldown}s)` : "Email me a code";
+
   return (
     <View style={styles.root}>
       <Text style={styles.title}>commit</Text>
       <Text style={styles.subtitle}>Stop drifting. Start finishing.</Text>
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => void onGooglePress()}
-        disabled={busy}
-        style={({ pressed }) => [styles.button, { opacity: pressed || busy ? 0.7 : 1 }]}
-      >
-        <Text style={styles.buttonText}>Continue with Google</Text>
-      </Pressable>
-
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
       {stage === "idle" && (
         <>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void onGooglePress()}
+            disabled={busy}
+            style={({ pressed }) => [styles.button, { opacity: pressed || busy ? 0.7 : 1 }]}
+          >
+            <Text style={styles.buttonText}>Continue with Google</Text>
+          </Pressable>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <TextInput
             style={styles.input}
             value={email}
@@ -150,14 +180,14 @@ export default function SignInScreen() {
           />
           <Pressable
             onPress={() => void onSendCode()}
-            disabled={busy || email.length === 0}
+            disabled={sendCodeDisabled || email.length === 0}
             style={({ pressed }) => [
               styles.button,
               styles.buttonOutline,
-              { opacity: pressed || busy || email.length === 0 ? 0.5 : 1 },
+              { opacity: pressed || sendCodeDisabled || email.length === 0 ? 0.5 : 1 },
             ]}
           >
-            <Text style={styles.buttonOutlineText}>Email me a code</Text>
+            <Text style={styles.buttonOutlineText}>{emailCodeLabel}</Text>
           </Pressable>
         </>
       )}
@@ -184,6 +214,31 @@ export default function SignInScreen() {
             ]}
           >
             <Text style={styles.buttonText}>Verify</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void onSendCode()}
+            disabled={sendCodeDisabled}
+            style={({ pressed }) => [
+              styles.button,
+              styles.buttonOutline,
+              { opacity: pressed || sendCodeDisabled ? 0.5 : 1 },
+            ]}
+          >
+            <Text style={styles.buttonOutlineText}>{sendCodeLabel}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setStage("idle");
+              setCode("");
+            }}
+            disabled={busy}
+            style={({ pressed }) => [
+              styles.button,
+              styles.buttonOutline,
+              { opacity: pressed || busy ? 0.5 : 1 },
+            ]}
+          >
+            <Text style={styles.buttonOutlineText}>Back</Text>
           </Pressable>
         </>
       )}
