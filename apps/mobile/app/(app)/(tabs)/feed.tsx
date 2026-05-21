@@ -85,6 +85,7 @@ export default function Feed() {
             author={item.author}
             photoUrl={item.photoUrl}
             authorHeatmap={item.authorHeatmap}
+            habitColor={item.habitColor}
           />
         )}
         contentContainerStyle={styles.list}

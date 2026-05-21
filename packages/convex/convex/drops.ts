@@ -68,6 +68,7 @@ const enrichedDropShape = v.object({
   voiceUrl: v.union(v.string(), v.null()),
   // Year-long drop heatmap for the author — powers the MiniHeatmap in DropCard.
   authorHeatmap: v.array(heatmapEntryShape),
+  habitColor: v.union(v.string(), v.null()),
 });
 
 const MAX_CAPTION = 100;
@@ -297,7 +298,9 @@ export const feedForUser = query({
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
         const authorHeatmap = heatmapByAuthor.get(drop.ownerId) ?? [];
-        return { drop, author, photoUrl, voiceUrl, authorHeatmap };
+        const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
+        const habitColor = habit?.color ?? null;
+        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
       }),
     );
     const filtered = enriched.filter((e): e is NonNullable<typeof e> => e !== null);
@@ -459,7 +462,9 @@ export const recentForProfile = query({
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
-        return { drop, author, photoUrl, voiceUrl, authorHeatmap };
+        const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
+        const habitColor = habit?.color ?? null;
+        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
       }),
     );
     return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
