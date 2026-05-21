@@ -26,7 +26,6 @@ type Visibility = "public" | "friends" | "private";
 
 export default function Compose() {
   const habitId = useDropDraft((s) => s.habitId);
-  const difficulty = useDropDraft((s) => s.difficulty);
   const photoUri = useDropDraft((s) => s.photoUri);
   const voiceUri = useDropDraft((s) => s.voiceUri);
   const setVoice = useDropDraft((s) => s.setVoice);

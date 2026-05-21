@@ -87,7 +87,7 @@ export default function HabitDetail() {
   };
 
   const onDrop = () => {
-    startDropDraft(habit._id, habit.difficulty);
+    startDropDraft(habit._id);
     router.push("/drop/camera");
   };
 
@@ -109,11 +109,7 @@ export default function HabitDetail() {
 
         {heatmapData && me && (
           <View style={styles.miniHeatmapWrap}>
-            <MiniHeatmap
-              data={heatmapData}
-              color={habit.color ?? "#444444"}
-              timezone={me.timezone}
-            />
+            <MiniHeatmap data={heatmapData} timezone={me.timezone} />
           </View>
         )}
 

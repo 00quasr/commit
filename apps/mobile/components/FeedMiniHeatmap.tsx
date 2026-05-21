@@ -7,15 +7,7 @@ const COLS = 6;
 const DAYS = ROWS * COLS; // 30
 const CELL = 7;
 const GAP = 2;
-const PALETTE = ["#252525", "#1a4d2e", "#2d7a47", "#3fa860", "#5fd97a"] as const;
-
-function intensity(count: number): number {
-  if (count <= 0) return 0;
-  if (count === 1) return 1;
-  if (count === 2) return 2;
-  if (count === 3) return 3;
-  return 4;
-}
+const EMPTY_COLOR = "#252525";
 
 function addDays(dayKey: string, days: number): string {
   const [y, m, d] = dayKey.split("-").map(Number);
@@ -25,11 +17,13 @@ function addDays(dayKey: string, days: number): string {
 export interface FeedMiniHeatmapProps {
   data: Array<{ dayKey: string; count: number }> | undefined;
   timezone: string;
+  color: string;
 }
 
 export const FeedMiniHeatmap = memo(function FeedMiniHeatmap({
   data,
   timezone,
+  color,
 }: FeedMiniHeatmapProps) {
   const counts = new Map((data ?? []).map((d) => [d.dayKey, d.count]));
   const todayKey = dayKeyInTimezone(Date.now(), timezone);
@@ -54,7 +48,7 @@ export const FeedMiniHeatmap = memo(function FeedMiniHeatmap({
                 width: CELL,
                 height: CELL,
                 borderRadius: 1,
-                backgroundColor: PALETTE[intensity(count)],
+                backgroundColor: count > 0 ? color : EMPTY_COLOR,
               }}
             />
           ))}
