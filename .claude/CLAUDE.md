@@ -1,15 +1,43 @@
 # General
 
-- Use `npx expo run` instead of `npx expo start`
+- Always pull `main` before starting work on a ticket:
+  ```
+  git pull origin main
+  ```
 
 # Worktrees
 
 - Always create a dedicated worktree for each ticket before starting implementation, unless explicitly told not to
 - Always create worktrees from the `main` branch unless explicitly told otherwise
 - When creating a worktree, copy all `.env` files and `.claude/settings.json` into it
-- When launching the iOS app from a worktree, run `pod install` with locale env vars to avoid Ruby encoding errors:
+- After creating a worktree, symlink the workspace packages that pnpm places in the main repo (not the worktree root):
   ```
-  LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install
+  MAIN=$(git worktree list | head -1 | awk '{print $1}')
+  mkdir -p apps/mobile/node_modules/@commit
+  for pkg in $(ls "$MAIN/apps/mobile/node_modules/@commit/"); do
+    ln -sf "$MAIN/apps/mobile/node_modules/@commit/$pkg" "apps/mobile/node_modules/@commit/$pkg"
+  done
+  ```
+
+# Testing
+
+- After implementing a ticket, ask the user whether to test it in the iOS simulator before creating the PR
+- Always use the main repo's expo binary (not `npx expo`) and run from `apps/mobile`
+- **JS-only changes** (most tickets):
+  1. Check if the app is already installed on the simulator. If not, run the native build once from the main repo:
+     ```
+     MAIN=$(git worktree list | head -1 | awk '{print $1}')
+     cd "$MAIN/apps/mobile" && $MAIN/node_modules/.bin/expo run:ios
+     ```
+  2. Then start Metro from the worktree — the installed app connects and loads the worktree's code:
+     ```
+     MAIN=$(git worktree list | head -1 | awk '{print $1}')
+     cd apps/mobile && $MAIN/node_modules/.bin/expo start
+     ```
+- **Native changes** (new native package, changes to `ios/`): run the full build from the worktree:
+  ```
+  MAIN=$(git worktree list | head -1 | awk '{print $1}')
+  cd apps/mobile && $MAIN/node_modules/.bin/expo run:ios
   ```
 
 # Linear
