@@ -387,7 +387,13 @@ export const heatmapForProfile = query({
  */
 export const heatmapForHabit = query({
   args: { habitId: v.id("habits") },
-  returns: v.array(v.object({ dayKey: v.string() })),
+  returns: v.array(
+    v.object({
+      dayKey: v.string(),
+      total: v.number(),
+      habits: v.array(v.object({ habitId: v.id("habits"), color: v.string() })),
+    }),
+  ),
   handler: async (ctx, args) => {
     const me = await requireCallerProfile(ctx);
     const habit = await ctx.db.get(args.habitId);
@@ -398,10 +404,16 @@ export const heatmapForHabit = query({
       .query("drops")
       .withIndex("by_owner_day", (q) => q.eq("ownerId", me._id).gte("dayKey", sinceDayKey))
       .collect();
-    const uniqueDays = new Set(
-      drops.filter((d) => d.habitId === args.habitId).map((d) => d.dayKey),
-    );
-    return [...uniqueDays].map((dayKey) => ({ dayKey }));
+    const countByDay = new Map<string, number>();
+    for (const d of drops.filter((d) => d.habitId === args.habitId)) {
+      countByDay.set(d.dayKey, (countByDay.get(d.dayKey) ?? 0) + 1);
+    }
+    const color = habit.color ?? "#444444";
+    return [...countByDay.entries()].map(([dayKey, total]) => ({
+      dayKey,
+      total,
+      habits: [{ habitId: args.habitId, color }],
+    }));
   },
 });
 
