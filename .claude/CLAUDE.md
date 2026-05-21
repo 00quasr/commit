@@ -23,12 +23,17 @@
 
 - After implementing a ticket, ask the user whether to test it in the iOS simulator before creating the PR
 - Always use the main repo's expo binary (not `npx expo`) and run from `apps/mobile`
-- **JS-only changes** (most tickets): no native build needed in the worktree. Start Metro from the worktree — the already-installed app connects and loads the new code:
-  ```
-  MAIN=$(git worktree list | head -1 | awk '{print $1}')
-  cd apps/mobile && $MAIN/node_modules/.bin/expo start
-  ```
-  If the app is not yet installed, run `expo run:ios` once from the main repo first.
+- **JS-only changes** (most tickets):
+  1. Check if the app is already installed on the simulator. If not, run the native build once from the main repo:
+     ```
+     MAIN=$(git worktree list | head -1 | awk '{print $1}')
+     cd "$MAIN/apps/mobile" && $MAIN/node_modules/.bin/expo run:ios
+     ```
+  2. Then start Metro from the worktree — the installed app connects and loads the worktree's code:
+     ```
+     MAIN=$(git worktree list | head -1 | awk '{print $1}')
+     cd apps/mobile && $MAIN/node_modules/.bin/expo start
+     ```
 - **Native changes** (new native package, changes to `ios/`): run the full build from the worktree:
   ```
   MAIN=$(git worktree list | head -1 | awk '{print $1}')
