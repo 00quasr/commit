@@ -1,11 +1,11 @@
 import { dayKeyInTimezone } from "@commit/domain";
 import type { Id } from "@commit/convex/dataModel";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 
-const CELL = 8;
 const GAP = 2;
 const ROWS = 7;
 const COLS = 26; // ~6 months
+const PADDING_H = 20;
 
 const EMPTY_COLOR = "#0e0e0e";
 const ADHOC_COLOR = "#333333";
@@ -14,12 +14,6 @@ function addDays(dayKey: string, days: number): string {
   const [y, m, d] = dayKey.split("-").map(Number);
   const date = new Date(Date.UTC(y!, m! - 1, d! + days));
   return date.toISOString().slice(0, 10);
-}
-
-function dayOfWeekMonFirst(dayKey: string): number {
-  const [y, m, d] = dayKey.split("-").map(Number);
-  const dt = new Date(Date.UTC(y!, m! - 1, d!));
-  return (dt.getUTCDay() + 6) % 7;
 }
 
 interface HabitEntry {
@@ -33,12 +27,17 @@ export interface MiniHeatmapProps {
 }
 
 export function MiniHeatmap({ data, timezone }: MiniHeatmapProps) {
+  const { width: screenWidth } = useWindowDimensions();
+  const cellSize = (screenWidth - PADDING_H * 2 - (COLS - 1) * GAP) / COLS;
+
   const byDay = new Map(data.map((d) => [d.dayKey, d]));
   const todayKey = dayKeyInTimezone(Date.now(), timezone);
 
-  const todayDow = dayOfWeekMonFirst(todayKey);
-  const todayIndex = (COLS - 1) * ROWS + todayDow;
-  const startKey = addDays(todayKey, -todayIndex);
+  const totalCells = ROWS * COLS;
+  const todayIndex = totalCells - 1;
+  const startKey = addDays(todayKey, -(totalCells - 1));
+
+  const cellStyle = { width: cellSize, height: cellSize, borderRadius: Math.max(1, cellSize / 4) };
 
   return (
     <View style={styles.grid}>
@@ -47,23 +46,23 @@ export function MiniHeatmap({ data, timezone }: MiniHeatmapProps) {
           {Array.from({ length: ROWS }, (_, row) => {
             const idx = col * ROWS + row;
             if (idx > todayIndex) {
-              return <View key={row} style={[styles.cell, { backgroundColor: "transparent" }]} />;
+              return <View key={row} style={[cellStyle, { backgroundColor: "transparent" }]} />;
             }
             const dayKey = addDays(startKey, idx);
             const cell = byDay.get(dayKey);
             if (!cell || cell.total === 0) {
-              return <View key={row} style={[styles.cell, { backgroundColor: EMPTY_COLOR }]} />;
+              return <View key={row} style={[cellStyle, { backgroundColor: EMPTY_COLOR }]} />;
             }
             if (cell.habits.length === 0) {
-              return <View key={row} style={[styles.cell, { backgroundColor: ADHOC_COLOR }]} />;
+              return <View key={row} style={[cellStyle, { backgroundColor: ADHOC_COLOR }]} />;
             }
             if (cell.habits.length === 1) {
               return (
-                <View key={row} style={[styles.cell, { backgroundColor: cell.habits[0]!.color }]} />
+                <View key={row} style={[cellStyle, { backgroundColor: cell.habits[0]!.color }]} />
               );
             }
             return (
-              <View key={row} style={[styles.cell, styles.splitCell]}>
+              <View key={row} style={[cellStyle, styles.splitCell]}>
                 {cell.habits.map((h) => (
                   <View key={h.habitId} style={[styles.band, { backgroundColor: h.color }]} />
                 ))}
@@ -79,7 +78,6 @@ export function MiniHeatmap({ data, timezone }: MiniHeatmapProps) {
 const styles = StyleSheet.create({
   grid: { flexDirection: "row", gap: GAP, flexWrap: "nowrap" },
   column: { flexDirection: "column", gap: GAP },
-  cell: { width: CELL, height: CELL, borderRadius: 1.5, overflow: "hidden" },
-  splitCell: { flexDirection: "column" },
+  splitCell: { flexDirection: "column", overflow: "hidden" },
   band: { flex: 1 },
 });
