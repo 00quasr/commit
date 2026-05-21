@@ -35,6 +35,7 @@ const dropShape = v.object({
   habitId: v.optional(v.id("habits")),
   caption: v.string(),
   tags: v.array(v.string()),
+  difficulty: v.optional(v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"))),
   photoFileId: v.optional(v.id("_storage")),
   voiceFileId: v.optional(v.id("_storage")),
   dayKey: v.string(),
