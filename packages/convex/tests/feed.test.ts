@@ -16,7 +16,6 @@ const asEve = { subject: "user_eve" };
 const baseDropArgs = {
   caption: "shipped",
   tags: ["@build"],
-  difficulty: "medium" as const,
   visibility: "friends" as const,
 };
 

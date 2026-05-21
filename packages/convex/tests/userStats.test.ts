@@ -13,7 +13,6 @@ const asAlice = { subject: "user_alice" };
 const baseDropArgs = {
   caption: "shipped",
   tags: ["@build"],
-  difficulty: "medium" as const,
   visibility: "friends" as const,
 };
 

@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export interface HabitRowProps {
   text: string;
-  difficulty: "easy" | "medium" | "hard";
   cycleDays: number;
   color?: string;
   doneToday?: boolean;
@@ -20,7 +19,6 @@ function cycleLabel(cycleDays: number): string {
 
 export function HabitRow({
   text,
-  difficulty,
   cycleDays,
   color,
   doneToday = false,
@@ -44,7 +42,7 @@ export function HabitRow({
           {text}
         </Text>
         <Text style={styles.meta}>
-          {difficulty} · {cycleLabel(cycleDays)}
+          {cycleLabel(cycleDays)}
         </Text>
       </View>
     </Pressable>
