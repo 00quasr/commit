@@ -50,7 +50,6 @@ export default function TabsLayout() {
           tabBarIcon: () => null,
         }}
       />
-      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }
