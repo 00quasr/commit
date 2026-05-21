@@ -1,11 +1,13 @@
 import { useOAuth, useSignIn, useSignUp } from "@clerk/clerk-expo";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors, fonts } from "@commit/ui-tokens";
 
 WebBrowser.maybeCompleteAuthSession();
+
+const RESEND_COOLDOWN_S = 60;
 
 function useWarmUpBrowser() {
   useEffect(() => {
@@ -28,7 +30,28 @@ export default function SignInScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isLoaded = signInLoaded && signUpLoaded;
+
+  const startCooldown = useCallback(() => {
+    setCooldown(RESEND_COOLDOWN_S);
+    cooldownRef.current = setInterval(() => {
+      setCooldown((s) => {
+        if (s <= 1) {
+          clearInterval(cooldownRef.current!);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, []);
 
   const onGooglePress = useCallback(async () => {
     setError(null);
@@ -48,7 +71,7 @@ export default function SignInScreen() {
   }, [startOAuthFlow]);
 
   const onSendCode = useCallback(async () => {
-    if (!isLoaded || !signIn || !signUp) return;
+    if (!isLoaded || !signIn || !signUp || cooldown > 0) return;
     setError(null);
     setBusy(true);
     try {
@@ -64,6 +87,7 @@ export default function SignInScreen() {
       });
       setIsSignUp(false);
       setStage("code-sent");
+      startCooldown();
     } catch (err: unknown) {
       // Clerk returns this code when the email has no Clerk account yet
       const clerkErrors = (err as { errors?: { code: string }[] })?.errors;
@@ -73,6 +97,7 @@ export default function SignInScreen() {
           await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
           setIsSignUp(true);
           setStage("code-sent");
+          startCooldown();
         } catch (signUpErr) {
           setError(signUpErr instanceof Error ? signUpErr.message : "Could not send code");
         }
@@ -82,7 +107,7 @@ export default function SignInScreen() {
     } finally {
       setBusy(false);
     }
-  }, [email, isLoaded, signIn, signUp]);
+  }, [cooldown, email, isLoaded, signIn, signUp, startCooldown]);
 
   const onVerifyCode = useCallback(async () => {
     if (!isLoaded) return;
@@ -115,6 +140,10 @@ export default function SignInScreen() {
       setBusy(false);
     }
   }, [code, isLoaded, isSignUp, signIn, signUp, setActiveSignIn, setActiveSignUp]);
+
+  const sendCodeDisabled = busy || cooldown > 0;
+  const sendCodeLabel = cooldown > 0 ? `Resend code (${cooldown}s)` : "Resend code";
+  const emailCodeLabel = cooldown > 0 ? `Email me a code (${cooldown}s)` : "Email me a code";
 
   return (
     <View style={styles.root}>
@@ -150,14 +179,14 @@ export default function SignInScreen() {
           />
           <Pressable
             onPress={() => void onSendCode()}
-            disabled={busy || email.length === 0}
+            disabled={sendCodeDisabled || email.length === 0}
             style={({ pressed }) => [
               styles.button,
               styles.buttonOutline,
-              { opacity: pressed || busy || email.length === 0 ? 0.5 : 1 },
+              { opacity: pressed || sendCodeDisabled || email.length === 0 ? 0.5 : 1 },
             ]}
           >
-            <Text style={styles.buttonOutlineText}>Email me a code</Text>
+            <Text style={styles.buttonOutlineText}>{emailCodeLabel}</Text>
           </Pressable>
         </>
       )}
@@ -187,14 +216,14 @@ export default function SignInScreen() {
           </Pressable>
           <Pressable
             onPress={() => void onSendCode()}
-            disabled={busy}
+            disabled={sendCodeDisabled}
             style={({ pressed }) => [
               styles.button,
               styles.buttonOutline,
-              { opacity: pressed || busy ? 0.5 : 1 },
+              { opacity: pressed || sendCodeDisabled ? 0.5 : 1 },
             ]}
           >
-            <Text style={styles.buttonOutlineText}>Resend code</Text>
+            <Text style={styles.buttonOutlineText}>{sendCodeLabel}</Text>
           </Pressable>
           <Pressable
             onPress={() => {
