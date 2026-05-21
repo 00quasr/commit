@@ -1,6 +1,5 @@
 # General
 
-- Use `npx expo run` instead of `npx expo start`
 - Always pull `main` before starting work on a ticket:
   ```
   git pull origin main
@@ -24,6 +23,11 @@
      ```
      cd apps/mobile && $MAIN/node_modules/.bin/expo run:ios
      ```
+
+# Testing
+
+- After implementing a ticket, ask the user whether to test it in the iOS simulator before creating the PR
+- Use `npx expo run` instead of `npx expo start`
 
 # Linear
 
