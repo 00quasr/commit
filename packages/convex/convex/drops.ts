@@ -7,6 +7,7 @@ import {
   dayKeyForCaller,
   fetchFriendDropsToday,
   fetchHeatmapForProfile,
+  resolveHabitColor,
   hasDroppedToday,
   requireCallerProfile,
 } from "./_helpers";
@@ -299,7 +300,7 @@ export const feedForUser = query({
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
         const authorHeatmap = heatmapByAuthor.get(drop.ownerId) ?? [];
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
-        const habitColor = habit?.color ?? null;
+        const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
         return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
       }),
     );
@@ -376,7 +377,7 @@ export const heatmapForProfile = query({
             .sort((a, b) => a[1] - b[1])
             .map(([habitId]) => ({
               habitId: habitId as Id<"habits">,
-              color: habitColorMap.get(habitId) ?? "#444444",
+              color: resolveHabitColor(habitId, habitColorMap.get(habitId)),
             }))
         : [];
       return { dayKey, total, habits };
@@ -411,7 +412,7 @@ export const heatmapForHabit = query({
     for (const d of drops.filter((d) => d.habitId === args.habitId)) {
       countByDay.set(d.dayKey, (countByDay.get(d.dayKey) ?? 0) + 1);
     }
-    const color = habit.color ?? "#444444";
+    const color = resolveHabitColor(args.habitId, habit.color);
     return [...countByDay.entries()].map(([dayKey, total]) => ({
       dayKey,
       total,
@@ -463,7 +464,7 @@ export const recentForProfile = query({
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
-        const habitColor = habit?.color ?? null;
+        const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
         return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
       }),
     );
