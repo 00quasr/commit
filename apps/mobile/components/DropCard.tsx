@@ -29,7 +29,12 @@ function timeAgo(ms: number): string {
   return `${days}d`;
 }
 
-export const DropCard = memo(function DropCard({ drop, author, photoUrl, authorHeatmap }: DropCardProps) {
+export const DropCard = memo(function DropCard({
+  drop,
+  author,
+  photoUrl,
+  authorHeatmap,
+}: DropCardProps) {
   const toggleReaction = useMutation(api.reactions.toggle);
 
   const onTapEmoji = useCallback(
@@ -59,16 +64,12 @@ export const DropCard = memo(function DropCard({ drop, author, photoUrl, authorH
           <View style={styles.statsPanelLeft}>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>streak</Text>
-              <Text style={styles.statValue}>
-                {drop.streakAtDrop ?? "—"}
-              </Text>
+              <Text style={styles.statValue}>{drop.streakAtDrop ?? "—"}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>drop</Text>
-              <Text style={styles.statValue}>
-                {drop.totalDropsAtDrop ?? "—"}
-              </Text>
+              <Text style={styles.statValue}>{drop.totalDropsAtDrop ?? "—"}</Text>
             </View>
           </View>
           <View style={styles.statsPanelDivider} />
@@ -119,7 +120,6 @@ export const DropCard = memo(function DropCard({ drop, author, photoUrl, authorH
           {drop.viewCount} {drop.viewCount === 1 ? "view" : "views"}
         </Text>
       </View>
-
     </View>
   );
 });
@@ -150,9 +150,19 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   statItem: { alignItems: "flex-end" },
-  statLabel: { color: "#555", fontSize: 8, fontFamily: fonts.mono, textTransform: "uppercase", letterSpacing: 0.5 },
+  statLabel: {
+    color: "#555",
+    fontSize: 8,
+    fontFamily: fonts.mono,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   statValue: { color: colors.fg, fontSize: 10, fontFamily: fonts.mono, fontWeight: "600" },
-  statDivider: { height: StyleSheet.hairlineWidth, backgroundColor: "#2a2a2a", marginHorizontal: -10 },
+  statDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#2a2a2a",
+    marginHorizontal: -10,
+  },
   statsPanelDivider: { width: StyleSheet.hairlineWidth, backgroundColor: "#2a2a2a" },
   statsPanelRight: { padding: 8 },
   username: { color: colors.fg, fontSize: 15, fontFamily: fonts.sans, fontWeight: "600" },

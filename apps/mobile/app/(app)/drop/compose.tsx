@@ -3,7 +3,7 @@ import type { Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation } from "convex/react";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -18,19 +18,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
-import { useDropTimer, useTimerRemaining } from "@/lib/dropTimer";
+import { useDropDraft } from "@/lib/dropDraft";
 
 const MAX_CAPTION = 100;
 const TAG_PRESETS = ["@build", "@health", "@create", "@learn", "@ship"] as const;
 type Visibility = "public" | "friends" | "private";
 
 export default function Compose() {
-  const habitId = useDropTimer((s) => s.habitId);
-  const photoUri = useDropTimer((s) => s.photoUri);
-  const voiceUri = useDropTimer((s) => s.voiceUri);
-  const setVoice = useDropTimer((s) => s.setVoice);
-  const cancel = useDropTimer((s) => s.cancel);
-  const remainingMs = useTimerRemaining();
+  const habitId = useDropDraft((s) => s.habitId);
+  const difficulty = useDropDraft((s) => s.difficulty);
+  const photoUri = useDropDraft((s) => s.photoUri);
+  const voiceUri = useDropDraft((s) => s.voiceUri);
+  const setVoice = useDropDraft((s) => s.setVoice);
+  const cancel = useDropDraft((s) => s.cancel);
 
   const generateUploadUrl = useMutation(api.drops.generateUploadUrl);
   const createDrop = useMutation(api.drops.create);
@@ -41,17 +41,6 @@ export default function Compose() {
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<"idle" | "uploading" | "creating">("idle");
   const [error, setError] = useState<string | null>(null);
-
-  // Window expired → close modal. We do NOT also key on habitId becoming null,
-  // because cancel() in onSubmit deliberately sets it null and re-firing
-  // dismiss() after we already dismissed produces a noisy POP_TO_TOP warning
-  // from react-navigation.
-  useEffect(() => {
-    if (remainingMs !== null && remainingMs <= 0) {
-      cancel();
-      router.replace("/(tabs)");
-    }
-  }, [remainingMs, cancel]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) => {
@@ -116,7 +105,6 @@ export default function Compose() {
     }
   };
 
-  const seconds = remainingMs === null ? 0 : Math.ceil(remainingMs / 1000);
   const captionOver = caption.length > MAX_CAPTION;
   const submitLabel =
     stage === "uploading" ? "Uploading…" : stage === "creating" ? "Submitting…" : "Drop";
@@ -127,7 +115,6 @@ export default function Compose() {
         <Pressable onPress={() => router.back()} disabled={busy}>
           <Text style={[styles.backText, busy && { opacity: 0.4 }]}>← Back</Text>
         </Pressable>
-        <Text style={styles.timer}>{seconds}s</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -227,12 +214,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#111",
   },
   backText: { color: "#888", fontSize: 16, fontFamily: fonts.sans },
-  timer: {
-    color: colors.fg,
-    fontSize: 16,
-    fontFamily: fonts.mono,
-    fontVariant: ["tabular-nums"],
-  },
   scroll: { padding: 20 },
   photoWrap: {
     width: "100%",

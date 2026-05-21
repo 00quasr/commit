@@ -17,13 +17,7 @@ function cycleLabel(cycleDays: number): string {
   return `every ${cycleDays} days`;
 }
 
-export function HabitRow({
-  text,
-  cycleDays,
-  color,
-  doneToday = false,
-  onPress,
-}: HabitRowProps) {
+export function HabitRow({ text, cycleDays, color, doneToday = false, onPress }: HabitRowProps) {
   const accentColor = color ?? theme.text.muted;
   return (
     <Pressable style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]} onPress={onPress}>
@@ -41,9 +35,7 @@ export function HabitRow({
         <Text style={[styles.text, doneToday && styles.textDone]} numberOfLines={2}>
           {text}
         </Text>
-        <Text style={styles.meta}>
-          {cycleLabel(cycleDays)}
-        </Text>
+        <Text style={styles.meta}>{cycleLabel(cycleDays)}</Text>
       </View>
     </Pressable>
   );

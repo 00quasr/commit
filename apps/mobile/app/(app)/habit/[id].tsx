@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MiniHeatmap } from "@/components/MiniHeatmap";
 import { ProfileDropRow } from "@/components/ProfileDropRow";
-import { useDropTimer } from "@/lib/dropTimer";
+import { useDropDraft } from "@/lib/dropDraft";
 import { theme } from "@/lib/theme";
 
 function cycleLabel(cycleDays: number): string {
@@ -38,7 +38,7 @@ export default function HabitDetail() {
   );
   const heatmapData = useQuery(api.drops.heatmapForHabit, { habitId });
   const archive = useMutation(api.habits.archive);
-  const startDropTimer = useDropTimer((s) => s.start);
+  const startDropDraft = useDropDraft((s) => s.start);
 
   const habit = useMemo(() => allHabits?.find((h) => h._id === habitId), [allHabits, habitId]);
   const habitDrops = useMemo(
@@ -87,8 +87,8 @@ export default function HabitDetail() {
   };
 
   const onDrop = () => {
-    startDropTimer(habit._id);
-    router.push("/drop/countdown");
+    startDropDraft(habit._id, habit.difficulty);
+    router.push("/drop/camera");
   };
 
   return (

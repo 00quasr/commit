@@ -39,7 +39,7 @@ export const FeedMiniHeatmap = memo(function FeedMiniHeatmap({
     return { dayKey, count: counts.get(dayKey) ?? 0 };
   });
 
-  const columns: typeof cells[] = Array.from({ length: COLS }, (_, col) =>
+  const columns: (typeof cells)[] = Array.from({ length: COLS }, (_, col) =>
     cells.slice(col * ROWS, col * ROWS + ROWS),
   );
 
