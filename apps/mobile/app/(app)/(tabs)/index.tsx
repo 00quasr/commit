@@ -265,7 +265,7 @@ function StatsAndHeatmap({
   timezone,
 }: {
   stats: { streak: number; totalDrops: number } | null | undefined;
-  heatmapData: { dayKey: string; count: number }[];
+  heatmapData: { dayKey: string; total: number; habits: { habitId: string; color: string }[] }[];
   timezone: string;
 }) {
   return (

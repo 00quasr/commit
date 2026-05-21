@@ -80,7 +80,7 @@ export default function Feed() {
         data={result.drops}
         keyExtractor={(item) => item.drop._id}
         renderItem={({ item }) => (
-          <DropCard drop={item.drop} author={item.author} photoUrl={item.photoUrl} />
+          <DropCard drop={item.drop} author={item.author} photoUrl={item.photoUrl} authorHeatmap={item.authorHeatmap} />
         )}
         contentContainerStyle={styles.list}
         onViewableItemsChanged={onViewableItemsChanged}
