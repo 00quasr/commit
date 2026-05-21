@@ -35,8 +35,6 @@ export default defineSchema({
   habits: defineTable({
     ownerId: v.id("profiles"),
     text: v.string(),
-    // Optional for backwards-compatibility with existing rows written before difficulty was removed.
-    difficulty: v.optional(v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"))),
     cycleDays: v.number(), // 1 = daily, 2 = every 2 days, ... 31 = monthly
     // dayKey at habit creation in the owner's timezone. Stored explicitly so
     // dueToday queries don't depend on _creationTime (which can drift from
@@ -57,8 +55,6 @@ export default defineSchema({
     habitId: v.optional(v.id("habits")), // optional: ad-hoc drops without a habit are allowed
     caption: v.string(),
     tags: v.array(v.string()),
-    // Optional for backwards-compatibility with existing rows written before difficulty was removed.
-    difficulty: v.optional(v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"))),
     photoFileId: v.optional(v.id("_storage")),
     voiceFileId: v.optional(v.id("_storage")),
     dayKey: v.string(),

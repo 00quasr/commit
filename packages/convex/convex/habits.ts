@@ -13,7 +13,6 @@ const habitShape = v.object({
   _creationTime: v.number(),
   ownerId: v.id("profiles"),
   text: v.string(),
-  difficulty: v.optional(v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"))),
   cycleDays: v.number(),
   createdDayKey: v.string(),
   lastDropDayKey: v.optional(v.string()),
