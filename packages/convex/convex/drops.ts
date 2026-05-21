@@ -7,6 +7,7 @@ import {
   dayKeyForCaller,
   fetchFriendDropsToday,
   fetchHeatmapForProfile,
+  resolveHabitColor,
   hasDroppedToday,
   requireCallerProfile,
 } from "./_helpers";
@@ -68,6 +69,7 @@ const enrichedDropShape = v.object({
   voiceUrl: v.union(v.string(), v.null()),
   // Year-long drop heatmap for the author — powers the MiniHeatmap in DropCard.
   authorHeatmap: v.array(heatmapEntryShape),
+  habitColor: v.union(v.string(), v.null()),
 });
 
 const MAX_CAPTION = 100;
@@ -297,7 +299,9 @@ export const feedForUser = query({
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
         const authorHeatmap = heatmapByAuthor.get(drop.ownerId) ?? [];
-        return { drop, author, photoUrl, voiceUrl, authorHeatmap };
+        const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
+        const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
+        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
       }),
     );
     const filtered = enriched.filter((e): e is NonNullable<typeof e> => e !== null);
@@ -373,7 +377,7 @@ export const heatmapForProfile = query({
             .sort((a, b) => a[1] - b[1])
             .map(([habitId]) => ({
               habitId: habitId as Id<"habits">,
-              color: habitColorMap.get(habitId) ?? "#444444",
+              color: resolveHabitColor(habitId, habitColorMap.get(habitId)),
             }))
         : [];
       return { dayKey, total, habits };
@@ -387,7 +391,13 @@ export const heatmapForProfile = query({
  */
 export const heatmapForHabit = query({
   args: { habitId: v.id("habits") },
-  returns: v.array(v.object({ dayKey: v.string() })),
+  returns: v.array(
+    v.object({
+      dayKey: v.string(),
+      total: v.number(),
+      habits: v.array(v.object({ habitId: v.id("habits"), color: v.string() })),
+    }),
+  ),
   handler: async (ctx, args) => {
     const me = await requireCallerProfile(ctx);
     const habit = await ctx.db.get(args.habitId);
@@ -398,10 +408,16 @@ export const heatmapForHabit = query({
       .query("drops")
       .withIndex("by_owner_day", (q) => q.eq("ownerId", me._id).gte("dayKey", sinceDayKey))
       .collect();
-    const uniqueDays = new Set(
-      drops.filter((d) => d.habitId === args.habitId).map((d) => d.dayKey),
-    );
-    return [...uniqueDays].map((dayKey) => ({ dayKey }));
+    const countByDay = new Map<string, number>();
+    for (const d of drops.filter((d) => d.habitId === args.habitId)) {
+      countByDay.set(d.dayKey, (countByDay.get(d.dayKey) ?? 0) + 1);
+    }
+    const color = resolveHabitColor(args.habitId, habit.color);
+    return [...countByDay.entries()].map(([dayKey, total]) => ({
+      dayKey,
+      total,
+      habits: [{ habitId: args.habitId, color }],
+    }));
   },
 });
 
@@ -447,7 +463,9 @@ export const recentForProfile = query({
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
-        return { drop, author, photoUrl, voiceUrl, authorHeatmap };
+        const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
+        const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
+        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
       }),
     );
     return enriched.filter((e): e is NonNullable<typeof e> => e !== null);

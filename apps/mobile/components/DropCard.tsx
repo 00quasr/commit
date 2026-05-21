@@ -15,6 +15,7 @@ export interface DropCardProps {
   author: Doc<"profiles">;
   photoUrl: string | null;
   authorHeatmap: Array<{ dayKey: string; count: number }>;
+  habitColor: string | null;
   onVisible?: (dropId: Id<"drops">) => void;
 }
 
@@ -34,6 +35,7 @@ export const DropCard = memo(function DropCard({
   author,
   photoUrl,
   authorHeatmap,
+  habitColor,
 }: DropCardProps) {
   const toggleReaction = useMutation(api.reactions.toggle);
 
@@ -74,7 +76,11 @@ export const DropCard = memo(function DropCard({
           </View>
           <View style={styles.statsPanelDivider} />
           <View style={styles.statsPanelRight}>
-            <FeedMiniHeatmap data={authorHeatmap} timezone={author.timezone} />
+            <FeedMiniHeatmap
+              data={authorHeatmap}
+              timezone={author.timezone}
+              color={habitColor ?? "#444444"}
+            />
           </View>
         </View>
       </View>

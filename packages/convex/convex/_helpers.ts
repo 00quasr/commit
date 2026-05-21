@@ -2,6 +2,26 @@ import { dayKeyInTimezone } from "@commit/domain";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
+const HABIT_COLORS = [
+  "#5590D9",
+  "#52B788",
+  "#E05252",
+  "#E09940",
+  "#9B6EDE",
+  "#40B4C4",
+  "#D46BAA",
+  "#C4D454",
+];
+
+export function resolveHabitColor(habitId: string, color: string | undefined | null): string {
+  if (color) return color;
+  let hash = 0;
+  for (let i = 0; i < habitId.length; i++) {
+    hash = (hash * 31 + habitId.charCodeAt(i)) & 0xffff;
+  }
+  return HABIT_COLORS[hash % HABIT_COLORS.length]!;
+}
+
 /**
  * Resolves the calling Clerk identity to a `profiles` row.
  * Throws if unauthenticated or if no profile exists yet (the mobile app
