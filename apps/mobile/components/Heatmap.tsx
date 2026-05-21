@@ -1,11 +1,11 @@
 import { dayKeyInTimezone } from "@commit/domain";
 import { colors, fonts } from "@commit/ui-tokens";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
-const CELL = 11;
 const GAP = 2;
 const ROWS = 7; // Mon-Sun
 const COLS = 53;
+const PADDING_H = 20;
 
 const EMPTY_COLOR = "#0e0e0e";
 const ADHOC_COLOR = "#333333";
@@ -33,6 +33,9 @@ export interface HeatmapProps {
 }
 
 export function Heatmap({ data, timezone }: HeatmapProps) {
+  const { width: screenWidth } = useWindowDimensions();
+  const cellSize = (screenWidth - PADDING_H * 2 - (COLS - 1) * GAP) / COLS;
+
   const byDay = new Map(data.map((d) => [d.dayKey, d]));
   const todayKey = dayKeyInTimezone(Date.now(), timezone);
 
@@ -57,47 +60,43 @@ export function Heatmap({ data, timezone }: HeatmapProps) {
   }
 
   const total = data.reduce((sum, d) => sum + d.total, 0);
+  const cellStyle = { width: cellSize, height: cellSize, borderRadius: Math.max(1, cellSize / 4) };
 
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>{total} drops in the last year</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroll}>
-        <View style={styles.grid}>
-          {columns.map((week, ci) => (
-            <View key={ci} style={styles.column}>
-              {week.map((cell, ri) => {
-                if (cell.total < 0) {
-                  return <View key={ri} style={[styles.cell, { backgroundColor: "transparent" }]} />;
-                }
-                if (cell.habits.length === 0) {
-                  // No drops or only ad-hoc drops
-                  const bg = cell.total > 0 ? ADHOC_COLOR : EMPTY_COLOR;
-                  return <View key={ri} style={[styles.cell, { backgroundColor: bg }]} />;
-                }
-                // Split cell: one horizontal band per habit
-                return (
-                  <View key={ri} style={[styles.cell, styles.splitCell]}>
-                    {cell.habits.map((h) => (
-                      <View key={h.habitId} style={[styles.band, { backgroundColor: h.color }]} />
-                    ))}
-                  </View>
-                );
-              })}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+      <View style={styles.grid}>
+        {columns.map((week, ci) => (
+          <View key={ci} style={styles.column}>
+            {week.map((cell, ri) => {
+              if (cell.total < 0) {
+                return <View key={ri} style={[cellStyle, { backgroundColor: "transparent" }]} />;
+              }
+              if (cell.habits.length === 0) {
+                const bg = cell.total > 0 ? ADHOC_COLOR : EMPTY_COLOR;
+                return <View key={ri} style={[cellStyle, { backgroundColor: bg }]} />;
+              }
+              // Split cell: one horizontal band per habit
+              return (
+                <View key={ri} style={[cellStyle, styles.splitCell]}>
+                  {cell.habits.map((h) => (
+                    <View key={h.habitId} style={[styles.band, { backgroundColor: h.color }]} />
+                  ))}
+                </View>
+              );
+            })}
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: 20 },
+  wrap: { paddingHorizontal: PADDING_H },
   title: { color: colors.fg, fontSize: 14, fontFamily: fonts.mono, marginBottom: 12 },
-  scroll: { marginHorizontal: -20, paddingHorizontal: 20 },
   grid: { flexDirection: "row", gap: GAP },
   column: { flexDirection: "column", gap: GAP },
-  cell: { width: CELL, height: CELL, borderRadius: 2, overflow: "hidden" },
-  splitCell: { flexDirection: "column" },
+  splitCell: { flexDirection: "column", overflow: "hidden" },
   band: { flex: 1 },
 });
