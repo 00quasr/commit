@@ -185,6 +185,31 @@ export default function SignInScreen() {
           >
             <Text style={styles.buttonText}>Verify</Text>
           </Pressable>
+          <Pressable
+            onPress={() => void onSendCode()}
+            disabled={busy}
+            style={({ pressed }) => [
+              styles.button,
+              styles.buttonOutline,
+              { opacity: pressed || busy ? 0.5 : 1 },
+            ]}
+          >
+            <Text style={styles.buttonOutlineText}>Resend code</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setStage("idle");
+              setCode("");
+            }}
+            disabled={busy}
+            style={({ pressed }) => [
+              styles.button,
+              styles.buttonOutline,
+              { opacity: pressed || busy ? 0.5 : 1 },
+            ]}
+          >
+            <Text style={styles.buttonOutlineText}>Back</Text>
+          </Pressable>
         </>
       )}
 
