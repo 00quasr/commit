@@ -13,7 +13,6 @@ const habitShape = v.object({
   _creationTime: v.number(),
   ownerId: v.id("profiles"),
   text: v.string(),
-  difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
   cycleDays: v.number(),
   createdDayKey: v.string(),
   lastDropDayKey: v.optional(v.string()),
@@ -24,7 +23,6 @@ const habitShape = v.object({
 export const create = mutation({
   args: {
     text: v.string(),
-    difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
     cycleDays: v.number(),
     color: v.string(),
   },
@@ -57,7 +55,6 @@ export const create = mutation({
     return await ctx.db.insert("habits", {
       ownerId: me._id,
       text,
-      difficulty: args.difficulty,
       cycleDays: args.cycleDays,
       createdDayKey: dayKeyForCaller(me),
       archived: false,

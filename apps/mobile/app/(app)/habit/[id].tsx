@@ -98,7 +98,6 @@ export default function HabitDetail() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.text}>{habit.text}</Text>
         <View style={styles.metaRow}>
-          <Text style={styles.metaPill}>{habit.difficulty}</Text>
           <Text style={styles.metaPill}>{cycleLabel(habit.cycleDays)}</Text>
           {dueToday && <Text style={[styles.metaPill, styles.duePill]}>due today</Text>}
         </View>

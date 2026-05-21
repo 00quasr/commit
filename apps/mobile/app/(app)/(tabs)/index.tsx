@@ -22,8 +22,6 @@ import { BottomBar } from "@/components/BottomBar";
 import { Heatmap } from "@/components/Heatmap";
 import { HabitRow } from "@/components/HabitRow";
 
-type Difficulty = "easy" | "medium" | "hard";
-
 const CYCLE_PRESETS: Array<{ label: string; days: number }> = [
   { label: "Daily", days: 1 },
   { label: "Every 2 days", days: 2 },
@@ -41,7 +39,6 @@ export default function Today() {
 
   const [showAdd, setShowAdd] = useState(false);
   const [draftText, setDraftText] = useState("");
-  const [draftDifficulty, setDraftDifficulty] = useState<Difficulty>("medium");
   const [draftCycle, setDraftCycle] = useState<number>(1);
   const [draftColor, setDraftColor] = useState<string>(habitColors[0]);
   const [busy, setBusy] = useState(false);
@@ -61,9 +58,8 @@ export default function Today() {
     if (!text || busy) return;
     setBusy(true);
     try {
-      await createHabit({ text, difficulty: draftDifficulty, cycleDays: draftCycle, color: draftColor });
+      await createHabit({ text, cycleDays: draftCycle, color: draftColor });
       setDraftText("");
-      setDraftDifficulty("medium");
       setDraftCycle(1);
       setDraftColor(habitColors[0]);
       setShowAdd(false);
@@ -161,7 +157,6 @@ export default function Today() {
               >
                 <HabitRow
                   text={item.text}
-                  difficulty={item.difficulty}
                   cycleDays={item.cycleDays}
                   color={item.color}
                   doneToday={doneToday}
@@ -194,21 +189,6 @@ export default function Today() {
               maxLength={280}
               multiline
             />
-
-            <Text style={styles.fieldLabel}>Difficulty</Text>
-            <View style={styles.chipRow}>
-              {(["easy", "medium", "hard"] as Difficulty[]).map((d) => (
-                <Pressable
-                  key={d}
-                  style={[styles.chip, draftDifficulty === d && styles.chipActive]}
-                  onPress={() => setDraftDifficulty(d)}
-                >
-                  <Text style={[styles.chipText, draftDifficulty === d && styles.chipTextActive]}>
-                    {d}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
 
             <Text style={styles.fieldLabel}>Cycle</Text>
             <View style={styles.chipRow}>
@@ -265,7 +245,7 @@ function StatsAndHeatmap({
   timezone,
 }: {
   stats: { streak: number; totalDrops: number } | null | undefined;
-  heatmapData: { dayKey: string; count: number }[];
+  heatmapData: { dayKey: string; total: number; habits: { habitId: string; color: string }[] }[];
   timezone: string;
 }) {
   return (

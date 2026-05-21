@@ -68,7 +68,7 @@ export default function Compose() {
   };
 
   const onSubmit = async () => {
-    if (!habitId || !difficulty || busy) return;
+    if (!habitId || busy) return;
     if (caption.length > MAX_CAPTION) return;
     setBusy(true);
     setError(null);
@@ -91,7 +91,6 @@ export default function Compose() {
         habitId,
         caption,
         tags: [...selectedTags],
-        difficulty,
         visibility,
         ...(photoFileId !== undefined ? { photoFileId } : {}),
         ...(voiceFileId !== undefined ? { voiceFileId } : {}),

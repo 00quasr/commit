@@ -14,7 +14,6 @@ const asBob = { subject: "user_bob" };
 const baseDropArgs = {
   caption: "shipped",
   tags: ["@build"],
-  difficulty: "medium" as const,
   visibility: "friends" as const,
 };
 

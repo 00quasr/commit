@@ -40,14 +40,12 @@ export const ProfileDropRow = memo(function ProfileDropRow({
   return (
     <Pressable style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]} onPress={onPress}>
       <View style={styles.thumb}>
-        {photoUrl ? (
+        {photoUrl && (
           <Image
             source={{ uri: photoUrl }}
             style={StyleSheet.absoluteFillObject}
             contentFit="cover"
           />
-        ) : (
-          <Text style={styles.thumbFallback}>{drop.difficulty.charAt(0).toUpperCase()}</Text>
         )}
       </View>
       <View style={styles.body}>
@@ -89,12 +87,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-  },
-  thumbFallback: {
-    color: theme.text.tertiary,
-    fontSize: 18,
-    fontFamily: fonts.mono,
-    fontWeight: "600",
   },
   body: { flex: 1 },
   caption: {

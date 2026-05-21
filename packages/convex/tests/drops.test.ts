@@ -26,7 +26,6 @@ const asAlice = { subject: "user_alice" };
 const baseDropArgs = {
   caption: "shipped",
   tags: ["@build"],
-  difficulty: "medium" as const,
   visibility: "friends" as const,
 };
 
@@ -69,7 +68,6 @@ describe("drops.create — basic", () => {
 
     const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
       text: "ship it",
-      difficulty: "medium",
       cycleDays: 1,
       color: "#5590D9",
     });

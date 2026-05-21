@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export interface HabitRowProps {
   text: string;
-  difficulty: "easy" | "medium" | "hard";
   cycleDays: number;
   color?: string;
   doneToday?: boolean;
@@ -18,14 +17,7 @@ function cycleLabel(cycleDays: number): string {
   return `every ${cycleDays} days`;
 }
 
-export function HabitRow({
-  text,
-  difficulty,
-  cycleDays,
-  color,
-  doneToday = false,
-  onPress,
-}: HabitRowProps) {
+export function HabitRow({ text, cycleDays, color, doneToday = false, onPress }: HabitRowProps) {
   const accentColor = color ?? theme.text.muted;
   return (
     <Pressable style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]} onPress={onPress}>
@@ -43,9 +35,7 @@ export function HabitRow({
         <Text style={[styles.text, doneToday && styles.textDone]} numberOfLines={2}>
           {text}
         </Text>
-        <Text style={styles.meta}>
-          {difficulty} · {cycleLabel(cycleDays)}
-        </Text>
+        <Text style={styles.meta}>{cycleLabel(cycleDays)}</Text>
       </View>
     </Pressable>
   );
