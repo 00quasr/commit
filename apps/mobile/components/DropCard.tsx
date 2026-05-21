@@ -1,6 +1,16 @@
 import { api } from "@commit/convex/api";
 import type { Doc, Id } from "@commit/convex/dataModel";
-import { colors, fonts } from "@commit/ui-tokens";
+import { colors, fonts, habitColors } from "@commit/ui-tokens";
+
+function colorForHabit(habitId: string | undefined, habitColor: string | null): string {
+  if (habitColor) return habitColor;
+  if (!habitId) return "#444444";
+  let hash = 0;
+  for (let i = 0; i < habitId.length; i++) {
+    hash = (hash * 31 + habitId.charCodeAt(i)) & 0xffff;
+  }
+  return habitColors[hash % habitColors.length]!;
+}
 import { Image } from "expo-image";
 import { useMutation } from "convex/react";
 import { memo, useCallback } from "react";
@@ -79,7 +89,7 @@ export const DropCard = memo(function DropCard({
             <FeedMiniHeatmap
               data={authorHeatmap}
               timezone={author.timezone}
-              color={habitColor ?? "#444444"}
+              color={colorForHabit(drop.habitId, habitColor)}
             />
           </View>
         </View>
