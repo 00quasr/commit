@@ -3,7 +3,16 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropDraft } from "@/lib/dropDraft";
 
@@ -11,6 +20,9 @@ export default function CameraScreen() {
   const photoUri = useDropDraft((s) => s.photoUri);
   const setPhoto = useDropDraft((s) => s.setPhoto);
   const cancel = useDropDraft((s) => s.cancel);
+
+  const { width: screenWidth } = useWindowDimensions();
+  const viewfinderHeight = Math.round((screenWidth * 4) / 3);
 
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
@@ -113,10 +125,10 @@ export default function CameraScreen() {
             <Text style={styles.cancelTop}>Retake</Text>
           </Pressable>
         </View>
-        <View style={styles.viewfinderWrap}>
+        <View style={[styles.viewfinderWrap, { height: viewfinderHeight }]}>
           <Image
             source={{ uri: photoUri }}
-            style={StyleSheet.absoluteFillObject}
+            style={{ width: screenWidth, height: viewfinderHeight }}
             resizeMode="cover"
           />
         </View>
@@ -137,8 +149,12 @@ export default function CameraScreen() {
           <Text style={styles.cancelTop}>Cancel</Text>
         </Pressable>
       </View>
-      <View style={styles.viewfinderWrap}>
-        <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+      <View style={[styles.viewfinderWrap, { height: viewfinderHeight }]}>
+        <CameraView
+          ref={cameraRef}
+          style={{ width: screenWidth, height: viewfinderHeight }}
+          facing="back"
+        />
       </View>
       <View style={styles.captureWrap}>
         <Pressable
@@ -165,11 +181,9 @@ const styles = StyleSheet.create({
   cancelTop: { color: colors.fg, fontSize: 16, fontFamily: fonts.sans },
   viewfinderWrap: {
     width: "100%",
-    aspectRatio: 3 / 4,
     overflow: "hidden",
     backgroundColor: "#111",
   },
-  camera: { flex: 1 },
   captureWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   captureBtn: {
     width: 80,
