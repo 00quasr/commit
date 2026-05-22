@@ -28,6 +28,7 @@ export default function TabsLayout() {
           borderTopWidth: 1,
           height: 72,
           paddingTop: 8,
+          paddingBottom: 24,
         },
         tabBarShowLabel: true,
         tabBarActiveTintColor: colors.fg,
