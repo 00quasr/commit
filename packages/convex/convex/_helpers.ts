@@ -115,23 +115,34 @@ export async function fetchFriendDropsToday(
 }
 
 /**
- * Year-long drop heatmap for a profile. Powers the MiniHeatmap in DropCard.
- * Same logic as the `heatmapForProfile` query, extracted so it can be called
- * inline from other query handlers.
+ * Raw drops for a profile over the last year. Callers build per-habit or
+ * per-profile heatmaps from this data using `buildHeatmap`.
  */
-export async function fetchHeatmapForProfile(
+export async function fetchDropsForHeatmap(
   ctx: QueryCtx | MutationCtx,
   profileId: Id<"profiles">,
   timezone: string,
-): Promise<{ dayKey: string; count: number }[]> {
+): Promise<Doc<"drops">[]> {
   const sinceMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
   const sinceDayKey = dayKeyInTimezone(sinceMs, timezone);
-  const drops = await ctx.db
+  return ctx.db
     .query("drops")
     .withIndex("by_owner_day", (q) => q.eq("ownerId", profileId).gte("dayKey", sinceDayKey))
     .collect();
+}
+
+/**
+ * Aggregates raw drops into a per-day count array. When `habitId` is provided,
+ * only drops for that specific habit are counted — fixes the streak-per-color
+ * bug where habits sharing a color merged into one inflated streak.
+ */
+export function buildHeatmap(
+  drops: Doc<"drops">[],
+  habitId?: Id<"habits">,
+): { dayKey: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const d of drops) {
+    if (habitId !== undefined && d.habitId !== habitId) continue;
     counts.set(d.dayKey, (counts.get(d.dayKey) ?? 0) + 1);
   }
   return [...counts.entries()].map(([dayKey, count]) => ({ dayKey, count }));
