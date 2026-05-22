@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   scroll: { padding: 20 },
   photoWrap: {
     width: "100%",
-    aspectRatio: 1,
+    aspectRatio: 3 / 4,
     borderRadius: 12,
     overflow: "hidden",
     backgroundColor: "#0a0a0a",
