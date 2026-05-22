@@ -120,8 +120,8 @@ export const DropCard = memo(function DropCard({
         absPos.stopAnimation();
         // Capture current position as offset so subsequent dx/dy are relative to it
         absPos.setOffset({
-          x: (absPos.x as any)._value,
-          y: (absPos.y as any)._value,
+          x: (absPos.x as unknown as { _value: number })._value,
+          y: (absPos.y as unknown as { _value: number })._value,
         });
         absPos.setValue({ x: 0, y: 0 });
         onOverlayDragStartRef.current?.();
@@ -135,8 +135,8 @@ export const DropCard = memo(function DropCard({
         absPos.flattenOffset();
         const { width: pw, height: ph } = photoSize.current;
         const { width: ow, height: oh } = overlaySize.current;
-        const curX = (absPos.x as any)._value;
-        const curY = (absPos.y as any)._value;
+        const curX = (absPos.x as unknown as { _value: number })._value;
+        const curY = (absPos.y as unknown as { _value: number })._value;
         const centerX = curX + ow / 2;
         const centerY = curY + oh / 2;
 
