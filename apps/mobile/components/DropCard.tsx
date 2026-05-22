@@ -30,6 +30,28 @@ function timeAgo(ms: number): string {
 }
 
 const OVERLAY_PAD = 8;
+const FLICK_THRESHOLD = 0.5; // px/ms
+
+function resolveCorner(
+  dx: number,
+  dy: number,
+  vx: number,
+  vy: number,
+  pw: number,
+  ph: number,
+  ow: number,
+  oh: number,
+  current: Corner,
+): Corner {
+  const base = cornerBasePos(current, pw, ph, ow, oh);
+  const centerX = base.x + dx + ow / 2;
+  const centerY = base.y + dy + oh / 2;
+  const flickX = Math.abs(vx) > FLICK_THRESHOLD;
+  const flickY = Math.abs(vy) > FLICK_THRESHOLD;
+  const goRight = flickX ? vx > 0 : centerX >= pw / 2;
+  const goDown = flickY ? vy > 0 : centerY >= ph / 2;
+  return `${goDown ? "bottom" : "top"}-${goRight ? "right" : "left"}` as Corner;
+}
 
 function cornerBasePos(
   c: Corner,
@@ -81,21 +103,10 @@ export const DropCard = memo(function DropCard({
       onPanResponderMove: Animated.event([null, { dx: dragOffset.x, dy: dragOffset.y }], {
         useNativeDriver: false,
       }),
-      onPanResponderRelease: (_e, { dx, dy }) => {
+      onPanResponderRelease: (_e, { dx, dy, vx, vy }) => {
         const { width: pw, height: ph } = photoSize.current;
         const { width: ow, height: oh } = overlaySize.current;
-        const base = cornerBasePos(cornerRef.current, pw, ph, ow, oh);
-        // Snap based on the CENTER of the overlay, not the finger position
-        const centerX = base.x + dx + ow / 2;
-        const centerY = base.y + dy + oh / 2;
-        const newCorner: Corner =
-          centerX < pw / 2
-            ? centerY < ph / 2
-              ? "top-left"
-              : "bottom-left"
-            : centerY < ph / 2
-              ? "top-right"
-              : "bottom-right";
+        const newCorner = resolveCorner(dx, dy, vx, vy, pw, ph, ow, oh, cornerRef.current);
         cornerRef.current = newCorner;
         dragOffset.setValue({ x: 0, y: 0 });
         setCorner(newCorner);
