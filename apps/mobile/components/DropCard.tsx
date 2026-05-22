@@ -30,7 +30,9 @@ function timeAgo(ms: number): string {
 }
 
 const OVERLAY_PAD = 8;
-const FLICK_THRESHOLD = 0.5; // px/ms
+const STRONG_FLICK = 0.5; // px/ms — snaps to new corner
+const WEAK_FLICK = 0.15; // px/ms — bounces slightly, returns to current corner
+const BOUNCE_PX = 30; // max overshoot distance for a weak flick
 
 function resolveCorner(
   dx: number,
@@ -46,8 +48,8 @@ function resolveCorner(
   const base = cornerBasePos(current, pw, ph, ow, oh);
   const centerX = base.x + dx + ow / 2;
   const centerY = base.y + dy + oh / 2;
-  const flickX = Math.abs(vx) > FLICK_THRESHOLD;
-  const flickY = Math.abs(vy) > FLICK_THRESHOLD;
+  const flickX = Math.abs(vx) > STRONG_FLICK;
+  const flickY = Math.abs(vy) > STRONG_FLICK;
   const goRight = flickX ? vx > 0 : centerX >= pw / 2;
   const goDown = flickY ? vy > 0 : centerY >= ph / 2;
   return `${goDown ? "bottom" : "top"}-${goRight ? "right" : "left"}` as Corner;
@@ -98,6 +100,9 @@ export const DropCard = memo(function DropCard({
       onMoveShouldSetPanResponder: () => true,
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
+        // Cancel any ongoing bounce animation before starting a new drag
+        dragOffset.stopAnimation();
+        dragOffset.setValue({ x: 0, y: 0 });
         onOverlayDragStartRef.current?.();
       },
       onPanResponderMove: Animated.event([null, { dx: dragOffset.x, dy: dragOffset.y }], {
@@ -106,10 +111,34 @@ export const DropCard = memo(function DropCard({
       onPanResponderRelease: (_e, { dx, dy, vx, vy }) => {
         const { width: pw, height: ph } = photoSize.current;
         const { width: ow, height: oh } = overlaySize.current;
-        const newCorner = resolveCorner(dx, dy, vx, vy, pw, ph, ow, oh, cornerRef.current);
-        cornerRef.current = newCorner;
-        dragOffset.setValue({ x: 0, y: 0 });
-        setCorner(newCorner);
+        const weakX = Math.abs(vx) > WEAK_FLICK && Math.abs(vx) <= STRONG_FLICK;
+        const weakY = Math.abs(vy) > WEAK_FLICK && Math.abs(vy) <= STRONG_FLICK;
+
+        if (weakX || weakY) {
+          // Weak flick: overshoot slightly in the flick direction, then spring back
+          Animated.sequence([
+            Animated.timing(dragOffset, {
+              toValue: {
+                x: dx + (weakX ? Math.sign(vx) * BOUNCE_PX : 0),
+                y: dy + (weakY ? Math.sign(vy) * BOUNCE_PX : 0),
+              },
+              duration: 80,
+              useNativeDriver: false,
+            }),
+            Animated.spring(dragOffset, {
+              toValue: { x: 0, y: 0 },
+              tension: 180,
+              friction: 12,
+              useNativeDriver: false,
+            }),
+          ]).start();
+        } else {
+          // Strong flick or slow drag: snap to resolved corner
+          const newCorner = resolveCorner(dx, dy, vx, vy, pw, ph, ow, oh, cornerRef.current);
+          cornerRef.current = newCorner;
+          dragOffset.setValue({ x: 0, y: 0 });
+          setCorner(newCorner);
+        }
         onOverlayDragEndRef.current?.();
       },
       onPanResponderTerminate: () => {
