@@ -32,30 +32,9 @@ function timeAgo(ms: number): string {
 const OVERLAY_PAD = 8;
 const STRONG_FLICK = 0.5; // px/ms — snaps to new corner
 const WEAK_FLICK = 0.15; // px/ms — bounces slightly, returns to current corner
-const BOUNCE_PX = 30; // max overshoot distance for a weak flick
+const BOUNCE_PX = 30; // overshoot distance for a weak flick
 
-function resolveCorner(
-  dx: number,
-  dy: number,
-  vx: number,
-  vy: number,
-  pw: number,
-  ph: number,
-  ow: number,
-  oh: number,
-  current: Corner,
-): Corner {
-  const base = cornerBasePos(current, pw, ph, ow, oh);
-  const centerX = base.x + dx + ow / 2;
-  const centerY = base.y + dy + oh / 2;
-  const flickX = Math.abs(vx) > STRONG_FLICK;
-  const flickY = Math.abs(vy) > STRONG_FLICK;
-  const goRight = flickX ? vx > 0 : centerX >= pw / 2;
-  const goDown = flickY ? vy > 0 : centerY >= ph / 2;
-  return `${goDown ? "bottom" : "top"}-${goRight ? "right" : "left"}` as Corner;
-}
-
-function cornerBasePos(
+function cornerPos(
   c: Corner,
   pw: number,
   ph: number,
@@ -74,6 +53,21 @@ function cornerBasePos(
   }
 }
 
+function resolveCorner(
+  cx: number,
+  cy: number,
+  vx: number,
+  vy: number,
+  pw: number,
+  ph: number,
+): Corner {
+  const flickX = Math.abs(vx) > STRONG_FLICK;
+  const flickY = Math.abs(vy) > STRONG_FLICK;
+  const goRight = flickX ? vx > 0 : cx >= pw / 2;
+  const goDown = flickY ? vy > 0 : cy >= ph / 2;
+  return `${goDown ? "bottom" : "top"}-${goRight ? "right" : "left"}` as Corner;
+}
+
 export const DropCard = memo(function DropCard({
   drop,
   author,
@@ -83,87 +77,110 @@ export const DropCard = memo(function DropCard({
   onOverlayDragStart,
   onOverlayDragEnd,
 }: DropCardProps) {
-  const [corner, setCorner] = useState<Corner>("bottom-right");
-  const cornerRef = useRef<Corner>("bottom-right");
-  cornerRef.current = corner; // always mirrors rendered state
-  const dragOffset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  // Single Animated.ValueXY drives the absolute {left, top} position of the overlay.
+  // No dual-source-of-truth (corner state + dragOffset) → no inter-frame sync glitches.
+  const absPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const committedCornerRef = useRef<Corner>("bottom-right");
+  const initializedRef = useRef(false);
+  const [overlayReady, setOverlayReady] = useState(false);
   const photoSize = useRef({ width: 0, height: 0 });
   const overlaySize = useRef({ width: 0, height: 0 });
-  // Refs so PanResponder closure always sees the latest callbacks
+
   const onOverlayDragStartRef = useRef(onOverlayDragStart);
   const onOverlayDragEndRef = useRef(onOverlayDragEnd);
   onOverlayDragStartRef.current = onOverlayDragStart;
   onOverlayDragEndRef.current = onOverlayDragEnd;
+
+  function maybeInit() {
+    if (initializedRef.current) return;
+    const { width: pw, height: ph } = photoSize.current;
+    const { width: ow, height: oh } = overlaySize.current;
+    if (pw === 0 || ow === 0) return;
+    initializedRef.current = true;
+    absPos.setValue(cornerPos("bottom-right", pw, ph, ow, oh));
+    setOverlayReady(true);
+  }
+
+  function springTo(target: { x: number; y: number }) {
+    Animated.spring(absPos, {
+      toValue: target,
+      tension: 350,
+      friction: 30,
+      useNativeDriver: false,
+    }).start();
+  }
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderTerminationRequest: () => false,
+
       onPanResponderGrant: () => {
-        // Cancel any ongoing bounce animation before starting a new drag
-        dragOffset.stopAnimation();
-        dragOffset.setValue({ x: 0, y: 0 });
+        absPos.stopAnimation();
+        // Capture current position as offset so subsequent dx/dy are relative to it
+        absPos.setOffset({
+          x: (absPos.x as any)._value,
+          y: (absPos.y as any)._value,
+        });
+        absPos.setValue({ x: 0, y: 0 });
         onOverlayDragStartRef.current?.();
       },
-      onPanResponderMove: Animated.event([null, { dx: dragOffset.x, dy: dragOffset.y }], {
+
+      onPanResponderMove: Animated.event([null, { dx: absPos.x, dy: absPos.y }], {
         useNativeDriver: false,
       }),
-      onPanResponderRelease: (_e, { dx, dy, vx, vy }) => {
+
+      onPanResponderRelease: (_e, { vx, vy }) => {
+        absPos.flattenOffset();
         const { width: pw, height: ph } = photoSize.current;
         const { width: ow, height: oh } = overlaySize.current;
+        const curX = (absPos.x as any)._value;
+        const curY = (absPos.y as any)._value;
+        const centerX = curX + ow / 2;
+        const centerY = curY + oh / 2;
+
         const weakX = Math.abs(vx) > WEAK_FLICK && Math.abs(vx) <= STRONG_FLICK;
         const weakY = Math.abs(vy) > WEAK_FLICK && Math.abs(vy) <= STRONG_FLICK;
 
         if (weakX || weakY) {
-          // Weak flick: overshoot slightly in the flick direction, then spring back
+          // Weak flick: overshoot slightly, then spring back to current corner
+          const returnPos = cornerPos(committedCornerRef.current, pw, ph, ow, oh);
           Animated.sequence([
-            Animated.timing(dragOffset, {
+            Animated.timing(absPos, {
               toValue: {
-                x: dx + (weakX ? Math.sign(vx) * BOUNCE_PX : 0),
-                y: dy + (weakY ? Math.sign(vy) * BOUNCE_PX : 0),
+                x: curX + (weakX ? Math.sign(vx) * BOUNCE_PX : 0),
+                y: curY + (weakY ? Math.sign(vy) * BOUNCE_PX : 0),
               },
               duration: 80,
               useNativeDriver: false,
             }),
-            Animated.spring(dragOffset, {
-              toValue: { x: 0, y: 0 },
+            Animated.spring(absPos, {
+              toValue: returnPos,
               tension: 350,
               friction: 30,
               useNativeDriver: false,
             }),
           ]).start();
         } else {
-          // Strong flick or slow drag: slide to resolved corner via spring
-          const prevCorner = cornerRef.current;
-          const newCorner = resolveCorner(dx, dy, vx, vy, pw, ph, ow, oh, prevCorner);
-          const prevBase = cornerBasePos(prevCorner, pw, ph, ow, oh);
-          const newBase = cornerBasePos(newCorner, pw, ph, ow, oh);
-          Animated.spring(dragOffset, {
-            toValue: { x: newBase.x - prevBase.x, y: newBase.y - prevBase.y },
-            tension: 350,
-            friction: 30,
-            useNativeDriver: false,
-          }).start(({ finished }) => {
-            if (finished) {
-              setCorner(newCorner);
-              dragOffset.setValue({ x: 0, y: 0 });
-            }
-          });
+          // Strong flick or slow drag: resolve target corner and slide there
+          const newCorner = resolveCorner(centerX, centerY, vx, vy, pw, ph);
+          committedCornerRef.current = newCorner;
+          springTo(cornerPos(newCorner, pw, ph, ow, oh));
         }
+
         onOverlayDragEndRef.current?.();
       },
+
       onPanResponderTerminate: () => {
-        dragOffset.setValue({ x: 0, y: 0 });
+        absPos.flattenOffset();
+        const { width: pw, height: ph } = photoSize.current;
+        const { width: ow, height: oh } = overlaySize.current;
+        springTo(cornerPos(committedCornerRef.current, pw, ph, ow, oh));
         onOverlayDragEndRef.current?.();
       },
     }),
   ).current;
-
-  const overlayPosition = {
-    ...(corner.startsWith("top") ? { top: OVERLAY_PAD } : { bottom: OVERLAY_PAD }),
-    ...(corner.endsWith("left") ? { left: OVERLAY_PAD } : { right: OVERLAY_PAD }),
-  };
 
   const statsPanel = (
     <View style={styles.statsPanel}>
@@ -224,6 +241,7 @@ export const DropCard = memo(function DropCard({
           collapsable={false}
           onLayout={(e) => {
             photoSize.current = e.nativeEvent.layout;
+            maybeInit();
           }}
         >
           <Image
@@ -235,11 +253,12 @@ export const DropCard = memo(function DropCard({
           <Animated.View
             style={[
               styles.statsOverlay,
-              overlayPosition,
-              { transform: dragOffset.getTranslateTransform() },
+              { left: absPos.x, top: absPos.y },
+              !overlayReady && styles.statsOverlayHidden,
             ]}
             onLayout={(e) => {
               overlaySize.current = e.nativeEvent.layout;
+              maybeInit();
             }}
             {...panResponder.panHandlers}
           >
@@ -330,6 +349,9 @@ const styles = StyleSheet.create({
   photo: { width: "100%", height: "100%" },
   statsOverlay: {
     position: "absolute",
+  },
+  statsOverlayHidden: {
+    opacity: 0,
   },
   caption: {
     color: colors.fg,
