@@ -3,8 +3,8 @@ import { colors, fonts } from "@commit/ui-tokens";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 const GAP = 2;
-const ROWS = 7; // Mon-Sun
-const COLS = 53;
+const ROWS = 7;
+const COLS = 26;
 const PADDING_H = 20;
 
 const EMPTY_COLOR = "#0e0e0e";
@@ -14,12 +14,6 @@ function addDays(dayKey: string, days: number): string {
   const [y, m, d] = dayKey.split("-").map(Number);
   const date = new Date(Date.UTC(y!, m! - 1, d! + days));
   return date.toISOString().slice(0, 10);
-}
-
-function dayOfWeekMonFirst(dayKey: string): number {
-  const [y, m, d] = dayKey.split("-").map(Number);
-  const dt = new Date(Date.UTC(y!, m! - 1, d!));
-  return (dt.getUTCDay() + 6) % 7;
 }
 
 interface HabitEntry {
@@ -39,22 +33,16 @@ export function Heatmap({ data, timezone }: HeatmapProps) {
   const byDay = new Map(data.map((d) => [d.dayKey, d]));
   const todayKey = dayKeyInTimezone(Date.now(), timezone);
 
-  const todayDow = dayOfWeekMonFirst(todayKey);
-  const todayIndex = (COLS - 1) * ROWS + todayDow;
-  const startOffset = -todayIndex;
-  const startKey = addDays(todayKey, startOffset);
+  const totalCells = ROWS * COLS;
+  const startKey = addDays(todayKey, -(totalCells - 1));
 
   const columns: Array<Array<{ dayKey: string; total: number; habits: HabitEntry[] }>> = [];
   for (let col = 0; col < COLS; col++) {
     const week: Array<{ dayKey: string; total: number; habits: HabitEntry[] }> = [];
     for (let row = 0; row < ROWS; row++) {
       const idx = col * ROWS + row;
-      if (idx > todayIndex) {
-        week.push({ dayKey: "", total: -1, habits: [] });
-      } else {
-        const dayKey = addDays(startKey, idx);
-        week.push(byDay.get(dayKey) ?? { dayKey, total: 0, habits: [] });
-      }
+      const dayKey = addDays(startKey, idx);
+      week.push(byDay.get(dayKey) ?? { dayKey, total: 0, habits: [] });
     }
     columns.push(week);
   }
@@ -64,19 +52,15 @@ export function Heatmap({ data, timezone }: HeatmapProps) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>{total} drops in the last year</Text>
+      <Text style={styles.title}>{total} drops in the last 6 months</Text>
       <View style={styles.grid}>
         {columns.map((week, ci) => (
           <View key={ci} style={styles.column}>
             {week.map((cell, ri) => {
-              if (cell.total < 0) {
-                return <View key={ri} style={[cellStyle, { backgroundColor: "transparent" }]} />;
-              }
               if (cell.habits.length === 0) {
                 const bg = cell.total > 0 ? ADHOC_COLOR : EMPTY_COLOR;
                 return <View key={ri} style={[cellStyle, { backgroundColor: bg }]} />;
               }
-              // Split cell: one horizontal band per habit
               return (
                 <View key={ri} style={[cellStyle, styles.splitCell]}>
                   {cell.habits.map((h) => (
