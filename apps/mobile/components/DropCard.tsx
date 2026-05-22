@@ -76,7 +76,7 @@ export const DropCard = memo(function DropCard({
           <Image
             source={{ uri: photoUrl }}
             style={styles.photo}
-            contentFit="cover"
+            contentFit="contain"
             transition={120}
           />
         </View>
