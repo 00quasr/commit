@@ -14,6 +14,8 @@ export interface DropCardProps {
   authorHeatmap: Array<{ dayKey: string; count: number }>;
   habitColor: string | null;
   onVisible?: (dropId: Id<"drops">) => void;
+  onOverlayDragStart?: () => void;
+  onOverlayDragEnd?: () => void;
 }
 
 function timeAgo(ms: number): string {
@@ -54,20 +56,28 @@ export const DropCard = memo(function DropCard({
   photoUrl,
   authorHeatmap,
   habitColor,
+  onOverlayDragStart,
+  onOverlayDragEnd,
 }: DropCardProps) {
   const [corner, setCorner] = useState<Corner>("bottom-right");
   const cornerRef = useRef<Corner>("bottom-right");
   const dragOffset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const photoSize = useRef({ width: 0, height: 0 });
   const overlaySize = useRef({ width: 0, height: 0 });
+  // Refs so PanResponder closure always sees the latest callbacks
+  const onOverlayDragStartRef = useRef(onOverlayDragStart);
+  const onOverlayDragEndRef = useRef(onOverlayDragEnd);
+  onOverlayDragStartRef.current = onOverlayDragStart;
+  onOverlayDragEndRef.current = onOverlayDragEnd;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      // Capture movement so the parent FlatList cannot scroll while dragging the overlay
       onMoveShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: () => {
+        onOverlayDragStartRef.current?.();
+      },
       onPanResponderMove: Animated.event([null, { dx: dragOffset.x, dy: dragOffset.y }], {
         useNativeDriver: false,
       }),
@@ -89,6 +99,11 @@ export const DropCard = memo(function DropCard({
         cornerRef.current = newCorner;
         dragOffset.setValue({ x: 0, y: 0 });
         setCorner(newCorner);
+        onOverlayDragEndRef.current?.();
+      },
+      onPanResponderTerminate: () => {
+        dragOffset.setValue({ x: 0, y: 0 });
+        onOverlayDragEndRef.current?.();
       },
     }),
   ).current;
