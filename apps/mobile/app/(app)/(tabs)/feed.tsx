@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
   title: { color: colors.fg, fontSize: 36, fontFamily: fonts.sans, fontWeight: "700" },
   subtitle: { color: "#666", fontSize: 14, fontFamily: fonts.sans, marginTop: 4 },
-  list: { paddingHorizontal: 20, paddingBottom: 40 },
+  list: { paddingHorizontal: 8, paddingBottom: 40 },
   emptyWrap: { alignItems: "center", paddingTop: 80, paddingHorizontal: 32 },
   empty: { color: colors.fg, fontSize: 18, fontFamily: fonts.sans },
   emptyHint: {
