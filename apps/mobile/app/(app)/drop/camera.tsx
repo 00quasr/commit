@@ -138,7 +138,7 @@ export default function CameraScreen() {
         </Pressable>
       </View>
       <View style={styles.viewfinderWrap}>
-        <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="back" />
+        <CameraView ref={cameraRef} style={styles.camera} facing="back" />
       </View>
       <View style={styles.captureWrap}>
         <Pressable
@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "#111",
   },
+  camera: { flex: 1 },
   captureWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   captureBtn: {
     width: 80,
