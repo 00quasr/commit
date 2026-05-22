@@ -1,9 +1,11 @@
 import type { Doc, Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { Image } from "expo-image";
-import { memo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { memo, useRef, useState } from "react";
+import { Animated, PanResponder, StyleSheet, Text, View } from "react-native";
 import { FeedMiniHeatmap } from "./FeedMiniHeatmap";
+
+type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 export interface DropCardProps {
   drop: Doc<"drops">;
@@ -25,6 +27,27 @@ function timeAgo(ms: number): string {
   return `${days}d`;
 }
 
+const OVERLAY_PAD = 8;
+
+function cornerBasePos(
+  c: Corner,
+  pw: number,
+  ph: number,
+  ow: number,
+  oh: number,
+): { x: number; y: number } {
+  switch (c) {
+    case "top-left":
+      return { x: OVERLAY_PAD, y: OVERLAY_PAD };
+    case "top-right":
+      return { x: pw - ow - OVERLAY_PAD, y: OVERLAY_PAD };
+    case "bottom-left":
+      return { x: OVERLAY_PAD, y: ph - oh - OVERLAY_PAD };
+    case "bottom-right":
+      return { x: pw - ow - OVERLAY_PAD, y: ph - oh - OVERLAY_PAD };
+  }
+}
+
 export const DropCard = memo(function DropCard({
   drop,
   author,
@@ -32,53 +55,129 @@ export const DropCard = memo(function DropCard({
   authorHeatmap,
   habitColor,
 }: DropCardProps) {
+  const [corner, setCorner] = useState<Corner>("bottom-right");
+  const cornerRef = useRef<Corner>("bottom-right");
+  const dragOffset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const photoSize = useRef({ width: 0, height: 0 });
+  const overlaySize = useRef({ width: 0, height: 0 });
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      // Capture movement so the parent FlatList cannot scroll while dragging the overlay
+      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderMove: Animated.event([null, { dx: dragOffset.x, dy: dragOffset.y }], {
+        useNativeDriver: false,
+      }),
+      onPanResponderRelease: (_e, { dx, dy }) => {
+        const { width: pw, height: ph } = photoSize.current;
+        const { width: ow, height: oh } = overlaySize.current;
+        const base = cornerBasePos(cornerRef.current, pw, ph, ow, oh);
+        // Snap based on the CENTER of the overlay, not the finger position
+        const centerX = base.x + dx + ow / 2;
+        const centerY = base.y + dy + oh / 2;
+        const newCorner: Corner =
+          centerX < pw / 2
+            ? centerY < ph / 2
+              ? "top-left"
+              : "bottom-left"
+            : centerY < ph / 2
+              ? "top-right"
+              : "bottom-right";
+        cornerRef.current = newCorner;
+        dragOffset.setValue({ x: 0, y: 0 });
+        setCorner(newCorner);
+      },
+    }),
+  ).current;
+
+  const overlayPosition = {
+    ...(corner.startsWith("top") ? { top: OVERLAY_PAD } : { bottom: OVERLAY_PAD }),
+    ...(corner.endsWith("left") ? { left: OVERLAY_PAD } : { right: OVERLAY_PAD }),
+  };
+
+  const statsPanel = (
+    <View style={styles.statsPanel}>
+      <View style={styles.statsPanelLeft}>
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>streak</Text>
+          <Text style={styles.statValue}>{drop.streakAtDrop ?? "—"}</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>drop</Text>
+          <Text style={styles.statValue}>{drop.totalDropsAtDrop ?? "—"}</Text>
+        </View>
+      </View>
+      <View style={styles.statsPanelDivider} />
+      <View style={styles.statsPanelRight}>
+        <FeedMiniHeatmap
+          data={authorHeatmap}
+          timezone={author.timezone}
+          color={habitColor ?? "#444444"}
+        />
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.card}>
-      <View style={styles.header}>
+      <View style={[styles.header, photoUrl ? styles.headerSlim : null]}>
         <View style={styles.headerLeft}>
           {author.avatarUrl ? (
-            <Image source={{ uri: author.avatarUrl }} style={styles.avatar} contentFit="cover" />
+            <Image
+              source={{ uri: author.avatarUrl }}
+              style={[styles.avatar, photoUrl ? styles.avatarSlim : null]}
+              contentFit="cover"
+            />
           ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarLetter}>{author.username.charAt(0).toUpperCase()}</Text>
+            <View
+              style={[styles.avatar, photoUrl ? styles.avatarSlim : null, styles.avatarFallback]}
+            >
+              <Text style={[styles.avatarLetter, photoUrl ? styles.avatarLetterSlim : null]}>
+                {author.username.charAt(0).toUpperCase()}
+              </Text>
             </View>
           )}
           <View style={styles.headerText}>
-            <Text style={styles.username}>{author.username}</Text>
+            <Text style={[styles.username, photoUrl ? styles.usernameSlim : null]}>
+              {author.username}
+            </Text>
             <Text style={styles.time}>{timeAgo(drop.createdAt)}</Text>
           </View>
         </View>
-        <View style={styles.statsPanel}>
-          <View style={styles.statsPanelLeft}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>streak</Text>
-              <Text style={styles.statValue}>{drop.streakAtDrop ?? "—"}</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>drop</Text>
-              <Text style={styles.statValue}>{drop.totalDropsAtDrop ?? "—"}</Text>
-            </View>
-          </View>
-          <View style={styles.statsPanelDivider} />
-          <View style={styles.statsPanelRight}>
-            <FeedMiniHeatmap
-              data={authorHeatmap}
-              timezone={author.timezone}
-              color={habitColor ?? "#444444"}
-            />
-          </View>
-        </View>
+        {!photoUrl && statsPanel}
       </View>
 
       {photoUrl && (
-        <View style={styles.photoWrap}>
+        <View
+          style={styles.photoWrap}
+          collapsable={false}
+          onLayout={(e) => {
+            photoSize.current = e.nativeEvent.layout;
+          }}
+        >
           <Image
             source={{ uri: photoUrl }}
             style={styles.photo}
             contentFit="cover"
             transition={120}
           />
+          <Animated.View
+            style={[
+              styles.statsOverlay,
+              overlayPosition,
+              { transform: dragOffset.getTranslateTransform() },
+            ]}
+            onLayout={(e) => {
+              overlaySize.current = e.nativeEvent.layout;
+            }}
+            {...panResponder.panHandlers}
+          >
+            {statsPanel}
+          </Animated.View>
         </View>
       )}
 
@@ -113,11 +212,21 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  headerSlim: {
+    paddingTop: 10,
+    paddingBottom: 10,
+    minHeight: 0,
+  },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#222" },
+  avatarSlim: { width: 28, height: 28, borderRadius: 14 },
   avatarFallback: { alignItems: "center", justifyContent: "center" },
   avatarLetter: { color: colors.fg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "600" },
+  avatarLetterSlim: { fontSize: 12 },
   headerText: {},
+  username: { color: colors.fg, fontSize: 15, fontFamily: fonts.sans, fontWeight: "600" },
+  usernameSlim: { fontSize: 13 },
+  time: { color: "#666", fontSize: 12, fontFamily: fonts.mono, marginTop: 2 },
   statsPanel: {
     flexDirection: "row",
     backgroundColor: "#141414",
@@ -146,14 +255,15 @@ const styles = StyleSheet.create({
   },
   statsPanelDivider: { width: StyleSheet.hairlineWidth, backgroundColor: "#2a2a2a" },
   statsPanelRight: { padding: 8 },
-  username: { color: colors.fg, fontSize: 15, fontFamily: fonts.sans, fontWeight: "600" },
-  time: { color: "#666", fontSize: 12, fontFamily: fonts.mono, marginTop: 2 },
   photoWrap: {
     width: "100%",
     aspectRatio: 3 / 4,
     backgroundColor: "#111",
   },
   photo: { width: "100%", height: "100%" },
+  statsOverlay: {
+    position: "absolute",
+  },
   caption: {
     color: colors.fg,
     fontSize: 16,
