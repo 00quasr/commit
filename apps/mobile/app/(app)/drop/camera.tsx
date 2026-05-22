@@ -3,16 +3,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  Linking,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropDraft } from "@/lib/dropDraft";
 
@@ -21,13 +12,11 @@ export default function CameraScreen() {
   const setPhoto = useDropDraft((s) => s.setPhoto);
   const cancel = useDropDraft((s) => s.cancel);
 
-  const { width: screenWidth } = useWindowDimensions();
-  const viewfinderHeight = Math.round((screenWidth * 4) / 3);
-
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
   const [capturing, setCapturing] = useState(false);
 
+  // Auto-request permission on mount if undetermined.
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
       void requestPermission();
@@ -80,6 +69,7 @@ export default function CameraScreen() {
     router.replace("/(tabs)");
   };
 
+  // Permission states.
   if (!permission) {
     return (
       <View style={[styles.root, styles.center]}>
@@ -119,72 +109,67 @@ export default function CameraScreen() {
   // Preview after capture.
   if (photoUri) {
     return (
-      <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-        <View style={styles.topRow}>
-          <Pressable onPress={onRetake} hitSlop={12}>
-            <Text style={styles.cancelTop}>Retake</Text>
-          </Pressable>
-        </View>
-        <View style={[styles.viewfinderWrap, { height: viewfinderHeight }]}>
-          <Image
-            source={{ uri: photoUri }}
-            style={{ width: screenWidth, height: viewfinderHeight }}
-            resizeMode="cover"
-          />
-        </View>
-        <View style={styles.captureWrap}>
-          <Pressable style={styles.use} onPress={onUse}>
-            <Text style={styles.useText}>Use photo</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+      <View style={styles.root}>
+        <SafeAreaView style={styles.previewWrap} edges={["top", "bottom"]}>
+          <View style={styles.previewImageWrap}>
+            <Image
+              source={{ uri: photoUri }}
+              style={StyleSheet.absoluteFillObject}
+              resizeMode="cover"
+            />
+          </View>
+          <View style={styles.previewButtons}>
+            <Pressable style={styles.retake} onPress={onRetake}>
+              <Text style={styles.retakeText}>Retake</Text>
+            </Pressable>
+            <Pressable style={styles.use} onPress={onUse}>
+              <Text style={styles.useText}>Use photo</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
   // Live camera.
   return (
-    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-      <View style={styles.topRow}>
-        <Pressable onPress={onCancel} hitSlop={12}>
-          <Text style={styles.cancelTop}>Cancel</Text>
-        </Pressable>
-      </View>
-      <View style={[styles.viewfinderWrap, { height: viewfinderHeight }]}>
-        <CameraView
-          ref={cameraRef}
-          style={{ width: screenWidth, height: viewfinderHeight }}
-          facing="back"
-        />
-      </View>
-      <View style={styles.captureWrap}>
-        <Pressable
-          style={({ pressed }) => [styles.captureBtn, pressed && { transform: [{ scale: 0.95 }] }]}
-          onPress={() => void onCapture()}
-          disabled={capturing}
-        >
-          <View style={styles.captureInner} />
-        </Pressable>
-      </View>
-    </SafeAreaView>
+    <View style={styles.root}>
+      <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="back" />
+      <SafeAreaView style={styles.cameraOverlay} edges={["top", "bottom"]}>
+        <View style={styles.topRow}>
+          <Pressable onPress={onCancel} hitSlop={12}>
+            <Text style={styles.cancelTop}>Cancel</Text>
+          </Pressable>
+        </View>
+        <View style={styles.captureWrap}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.captureBtn,
+              pressed && { transform: [{ scale: 0.95 }] },
+            ]}
+            onPress={() => void onCapture()}
+            disabled={capturing}
+          >
+            <View style={styles.captureInner} />
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
   center: { alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
+  cameraOverlay: { flex: 1, justifyContent: "space-between", paddingHorizontal: 20 },
   topRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 8,
   },
   cancelTop: { color: colors.fg, fontSize: 16, fontFamily: fonts.sans },
-  viewfinderWrap: {
-    width: "100%",
-    overflow: "hidden",
-    backgroundColor: "#111",
-  },
-  captureWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+  captureWrap: { alignItems: "center", paddingBottom: 32 },
   captureBtn: {
     width: 80,
     height: 80,
@@ -195,14 +180,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   captureInner: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.fg },
-  use: {
-    paddingVertical: 14,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    backgroundColor: colors.fg,
-    alignItems: "center",
-  },
-  useText: { color: colors.bg, fontSize: 17, fontFamily: fonts.sans, fontWeight: "700" },
   // Permission state
   permTitle: { color: colors.fg, fontSize: 22, fontFamily: fonts.sans, fontWeight: "600" },
   permBody: {
@@ -221,4 +198,25 @@ const styles = StyleSheet.create({
   },
   permButtonText: { color: colors.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "600" },
   cancelInline: { color: "#666", fontSize: 14, fontFamily: fonts.sans },
+  // Preview
+  previewWrap: { flex: 1, justifyContent: "space-between", paddingHorizontal: 20 },
+  previewImageWrap: { flex: 1, marginVertical: 16, borderRadius: 16, overflow: "hidden" },
+  previewButtons: { flexDirection: "row", gap: 8, paddingBottom: 8 },
+  retake: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#333",
+    alignItems: "center",
+  },
+  retakeText: { color: "#888", fontSize: 16, fontFamily: fonts.sans },
+  use: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: colors.fg,
+    alignItems: "center",
+  },
+  useText: { color: colors.bg, fontSize: 17, fontFamily: fonts.sans, fontWeight: "700" },
 });
