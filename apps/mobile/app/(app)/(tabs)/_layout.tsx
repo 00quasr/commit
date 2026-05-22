@@ -10,7 +10,6 @@ function TabLabel({ children, focused }: { children: string; focused: boolean })
         fontSize: 11,
         fontFamily: fonts.mono,
         letterSpacing: 0.5,
-        transform: [{ translateY: -8 }],
       }}
     >
       {children.toUpperCase()}
@@ -28,6 +27,7 @@ export default function TabsLayout() {
           borderTopColor: "#1a1a1a",
           borderTopWidth: 1,
           height: 72,
+          paddingTop: 8,
         },
         tabBarShowLabel: true,
         tabBarActiveTintColor: colors.fg,
