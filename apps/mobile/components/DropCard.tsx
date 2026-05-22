@@ -85,6 +85,7 @@ export const DropCard = memo(function DropCard({
 }: DropCardProps) {
   const [corner, setCorner] = useState<Corner>("bottom-right");
   const cornerRef = useRef<Corner>("bottom-right");
+  cornerRef.current = corner; // always mirrors rendered state
   const dragOffset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const photoSize = useRef({ width: 0, height: 0 });
   const overlaySize = useRef({ width: 0, height: 0 });
@@ -136,7 +137,6 @@ export const DropCard = memo(function DropCard({
           // Strong flick or slow drag: slide to resolved corner via spring
           const prevCorner = cornerRef.current;
           const newCorner = resolveCorner(dx, dy, vx, vy, pw, ph, ow, oh, prevCorner);
-          cornerRef.current = newCorner;
           const prevBase = cornerBasePos(prevCorner, pw, ph, ow, oh);
           const newBase = cornerBasePos(newCorner, pw, ph, ow, oh);
           Animated.spring(dragOffset, {
@@ -144,9 +144,11 @@ export const DropCard = memo(function DropCard({
             tension: 350,
             friction: 30,
             useNativeDriver: false,
-          }).start(() => {
-            setCorner(newCorner);
-            dragOffset.setValue({ x: 0, y: 0 });
+          }).start(({ finished }) => {
+            if (finished) {
+              setCorner(newCorner);
+              dragOffset.setValue({ x: 0, y: 0 });
+            }
           });
         }
         onOverlayDragEndRef.current?.();
