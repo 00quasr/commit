@@ -93,12 +93,6 @@ export const DropCard = memo(function DropCard({
           ))}
         </View>
       )}
-
-      <View style={styles.footer}>
-        <Text style={styles.counts}>
-          {drop.viewCount} {drop.viewCount === 1 ? "view" : "views"}
-        </Text>
-      </View>
     </View>
   );
 });
@@ -107,10 +101,18 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#0a0a0a",
     borderRadius: 16,
-    padding: 16,
+    overflow: "hidden",
     marginBottom: 16,
   },
-  header: { flexDirection: "row", alignItems: "stretch", gap: 10, marginBottom: 12, minHeight: 44 },
+  header: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 10,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#222" },
   avatarFallback: { alignItems: "center", justifyContent: "center" },
@@ -148,24 +150,26 @@ const styles = StyleSheet.create({
   time: { color: "#666", fontSize: 12, fontFamily: fonts.mono, marginTop: 2 },
   photoWrap: {
     width: "100%",
-    aspectRatio: 1,
-    borderRadius: 12,
-    overflow: "hidden",
+    aspectRatio: 3 / 4,
     backgroundColor: "#111",
-    marginBottom: 12,
   },
   photo: { width: "100%", height: "100%" },
-  caption: { color: colors.fg, fontSize: 16, fontFamily: fonts.sans, lineHeight: 22 },
-  tagRow: { flexDirection: "row", gap: 8, flexWrap: "wrap", marginTop: 8 },
-  tag: { color: "#888", fontSize: 13, fontFamily: fonts.mono },
-  footer: {
-    marginTop: 12,
+  caption: {
+    color: colors.fg,
+    fontSize: 16,
+    fontFamily: fonts.sans,
+    lineHeight: 22,
+    paddingHorizontal: 16,
     paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#1a1a1a",
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
+    paddingBottom: 16,
   },
-  counts: { color: "#555", fontSize: 11, fontFamily: fonts.mono },
+  tagRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 8,
+  },
+  tag: { color: "#888", fontSize: 13, fontFamily: fonts.mono },
 });
