@@ -1,14 +1,9 @@
-import { api } from "@commit/convex/api";
 import type { Doc, Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { Image } from "expo-image";
-import { useMutation } from "convex/react";
-import { memo, useCallback } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { memo } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { FeedMiniHeatmap } from "./FeedMiniHeatmap";
-
-const REACTIONS = ["🔥", "💪", "👀", "💯"] as const;
-type ReactionEmoji = (typeof REACTIONS)[number];
 
 export interface DropCardProps {
   drop: Doc<"drops">;
@@ -37,15 +32,6 @@ export const DropCard = memo(function DropCard({
   authorHeatmap,
   habitColor,
 }: DropCardProps) {
-  const toggleReaction = useMutation(api.reactions.toggle);
-
-  const onTapEmoji = useCallback(
-    (emoji: ReactionEmoji) => {
-      void toggleReaction({ dropId: drop._id, emoji });
-    },
-    [drop._id, toggleReaction],
-  );
-
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -109,20 +95,7 @@ export const DropCard = memo(function DropCard({
       )}
 
       <View style={styles.footer}>
-        <View style={styles.reactionRow}>
-          {REACTIONS.map((emoji) => (
-            <Pressable
-              key={emoji}
-              onPress={() => onTapEmoji(emoji)}
-              style={({ pressed }) => [styles.reactionBtn, pressed && { opacity: 0.6 }]}
-              hitSlop={4}
-            >
-              <Text style={styles.reactionEmoji}>{emoji}</Text>
-            </Pressable>
-          ))}
-        </View>
         <Text style={styles.counts}>
-          {drop.reactionCount > 0 ? `${drop.reactionCount} reactions · ` : ""}
           {drop.viewCount} {drop.viewCount === 1 ? "view" : "views"}
         </Text>
       </View>
@@ -191,11 +164,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#1a1a1a",
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     alignItems: "center",
   },
-  reactionRow: { flexDirection: "row", gap: 16 },
-  reactionBtn: { paddingVertical: 4 },
-  reactionEmoji: { fontSize: 22 },
   counts: { color: "#555", fontSize: 11, fontFamily: fonts.mono },
 });
