@@ -127,17 +127,27 @@ export const DropCard = memo(function DropCard({
             }),
             Animated.spring(dragOffset, {
               toValue: { x: 0, y: 0 },
-              tension: 180,
-              friction: 12,
+              tension: 350,
+              friction: 30,
               useNativeDriver: false,
             }),
           ]).start();
         } else {
-          // Strong flick or slow drag: snap to resolved corner
-          const newCorner = resolveCorner(dx, dy, vx, vy, pw, ph, ow, oh, cornerRef.current);
+          // Strong flick or slow drag: slide to resolved corner via spring
+          const prevCorner = cornerRef.current;
+          const newCorner = resolveCorner(dx, dy, vx, vy, pw, ph, ow, oh, prevCorner);
           cornerRef.current = newCorner;
-          dragOffset.setValue({ x: 0, y: 0 });
-          setCorner(newCorner);
+          const prevBase = cornerBasePos(prevCorner, pw, ph, ow, oh);
+          const newBase = cornerBasePos(newCorner, pw, ph, ow, oh);
+          Animated.spring(dragOffset, {
+            toValue: { x: newBase.x - prevBase.x, y: newBase.y - prevBase.y },
+            tension: 350,
+            friction: 30,
+            useNativeDriver: false,
+          }).start(() => {
+            setCorner(newCorner);
+            dragOffset.setValue({ x: 0, y: 0 });
+          });
         }
         onOverlayDragEndRef.current?.();
       },
