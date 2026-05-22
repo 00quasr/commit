@@ -19,6 +19,7 @@ config.watchFolders = worktreeRoot ? [monorepoRoot, worktreeRoot] : [monorepoRoo
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(monorepoRoot, "node_modules"),
+  ...(worktreeRoot ? [path.resolve(worktreeRoot, "node_modules")] : []),
 ];
 config.resolver.disableHierarchicalLookup = true;
 

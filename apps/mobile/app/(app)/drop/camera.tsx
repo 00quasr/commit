@@ -1,5 +1,6 @@
 import { colors, fonts } from "@commit/ui-tokens";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
@@ -31,7 +32,24 @@ export default function CameraScreen() {
         skipProcessing: false,
       });
       if (photo?.uri) {
-        setPhoto(photo.uri);
+        const { width, height } = photo;
+        const targetRatio = 3 / 4;
+        const photoRatio = width / height;
+        let cropWidth = width;
+        let cropHeight = height;
+        if (photoRatio > targetRatio) {
+          cropWidth = Math.round(height * targetRatio);
+        } else if (photoRatio < targetRatio) {
+          cropHeight = Math.round(width / targetRatio);
+        }
+        const originX = Math.round((width - cropWidth) / 2);
+        const originY = Math.round((height - cropHeight) / 2);
+        const cropped = await manipulateAsync(
+          photo.uri,
+          [{ crop: { originX, originY, width: cropWidth, height: cropHeight } }],
+          { compress: 0.8, format: SaveFormat.JPEG },
+        );
+        setPhoto(cropped.uri);
       }
     } finally {
       setCapturing(false);
