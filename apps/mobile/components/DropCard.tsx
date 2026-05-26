@@ -10,6 +10,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 import { FeedMiniHeatmap } from "./FeedMiniHeatmap";
 
@@ -79,6 +80,7 @@ export const DropCard = memo(function DropCard({
 }: DropCardProps) {
   const posX = useSharedValue(0);
   const posY = useSharedValue(0);
+  const overlayOpacity = useSharedValue(0); // hidden until measured + positioned
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const committedCorner = useSharedValue(3); // bottom-right
@@ -102,8 +104,9 @@ export const DropCard = memo(function DropCard({
     const ty = ph - oh - OVERLAY_PAD;
     runOnUI(() => {
       "worklet";
-      posX.value = withSpring(tx, SPRING);
-      posY.value = withSpring(ty, SPRING);
+      posX.value = tx; // instant positioning
+      posY.value = ty;
+      overlayOpacity.value = withTiming(1, { duration: 150 });
     })();
   }
 
@@ -153,6 +156,7 @@ export const DropCard = memo(function DropCard({
   const animStyle = useAnimatedStyle(() => ({
     left: posX.value,
     top: posY.value,
+    opacity: overlayOpacity.value,
   }));
 
   const statsPanel = (
