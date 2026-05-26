@@ -92,9 +92,8 @@ export const DropCard = memo(function DropCard({
     if (initializedRef.current) return;
     if (photoW.value === 0 || overlayW.value === 0) return;
     initializedRef.current = true;
-    const pos = cornerPos(3, photoW.value, photoH.value, overlayW.value, overlayH.value);
-    posX.value = pos.x;
-    posY.value = pos.y;
+    posX.value = photoW.value - overlayW.value - OVERLAY_PAD;
+    posY.value = photoH.value - overlayH.value - OVERLAY_PAD;
     setOverlayReady(true);
   }
 
