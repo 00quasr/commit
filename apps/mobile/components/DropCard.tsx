@@ -82,26 +82,24 @@ export const DropCard = memo(function DropCard({
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   const committedCorner = useSharedValue(3); // bottom-right
+  // Shared values for pan handler worklets (UI-thread reads)
   const photoW = useSharedValue(0);
   const photoH = useSharedValue(0);
   const overlayW = useSharedValue(0);
   const overlayH = useSharedValue(0);
+  // Plain refs for maybeInit (JS-thread reads — shared values not reliable here)
+  const photoSizeRef = useRef({ w: 0, h: 0 });
+  const overlaySizeRef = useRef({ w: 0, h: 0 });
   const initializedRef = useRef(false);
 
   function maybeInit() {
-    console.log("[DropCard] maybeInit", {
-      initialized: initializedRef.current,
-      pw: photoW.value,
-      ph: photoH.value,
-      ow: overlayW.value,
-      oh: overlayH.value,
-    });
     if (initializedRef.current) return;
-    if (photoW.value === 0 || overlayW.value === 0) return;
+    const { w: pw, h: ph } = photoSizeRef.current;
+    const { w: ow, h: oh } = overlaySizeRef.current;
+    if (pw === 0 || ow === 0) return;
     initializedRef.current = true;
-    const tx = photoW.value - overlayW.value - OVERLAY_PAD;
-    const ty = photoH.value - overlayH.value - OVERLAY_PAD;
-    console.log("[DropCard] positioning to", { tx, ty });
+    const tx = pw - ow - OVERLAY_PAD;
+    const ty = ph - oh - OVERLAY_PAD;
     runOnUI(() => {
       "worklet";
       posX.value = withSpring(tx, SPRING);
@@ -216,7 +214,7 @@ export const DropCard = memo(function DropCard({
           collapsable={false}
           onLayout={(e) => {
             const { width, height } = e.nativeEvent.layout;
-            console.log("[DropCard] photoWrap onLayout", { width, height });
+            photoSizeRef.current = { w: width, h: height };
             photoW.value = width;
             photoH.value = height;
             maybeInit();
@@ -233,7 +231,7 @@ export const DropCard = memo(function DropCard({
               <View
                 onLayout={(e) => {
                   const { width, height } = e.nativeEvent.layout;
-                  console.log("[DropCard] overlay onLayout", { width, height });
+                  overlaySizeRef.current = { w: width, h: height };
                   overlayW.value = width;
                   overlayH.value = height;
                   maybeInit();
