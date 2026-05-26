@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   cancelAnimation,
+  runOnUI,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -88,11 +89,24 @@ export const DropCard = memo(function DropCard({
   const initializedRef = useRef(false);
 
   function maybeInit() {
+    console.log("[DropCard] maybeInit", {
+      initialized: initializedRef.current,
+      pw: photoW.value,
+      ph: photoH.value,
+      ow: overlayW.value,
+      oh: overlayH.value,
+    });
     if (initializedRef.current) return;
     if (photoW.value === 0 || overlayW.value === 0) return;
     initializedRef.current = true;
-    posX.value = withSpring(photoW.value - overlayW.value - OVERLAY_PAD, SPRING);
-    posY.value = withSpring(photoH.value - overlayH.value - OVERLAY_PAD, SPRING);
+    const tx = photoW.value - overlayW.value - OVERLAY_PAD;
+    const ty = photoH.value - overlayH.value - OVERLAY_PAD;
+    console.log("[DropCard] positioning to", { tx, ty });
+    runOnUI(() => {
+      "worklet";
+      posX.value = withSpring(tx, SPRING);
+      posY.value = withSpring(ty, SPRING);
+    })();
   }
 
   const pan = Gesture.Pan()
@@ -201,8 +215,10 @@ export const DropCard = memo(function DropCard({
           style={styles.photoWrap}
           collapsable={false}
           onLayout={(e) => {
-            photoW.value = e.nativeEvent.layout.width;
-            photoH.value = e.nativeEvent.layout.height;
+            const { width, height } = e.nativeEvent.layout;
+            console.log("[DropCard] photoWrap onLayout", { width, height });
+            photoW.value = width;
+            photoH.value = height;
             maybeInit();
           }}
         >
@@ -216,8 +232,10 @@ export const DropCard = memo(function DropCard({
             <Animated.View style={[styles.statsOverlay, animStyle]}>
               <View
                 onLayout={(e) => {
-                  overlayW.value = e.nativeEvent.layout.width;
-                  overlayH.value = e.nativeEvent.layout.height;
+                  const { width, height } = e.nativeEvent.layout;
+                  console.log("[DropCard] overlay onLayout", { width, height });
+                  overlayW.value = width;
+                  overlayH.value = height;
                   maybeInit();
                 }}
               >
