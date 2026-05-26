@@ -3,16 +3,9 @@ import type { Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
-import { useCallback, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type ViewToken,
-} from "react-native";
+import { useCallback, useRef } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewToken } from "react-native";
+import { FlatList } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DropCard } from "@/components/DropCard";
 
@@ -20,9 +13,6 @@ export default function Feed() {
   const result = useQuery(api.drops.feedForUser, {});
   const markSeen = useMutation(api.views.markSeen);
   const seenLocally = useRef(new Set<string>());
-  const [listScrollEnabled, setListScrollEnabled] = useState(true);
-  const onOverlayDragStart = useCallback(() => setListScrollEnabled(false), []);
-  const onOverlayDragEnd = useCallback(() => setListScrollEnabled(true), []);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -89,11 +79,8 @@ export default function Feed() {
             photoUrl={item.photoUrl}
             authorHeatmap={item.authorHeatmap}
             habitColor={item.habitColor}
-            onOverlayDragStart={onOverlayDragStart}
-            onOverlayDragEnd={onOverlayDragEnd}
           />
         )}
-        scrollEnabled={listScrollEnabled}
         contentContainerStyle={styles.list}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{ itemVisiblePercentThreshold: 60, minimumViewTime: 800 }}
