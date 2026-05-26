@@ -91,8 +91,8 @@ export const DropCard = memo(function DropCard({
     if (initializedRef.current) return;
     if (photoW.value === 0 || overlayW.value === 0) return;
     initializedRef.current = true;
-    posX.value = photoW.value - overlayW.value - OVERLAY_PAD;
-    posY.value = photoH.value - overlayH.value - OVERLAY_PAD;
+    posX.value = withSpring(photoW.value - overlayW.value - OVERLAY_PAD, SPRING);
+    posY.value = withSpring(photoH.value - overlayH.value - OVERLAY_PAD, SPRING);
   }
 
   const pan = Gesture.Pan()
