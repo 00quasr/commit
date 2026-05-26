@@ -217,13 +217,16 @@ export const DropCard = memo(function DropCard({
           <GestureDetector gesture={pan}>
             <Animated.View
               style={[styles.statsOverlay, animStyle, !overlayReady && styles.statsOverlayHidden]}
-              onLayout={(e) => {
-                overlayW.value = e.nativeEvent.layout.width;
-                overlayH.value = e.nativeEvent.layout.height;
-                maybeInit();
-              }}
             >
-              {statsPanel}
+              <View
+                onLayout={(e) => {
+                  overlayW.value = e.nativeEvent.layout.width;
+                  overlayH.value = e.nativeEvent.layout.height;
+                  maybeInit();
+                }}
+              >
+                {statsPanel}
+              </View>
             </Animated.View>
           </GestureDetector>
         </View>
