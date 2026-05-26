@@ -1,7 +1,7 @@
 import type { Doc, Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { Image } from "expo-image";
-import { memo, useRef, useState } from "react";
+import { memo, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -86,7 +86,6 @@ export const DropCard = memo(function DropCard({
   const overlayW = useSharedValue(0);
   const overlayH = useSharedValue(0);
   const initializedRef = useRef(false);
-  const [overlayReady, setOverlayReady] = useState(false);
 
   function maybeInit() {
     if (initializedRef.current) return;
@@ -94,7 +93,6 @@ export const DropCard = memo(function DropCard({
     initializedRef.current = true;
     posX.value = photoW.value - overlayW.value - OVERLAY_PAD;
     posY.value = photoH.value - overlayH.value - OVERLAY_PAD;
-    setOverlayReady(true);
   }
 
   const pan = Gesture.Pan()
@@ -215,9 +213,7 @@ export const DropCard = memo(function DropCard({
             transition={120}
           />
           <GestureDetector gesture={pan}>
-            <Animated.View
-              style={[styles.statsOverlay, animStyle, !overlayReady && styles.statsOverlayHidden]}
-            >
+            <Animated.View style={[styles.statsOverlay, animStyle]}>
               <View
                 onLayout={(e) => {
                   overlayW.value = e.nativeEvent.layout.width;
@@ -314,9 +310,6 @@ const styles = StyleSheet.create({
   photo: { width: "100%", height: "100%" },
   statsOverlay: {
     position: "absolute",
-  },
-  statsOverlayHidden: {
-    opacity: 0,
   },
   caption: {
     color: colors.fg,
