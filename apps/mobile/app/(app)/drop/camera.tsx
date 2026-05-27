@@ -1,11 +1,23 @@
+import { Ionicons } from "@expo/vector-icons";
 import { colors, fonts } from "@commit/ui-tokens";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
+import { FlipType, manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropDraft } from "@/lib/dropDraft";
+
+type Facing = "back" | "front";
 
 export default function CameraScreen() {
   const photoUri = useDropDraft((s) => s.photoUri);
@@ -15,8 +27,8 @@ export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
   const [capturing, setCapturing] = useState(false);
+  const [facing, setFacing] = useState<Facing>("back");
 
-  // Auto-request permission on mount if undetermined.
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
       void requestPermission();
@@ -32,23 +44,26 @@ export default function CameraScreen() {
         skipProcessing: false,
       });
       if (photo?.uri) {
-        const { width, height } = photo;
+        const { width: pw, height: ph } = photo;
         const targetRatio = 3 / 4;
-        const photoRatio = width / height;
-        let cropWidth = width;
-        let cropHeight = height;
+        const photoRatio = pw / ph;
+        let cropWidth = pw;
+        let cropHeight = ph;
         if (photoRatio > targetRatio) {
-          cropWidth = Math.round(height * targetRatio);
+          cropWidth = Math.round(ph * targetRatio);
         } else if (photoRatio < targetRatio) {
-          cropHeight = Math.round(width / targetRatio);
+          cropHeight = Math.round(pw / targetRatio);
         }
-        const originX = Math.round((width - cropWidth) / 2);
-        const originY = Math.round((height - cropHeight) / 2);
-        const cropped = await manipulateAsync(
-          photo.uri,
-          [{ crop: { originX, originY, width: cropWidth, height: cropHeight } }],
-          { compress: 0.8, format: SaveFormat.JPEG },
-        );
+        const originX = Math.round((pw - cropWidth) / 2);
+        const originY = Math.round((ph - cropHeight) / 2);
+        const actions: Parameters<typeof manipulateAsync>[1] = [
+          { crop: { originX, originY, width: cropWidth, height: cropHeight } },
+        ];
+        if (facing === "front") actions.push({ flip: FlipType.Horizontal });
+        const cropped = await manipulateAsync(photo.uri, actions, {
+          compress: 0.8,
+          format: SaveFormat.JPEG,
+        });
         setPhoto(cropped.uri);
       }
     } finally {
@@ -56,20 +71,16 @@ export default function CameraScreen() {
     }
   };
 
-  const onUse = () => {
-    router.push("/drop/compose");
-  };
-
-  const onRetake = () => {
-    setPhoto(null);
-  };
-
+  const onUse = () => router.push("/drop/compose");
+  const onRetake = () => setPhoto(null);
   const onCancel = () => {
     cancel();
     router.replace("/(tabs)");
   };
+  const toggleFacing = () => {
+    if (!capturing) setFacing((f) => (f === "back" ? "front" : "back"));
+  };
 
-  // Permission states.
   if (!permission) {
     return (
       <View style={[styles.root, styles.center]}>
@@ -88,11 +99,8 @@ export default function CameraScreen() {
         <Pressable
           style={({ pressed }) => [styles.permButton, pressed && { opacity: 0.7 }]}
           onPress={() => {
-            if (permission.canAskAgain) {
-              void requestPermission();
-            } else {
-              void Linking.openSettings();
-            }
+            if (permission.canAskAgain) void requestPermission();
+            else void Linking.openSettings();
           }}
         >
           <Text style={styles.permButtonText}>
@@ -111,12 +119,14 @@ export default function CameraScreen() {
     return (
       <View style={styles.root}>
         <SafeAreaView style={styles.previewWrap} edges={["top", "bottom"]}>
-          <View style={styles.previewImageWrap}>
-            <Image
-              source={{ uri: photoUri }}
-              style={StyleSheet.absoluteFillObject}
-              resizeMode="cover"
-            />
+          <View style={styles.previewFrameWrap}>
+            <View style={styles.previewFrame}>
+              <Image
+                source={{ uri: photoUri }}
+                style={StyleSheet.absoluteFillObject}
+                resizeMode="cover"
+              />
+            </View>
           </View>
           <View style={styles.previewButtons}>
             <Pressable style={styles.retake} onPress={onRetake}>
@@ -131,17 +141,33 @@ export default function CameraScreen() {
     );
   }
 
-  // Live camera.
+  // Live camera: 3:4 container so preview FOV matches capture.
   return (
     <View style={styles.root}>
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="back" />
-      <SafeAreaView style={styles.cameraOverlay} edges={["top", "bottom"]}>
+      {/* 3:4 frame — vertically centered, black fills rest */}
+      <View style={styles.cameraContainer}>
+        <View style={styles.cameraFrame}>
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFillObject}
+            facing={facing}
+            {...(Platform.OS === "android" ? { ratio: "4:3" } : {})}
+          />
+        </View>
+      </View>
+
+      {/* Controls overlay */}
+      <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
         <View style={styles.topRow}>
           <Pressable onPress={onCancel} hitSlop={12}>
             <Text style={styles.cancelTop}>Cancel</Text>
           </Pressable>
         </View>
-        <View style={styles.captureWrap}>
+
+        <View style={styles.bottomRow}>
+          {/* Left spacer mirrors flip button for centering */}
+          <View style={styles.sideSlot} />
+
           <Pressable
             style={({ pressed }) => [
               styles.captureBtn,
@@ -152,6 +178,17 @@ export default function CameraScreen() {
           >
             <View style={styles.captureInner} />
           </Pressable>
+
+          <View style={styles.sideSlot}>
+            <Pressable
+              onPress={toggleFacing}
+              hitSlop={12}
+              disabled={capturing}
+              style={({ pressed }) => [pressed && { opacity: 0.6 }, capturing && { opacity: 0.4 }]}
+            >
+              <Ionicons name="camera-reverse-outline" size={32} color={colors.fg} />
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     </View>
@@ -161,7 +198,14 @@ export default function CameraScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
   center: { alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
-  cameraOverlay: { flex: 1, justifyContent: "space-between", paddingHorizontal: 20 },
+  // Live camera
+  cameraContainer: { flex: 1, justifyContent: "center" },
+  cameraFrame: { width: "100%", aspectRatio: 3 / 4, overflow: "hidden" },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+  },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -169,7 +213,13 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   cancelTop: { color: colors.fg, fontSize: 16, fontFamily: fonts.sans },
-  captureWrap: { alignItems: "center", paddingBottom: 32 },
+  bottomRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 40,
+  },
+  sideSlot: { width: 60, alignItems: "center" },
   captureBtn: {
     width: 80,
     height: 80,
@@ -200,8 +250,15 @@ const styles = StyleSheet.create({
   cancelInline: { color: "#666", fontSize: 14, fontFamily: fonts.sans },
   // Preview
   previewWrap: { flex: 1, justifyContent: "space-between", paddingHorizontal: 20 },
-  previewImageWrap: { flex: 1, marginVertical: 16, borderRadius: 16, overflow: "hidden" },
-  previewButtons: { flexDirection: "row", gap: 8, paddingBottom: 8 },
+  previewFrameWrap: { flex: 1, justifyContent: "center" },
+  previewFrame: {
+    width: "100%",
+    aspectRatio: 3 / 4,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#111",
+  },
+  previewButtons: { flexDirection: "row", gap: 8, paddingBottom: 8, paddingTop: 16 },
   retake: {
     flex: 1,
     paddingVertical: 14,
