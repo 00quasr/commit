@@ -1,6 +1,6 @@
 # commit
 
-> Habit tracker with BeReal-style proof.  
+> Habit tracker with BeReal-style proof.\
 > Set a goal, prove you did it, see what your circle shipped today.
 
 A daily-feed iOS app where every entry is a **drop** — a 60-second photo + voice proof that you did the habit you committed to. Drops appear in a reciprocity-locked feed: no proof today, no feed access. Your profile shows a GitHub-contribution-style heatmap of every drop you've shipped.
@@ -34,7 +34,7 @@ You'll need a [Clerk](https://dashboard.clerk.com) app with the Convex integrati
 
 ## Project layout
 
-```
+```text
 apps/
   mobile/    Expo + expo-router  (Today / Feed / Profile + drop modal)
   web/       Next.js marketing landing + waitlist
@@ -57,3 +57,5 @@ pnpm test         # 115 tests
 —
 
 [VISION](./VISION.md) · [Roadmap](./docs/) · [LICENSE](./LICENSE)
+
+⠀
