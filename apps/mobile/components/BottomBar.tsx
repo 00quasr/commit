@@ -6,16 +6,22 @@ import { theme } from "@/lib/theme";
 export interface BottomBarProps {
   onAdd: () => void;
   disabled?: boolean;
+  hint?: string;
 }
 
 /**
  * Floating bottom-center "+" button. Single-action V1 — voice-only quick
  * drop is Phase 4 and will get its own affordance somewhere else.
  */
-export function BottomBar({ onAdd, disabled }: BottomBarProps) {
+export function BottomBar({ onAdd, disabled, hint }: BottomBarProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.wrap, { bottom: insets.bottom + 12 }]} pointerEvents="box-none">
+      {hint ? (
+        <Text style={styles.hint} numberOfLines={1}>
+          {hint}
+        </Text>
+      ) : null}
       <Pressable
         style={({ pressed }) => [
           styles.btn,
@@ -56,5 +62,13 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     fontFamily: fonts.sans,
     fontWeight: "300",
+  },
+  hint: {
+    color: theme.text.tertiary,
+    fontSize: 12,
+    fontFamily: fonts.sans,
+    marginBottom: 10,
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
 });
