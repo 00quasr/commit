@@ -1,8 +1,8 @@
 import type { Doc, Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { Image } from "expo-image";
-import { memo, useRef } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { memo, useRef, type RefObject } from "react";
+import { StyleSheet, Text, View, type FlatList } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   cancelAnimation,
@@ -21,6 +21,7 @@ export interface DropCardProps {
   authorHeatmap: Array<{ dayKey: string; count: number }>;
   habitColor: string | null;
   onVisible?: (dropId: Id<"drops">) => void;
+  scrollRef?: RefObject<FlatList | null>;
 }
 
 function timeAgo(ms: number): string {
@@ -77,6 +78,7 @@ export const DropCard = memo(function DropCard({
   photoUrl,
   authorHeatmap,
   habitColor,
+  scrollRef,
 }: DropCardProps) {
   const posX = useSharedValue(0);
   const posY = useSharedValue(0);
@@ -110,7 +112,7 @@ export const DropCard = memo(function DropCard({
     })();
   }
 
-  const pan = Gesture.Pan()
+  const panBase = Gesture.Pan()
     .minDistance(0)
     .onBegin(() => {
       "worklet";
@@ -152,6 +154,12 @@ export const DropCard = memo(function DropCard({
         posY.value = withSpring(target.y, SPRING);
       }
     });
+
+  const pan = scrollRef
+    ? panBase.blocksExternalGesture(
+        scrollRef as unknown as Parameters<typeof panBase.blocksExternalGesture>[0],
+      )
+    : panBase;
 
   const animStyle = useAnimatedStyle(() => ({
     left: posX.value,

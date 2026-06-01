@@ -4,8 +4,15 @@ import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import { useCallback, useRef } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewToken } from "react-native";
-import { FlatList } from "react-native-gesture-handler";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewToken,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DropCard } from "@/components/DropCard";
 
@@ -13,6 +20,7 @@ export default function Feed() {
   const result = useQuery(api.drops.feedForUser, {});
   const markSeen = useMutation(api.views.markSeen);
   const seenLocally = useRef(new Set<string>());
+  const listRef = useRef<FlatList>(null);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -70,6 +78,7 @@ export default function Feed() {
       </View>
 
       <FlatList
+        ref={listRef}
         data={result.drops}
         keyExtractor={(item) => item.drop._id}
         renderItem={({ item }) => (
@@ -79,6 +88,7 @@ export default function Feed() {
             photoUrl={item.photoUrl}
             authorHeatmap={item.authorHeatmap}
             habitColor={item.habitColor}
+            scrollRef={listRef}
           />
         )}
         contentContainerStyle={styles.list}
