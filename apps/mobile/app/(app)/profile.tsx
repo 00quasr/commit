@@ -2,12 +2,19 @@ import { useAuth } from "@clerk/clerk-expo";
 import { api } from "@commit/convex/api";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MemoriesGrid } from "@/components/MemoriesGrid";
+
+function cycleLabel(cycleDays: number): string {
+  if (cycleDays === 1) return "daily";
+  if (cycleDays === 2) return "every 2 days";
+  if (cycleDays === 7) return "weekly";
+  return `every ${cycleDays} days`;
+}
 
 export default function Profile() {
   const { signOut } = useAuth();
@@ -16,6 +23,9 @@ export default function Profile() {
     api.drops.recentForProfile,
     me ? { profileId: me._id, limit: 14 } : "skip",
   );
+  const activeHabits = useQuery(api.habits.list);
+  const archivedHabits = useQuery(api.habits.listArchived);
+  const unarchive = useMutation(api.habits.unarchive);
 
   if (me === undefined) {
     return (
@@ -32,6 +42,8 @@ export default function Profile() {
       </View>
     );
   }
+
+  const atLimit = (activeHabits?.length ?? 0) >= 3;
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -70,6 +82,53 @@ export default function Profile() {
             onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
           />
         )}
+
+        <View style={styles.archiveSection}>
+          <Text style={styles.sectionTitle}>Archived Habits</Text>
+          {archivedHabits === undefined ? (
+            <ActivityIndicator color={theme.text.primary} style={{ marginTop: 8 }} />
+          ) : archivedHabits.length === 0 ? (
+            <Text style={styles.emptyHint}>No archived habits.</Text>
+          ) : (
+            <>
+              {atLimit && (
+                <Text style={styles.limitHint}>Archive an active habit to reactivate one.</Text>
+              )}
+              {archivedHabits.map((habit) => {
+                const accent = habit.color ?? theme.text.muted;
+                return (
+                  <View key={habit._id} style={styles.archivedRow}>
+                    <View style={[styles.colorDot, { backgroundColor: accent }]} />
+                    <View style={styles.archivedBody}>
+                      <Text style={styles.archivedText} numberOfLines={2}>
+                        {habit.text}
+                      </Text>
+                      <Text style={styles.archivedMeta}>{cycleLabel(habit.cycleDays)}</Text>
+                    </View>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.reactivateBtn,
+                        atLimit && styles.reactivateBtnDisabled,
+                        pressed && !atLimit && { opacity: 0.6 },
+                      ]}
+                      onPress={atLimit ? undefined : () => void unarchive({ habitId: habit._id })}
+                      disabled={atLimit}
+                    >
+                      <Text
+                        style={[
+                          styles.reactivateBtnText,
+                          atLimit && styles.reactivateBtnTextDisabled,
+                        ]}
+                      >
+                        Reactivate
+                      </Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </>
+          )}
+        </View>
 
         <Pressable
           style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.6 }]}
@@ -120,6 +179,77 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   tz: { color: theme.text.tertiary, fontSize: 13, fontFamily: fonts.mono, marginTop: 2 },
+  archiveSection: {
+    marginTop: 32,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    color: theme.text.secondary,
+    fontSize: 13,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  emptyHint: {
+    color: theme.text.muted,
+    fontSize: 13,
+    fontFamily: fonts.mono,
+    marginTop: 8,
+  },
+  limitHint: {
+    color: theme.text.muted,
+    fontSize: 12,
+    fontFamily: fonts.mono,
+    marginBottom: 12,
+  },
+  archivedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.divide,
+  },
+  colorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  archivedBody: { flex: 1 },
+  archivedText: {
+    color: theme.text.tertiary,
+    fontSize: 16,
+    fontFamily: fonts.sans,
+    lineHeight: 21,
+  },
+  archivedMeta: {
+    color: theme.text.muted,
+    fontSize: 11,
+    fontFamily: fonts.mono,
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  reactivateBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.text.tertiary,
+  },
+  reactivateBtnDisabled: {
+    borderColor: theme.blockElevated,
+  },
+  reactivateBtnText: {
+    color: theme.text.primary,
+    fontSize: 13,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+  },
+  reactivateBtnTextDisabled: {
+    color: theme.text.muted,
+  },
   signOut: {
     alignSelf: "center",
     paddingVertical: 12,
