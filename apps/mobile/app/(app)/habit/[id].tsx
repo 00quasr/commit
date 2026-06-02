@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: "100%",
-    backgroundColor: theme.blockElevated,
+    backgroundColor: "#1a1a1a",
     borderRadius: 16,
     padding: 24,
   },
