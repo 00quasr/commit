@@ -91,6 +91,7 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen name="day/[dayKey]" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="habit/drops/[id]" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }
