@@ -67,16 +67,10 @@ export default function Profile() {
             drops={recent}
             timezone={me.timezone}
             onViewAll={() => router.push("/(app)/memories")}
+            onViewArchive={() => router.push("/(app)/archived-habits")}
             onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
           />
         )}
-
-        <Pressable
-          style={({ pressed }) => [styles.archiveBtn, pressed && { opacity: 0.6 }]}
-          onPress={() => router.push("/(app)/archived-habits")}
-        >
-          <Text style={styles.archiveBtnText}>Habit Archive</Text>
-        </Pressable>
 
         <Pressable
           style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.6 }]}
@@ -127,21 +121,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   tz: { color: theme.text.tertiary, fontSize: 13, fontFamily: fonts.mono, marginTop: 2 },
-  archiveBtn: {
-    alignSelf: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginTop: 32,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.text.tertiary,
-  },
-  archiveBtnText: {
-    color: theme.text.secondary,
-    fontSize: 14,
-    fontFamily: fonts.sans,
-    fontWeight: "600",
-  },
   signOut: {
     alignSelf: "center",
     paddingVertical: 12,

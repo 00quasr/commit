@@ -14,6 +14,7 @@ interface MemoriesGridProps {
   drops: EnrichedDrop[];
   timezone: string;
   onViewAll: () => void;
+  onViewArchive: () => void;
   onTileTap?: (dayKey: string) => void;
 }
 
@@ -27,7 +28,13 @@ function buildLast14Days(timezone: string): string[] {
   return [...new Set(keys)];
 }
 
-export function MemoriesGrid({ drops, timezone, onViewAll, onTileTap }: MemoriesGridProps) {
+export function MemoriesGrid({
+  drops,
+  timezone,
+  onViewAll,
+  onViewArchive,
+  onTileTap,
+}: MemoriesGridProps) {
   const today = dayKeyInTimezone(Date.now(), timezone);
   const days = buildLast14Days(timezone);
 
@@ -84,6 +91,12 @@ export function MemoriesGrid({ drops, timezone, onViewAll, onTileTap }: Memories
         onPress={onViewAll}
       >
         <Text style={styles.viewAllText}>View all my Drops</Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.viewAllBtn, styles.archiveBtn, pressed && { opacity: 0.6 }]}
+        onPress={onViewArchive}
+      >
+        <Text style={styles.viewAllText}>Habit Archive</Text>
       </Pressable>
     </View>
   );
@@ -161,6 +174,9 @@ const styles = StyleSheet.create({
   },
   numTextToday: {
     color: "#000",
+  },
+  archiveBtn: {
+    marginTop: 8,
   },
   viewAllBtn: {
     alignSelf: "center",
