@@ -108,6 +108,19 @@ export const list = query({
   },
 });
 
+export const listArchived = query({
+  args: {},
+  returns: v.array(habitShape),
+  handler: async (ctx) => {
+    const me = await requireCallerProfile(ctx);
+    return await ctx.db
+      .query("habits")
+      .withIndex("by_owner_archived", (q) => q.eq("ownerId", me._id).eq("archived", true))
+      .order("desc")
+      .collect();
+  },
+});
+
 /**
  * Habits that are due today for the caller, computed via @commit/domain.isDueToday
  * using each habit's stored `createdDayKey`, `lastDropDayKey`, and `cycleDays`

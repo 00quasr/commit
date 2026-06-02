@@ -67,6 +67,7 @@ export default function Profile() {
             drops={recent}
             timezone={me.timezone}
             onViewAll={() => router.push("/(app)/memories")}
+            onViewArchive={() => router.push("/(app)/archived-habits")}
             onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
           />
         )}
