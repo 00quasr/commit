@@ -7,7 +7,9 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   SectionList,
@@ -174,7 +176,10 @@ export default function Today() {
       <BottomBar onAdd={() => setShowAdd(true)} disabled={atMax} />
 
       <Modal visible={showAdd} animationType="slide" transparent>
-        <View style={styles.modalRoot}>
+        <KeyboardAvoidingView
+          style={styles.modalRoot}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <Pressable style={styles.backdrop} onPress={() => setShowAdd(false)} />
           <View style={styles.sheet}>
             <Text style={styles.sheetTitle}>New commitment</Text>
@@ -233,7 +238,7 @@ export default function Today() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
