@@ -431,6 +431,71 @@ export const heatmapForHabit = query({
  * Phase 3 ships only the own-profile case (`profileId === me._id`) — the
  * full friendship-aware filter lands in Phase 4.
  */
+export const memoryThumbnails = query({
+  args: { profileId: v.id("profiles") },
+  returns: v.array(
+    v.object({
+      dropId: v.id("drops"),
+      dayKey: v.string(),
+      photoUrl: v.union(v.string(), v.null()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireCallerProfile(ctx);
+    const drops = await ctx.db
+      .query("drops")
+      .withIndex("by_owner_created", (q) => q.eq("ownerId", args.profileId))
+      .order("desc")
+      .collect();
+    return await Promise.all(
+      drops.map(async (drop) => ({
+        dropId: drop._id,
+        dayKey: drop.dayKey,
+        photoUrl: drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null,
+      })),
+    );
+  },
+});
+
+export const forDay = query({
+  args: { profileId: v.id("profiles"), dayKey: v.string() },
+  returns: v.array(enrichedDropShape),
+  handler: async (ctx, args) => {
+    const me = await requireCallerProfile(ctx);
+    const isOwnProfile = me._id === args.profileId;
+
+    const drops = await ctx.db
+      .query("drops")
+      .withIndex("by_owner_day", (q) => q.eq("ownerId", args.profileId).eq("dayKey", args.dayKey))
+      .collect();
+
+    const visible = drops.filter((d) => {
+      if (isOwnProfile) return true;
+      if (d.visibility === "public") return true;
+      return false;
+    });
+
+    const profileDoc = await ctx.db.get(args.profileId);
+    const profileDrops = profileDoc
+      ? await fetchDropsForHeatmap(ctx, args.profileId, profileDoc.timezone)
+      : [];
+
+    const enriched = await Promise.all(
+      visible.map(async (drop) => {
+        const author = await ctx.db.get(drop.ownerId);
+        if (!author) return null;
+        const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
+        const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
+        const authorHeatmap = buildHeatmap(profileDrops, drop.habitId ?? undefined);
+        const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
+        const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
+        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
+      }),
+    );
+    return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
+  },
+});
+
 export const recentForProfile = query({
   args: { profileId: v.id("profiles"), limit: v.optional(v.number()) },
   returns: v.array(enrichedDropShape),

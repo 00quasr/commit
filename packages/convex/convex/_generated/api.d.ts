@@ -12,7 +12,6 @@ import type * as _helpers from "../_helpers.js";
 import type * as drops from "../drops.js";
 import type * as friendships from "../friendships.js";
 import type * as habits from "../habits.js";
-import type * as migrations from "../migrations.js";
 import type * as profiles from "../profiles.js";
 import type * as reactions from "../reactions.js";
 import type * as userStats from "../userStats.js";
@@ -30,7 +29,6 @@ declare const fullApi: ApiFromModules<{
   drops: typeof drops;
   friendships: typeof friendships;
   habits: typeof habits;
-  migrations: typeof migrations;
   profiles: typeof profiles;
   reactions: typeof reactions;
   userStats: typeof userStats;

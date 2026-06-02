@@ -82,6 +82,15 @@ export default function AppLayout() {
           gestureEnabled: false,
         }}
       />
+      <Stack.Screen
+        name="memories"
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+          gestureEnabled: true,
+        }}
+      />
+      <Stack.Screen name="day/[dayKey]" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }
