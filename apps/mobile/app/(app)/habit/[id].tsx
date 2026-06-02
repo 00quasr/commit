@@ -3,10 +3,10 @@ import type { Id } from "@commit/convex/dataModel";
 import { fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
 import { router, useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,6 +34,7 @@ export default function HabitDetail() {
   const heatmapData = useQuery(api.drops.heatmapForHabit, { habitId });
   const archive = useMutation(api.habits.archive);
   const startDropDraft = useDropDraft((s) => s.start);
+  const [archiveModalVisible, setArchiveModalVisible] = useState(false);
 
   const habit = useMemo(() => allHabits?.find((h) => h._id === habitId), [allHabits, habitId]);
   const totalDrops = useMemo(
@@ -62,22 +63,12 @@ export default function HabitDetail() {
 
   const dueToday = habit.lastDropDayKey === undefined; // simplified — real check is in habits.dueToday query
 
-  const onArchive = () => {
-    Alert.alert(
-      "Archive this habit?",
-      "It will disappear from your list. You can unarchive later.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Archive",
-          style: "destructive",
-          onPress: () => {
-            void archive({ habitId });
-            router.back();
-          },
-        },
-      ],
-    );
+  const onArchive = () => setArchiveModalVisible(true);
+
+  const confirmArchive = () => {
+    setArchiveModalVisible(false);
+    void archive({ habitId });
+    router.back();
   };
 
   const onDrop = () => {
@@ -87,6 +78,36 @@ export default function HabitDetail() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
+      <Modal
+        transparent
+        visible={archiveModalVisible}
+        animationType="fade"
+        onRequestClose={() => setArchiveModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Archive this habit?</Text>
+            <Text style={styles.modalBody}>
+              It will disappear from your list. You can unarchive later.
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                style={({ pressed }) => [styles.modalBtn, pressed && { opacity: 0.6 }]}
+                onPress={() => setArchiveModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.modalBtn, pressed && { opacity: 0.6 }]}
+                onPress={confirmArchive}
+              >
+                <Text style={styles.modalArchiveText}>Archive</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Header />
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -235,4 +256,52 @@ const styles = StyleSheet.create({
   },
   archiveBtn: { alignSelf: "center", paddingVertical: 14, paddingHorizontal: 24, marginTop: 16 },
   archiveText: { color: "#ff6b6b", fontSize: 14, fontFamily: fonts.sans },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: theme.blockElevated,
+    borderRadius: 16,
+    padding: 24,
+  },
+  modalTitle: {
+    color: theme.text.primary,
+    fontSize: 18,
+    fontFamily: fonts.sans,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  modalBody: {
+    color: theme.text.secondary,
+    fontSize: 14,
+    fontFamily: fonts.sans,
+    lineHeight: 20,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 24,
+  },
+  modalBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  modalCancelText: {
+    color: theme.text.secondary,
+    fontSize: 14,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+  },
+  modalArchiveText: {
+    color: "#ff6b6b",
+    fontSize: 14,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+  },
 });
