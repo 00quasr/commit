@@ -133,8 +133,7 @@ export async function fetchDropsForHeatmap(
 
 /**
  * Aggregates raw drops into a per-day count array. When `habitId` is provided,
- * only drops for that specific habit are counted — fixes the streak-per-color
- * bug where habits sharing a color merged into one inflated streak.
+ * only drops for that specific habit are counted.
  */
 export function buildHeatmap(
   drops: Doc<"drops">[],
