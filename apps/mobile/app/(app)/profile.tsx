@@ -1,27 +1,21 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { api } from "@commit/convex/api";
-import { dayKeyInTimezone } from "@commit/domain";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useQuery } from "convex/react";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { Fragment, useMemo } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ProfileDropRow } from "@/components/ProfileDropRow";
-import { groupByRelativeDate } from "@/lib/dateGroup";
+import { MemoriesGrid } from "@/components/MemoriesGrid";
 
 export default function Profile() {
   const { signOut } = useAuth();
   const me = useQuery(api.profiles.me);
-  const recent = useQuery(api.drops.recentForProfile, me ? { profileId: me._id } : "skip");
-
-  const sections = useMemo(() => {
-    if (!recent || !me) return [];
-    const today = dayKeyInTimezone(Date.now(), me.timezone);
-    return groupByRelativeDate(recent, (item) => item.drop.dayKey, today);
-  }, [recent, me]);
+  const recent = useQuery(
+    api.drops.recentForProfile,
+    me ? { profileId: me._id, limit: 14 } : "skip",
+  );
 
   if (me === undefined) {
     return (
@@ -66,25 +60,15 @@ export default function Profile() {
           </View>
         </View>
 
-        <Text style={styles.sectionLabelTop}>Recent drops</Text>
         {recent === undefined ? (
           <ActivityIndicator color={theme.text.primary} style={{ marginTop: 16 }} />
-        ) : recent.length === 0 ? (
-          <Text style={styles.emptyRecent}>No drops yet — your first drop will show up here.</Text>
         ) : (
-          sections.map((section, sectionIndex) => (
-            <Fragment key={section.bucket}>
-              <View style={[styles.bucketHeader, sectionIndex === 0 && styles.bucketHeaderFirst]}>
-                <Text style={styles.bucketTitle}>{section.title.toUpperCase()}</Text>
-              </View>
-              {section.data.map((item, idx) => (
-                <Fragment key={item.drop._id}>
-                  {idx > 0 && <View style={styles.rowDivider} />}
-                  <ProfileDropRow drop={item.drop} photoUrl={item.photoUrl} />
-                </Fragment>
-              ))}
-            </Fragment>
-          ))
+          <MemoriesGrid
+            drops={recent}
+            timezone={me.timezone}
+            onViewAll={() => router.push("/(app)/memories")}
+            onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
+          />
         )}
 
         <Pressable
@@ -136,35 +120,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   tz: { color: theme.text.tertiary, fontSize: 13, fontFamily: fonts.mono, marginTop: 2 },
-  sectionLabelTop: {
-    color: theme.text.tertiary,
-    fontSize: 11,
-    fontFamily: fonts.mono,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  emptyRecent: {
-    color: theme.text.tertiary,
-    fontSize: 14,
-    fontFamily: fonts.sans,
-    paddingHorizontal: 20,
-    marginTop: 8,
-  },
-  bucketHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 8,
-  },
-  bucketHeaderFirst: { paddingTop: 0 },
-  bucketTitle: {
-    color: theme.text.muted,
-    fontSize: 11,
-    fontFamily: fonts.mono,
-    letterSpacing: 1,
-  },
-  rowDivider: { height: 1, backgroundColor: theme.divide, marginLeft: 88 },
   signOut: {
     alignSelf: "center",
     paddingVertical: 12,
