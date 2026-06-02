@@ -22,7 +22,6 @@ import { useDropDraft } from "@/lib/dropDraft";
 
 const MAX_CAPTION = 100;
 const TAG_PRESETS = ["@build", "@health", "@create", "@learn", "@ship"] as const;
-type Visibility = "public" | "friends" | "private";
 
 export default function Compose() {
   const habitId = useDropDraft((s) => s.habitId);
@@ -36,7 +35,6 @@ export default function Compose() {
 
   const [caption, setCaption] = useState("");
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
-  const [visibility, setVisibility] = useState<Visibility>("friends");
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<"idle" | "uploading" | "creating">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +88,7 @@ export default function Compose() {
         habitId,
         caption,
         tags: [...selectedTags],
-        visibility,
+        visibility: "public",
         ...(photoFileId !== undefined ? { photoFileId } : {}),
         ...(voiceFileId !== undefined ? { voiceFileId } : {}),
       });
@@ -159,21 +157,6 @@ export default function Compose() {
                 </Pressable>
               );
             })}
-          </View>
-
-          <Text style={styles.fieldLabel}>Visibility</Text>
-          <View style={styles.chipRow}>
-            {(["public", "friends", "private"] as Visibility[]).map((v) => (
-              <Pressable
-                key={v}
-                style={[styles.chip, visibility === v && styles.chipActive]}
-                onPress={() => setVisibility(v)}
-              >
-                <Text style={[styles.chipText, visibility === v && styles.chipTextActive]}>
-                  {v}
-                </Text>
-              </Pressable>
-            ))}
           </View>
 
           {error && <Text style={styles.error}>{error}</Text>}
