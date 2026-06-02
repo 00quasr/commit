@@ -1,7 +1,10 @@
 import { fonts } from "@commit/ui-tokens";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
+
+const HINT_BLOCK_HEIGHT = 26;
 
 export interface BottomBarProps {
   onAdd: () => void;
@@ -9,30 +12,50 @@ export interface BottomBarProps {
   hint?: string;
 }
 
-/**
- * Floating bottom-center "+" button. Single-action V1 — voice-only quick
- * drop is Phase 4 and will get its own affordance somewhere else.
- */
 export function BottomBar({ onAdd, disabled, hint }: BottomBarProps) {
   const insets = useSafeAreaInsets();
+  const hintOpacity = useRef(new Animated.Value(0)).current;
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    },
+    [],
+  );
+
+  const flashHint = () => {
+    if (!hint) return;
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hintOpacity.setValue(1);
+    hideTimer.current = setTimeout(() => {
+      Animated.timing(hintOpacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    }, 1600);
+  };
+
+  const bottomOffset = insets.bottom + 12 - (hint ? HINT_BLOCK_HEIGHT : 0);
   return (
-    <View style={[styles.wrap, { bottom: insets.bottom + 12 }]} pointerEvents="box-none">
-      {hint ? (
-        <Text style={styles.hint} numberOfLines={1}>
-          {hint}
-        </Text>
-      ) : null}
+    <View style={[styles.wrap, { bottom: bottomOffset }]} pointerEvents="box-none">
       <Pressable
         style={({ pressed }) => [
           styles.btn,
           pressed && !disabled && { opacity: 0.7 },
           disabled && { opacity: 0.3 },
         ]}
-        onPress={disabled ? undefined : onAdd}
+        onPress={disabled ? flashHint : onAdd}
         hitSlop={8}
       >
         <Text style={styles.plusIcon}>+</Text>
       </Pressable>
+      {hint ? (
+        <Animated.Text style={[styles.hint, { opacity: hintOpacity }]} numberOfLines={1}>
+          {hint}
+        </Animated.Text>
+      ) : null}
     </View>
   );
 }
@@ -67,7 +90,7 @@ const styles = StyleSheet.create({
     color: theme.text.tertiary,
     fontSize: 12,
     fontFamily: fonts.sans,
-    marginBottom: 10,
+    marginTop: 10,
     textAlign: "center",
     paddingHorizontal: 20,
   },
