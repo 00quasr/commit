@@ -496,6 +496,38 @@ export const forDay = query({
   },
 });
 
+export const forHabit = query({
+  args: { habitId: v.id("habits") },
+  returns: v.array(enrichedDropShape),
+  handler: async (ctx, args) => {
+    const me = await requireCallerProfile(ctx);
+
+    const drops = await ctx.db
+      .query("drops")
+      .withIndex("by_owner_created", (q) => q.eq("ownerId", me._id))
+      .order("desc")
+      .collect();
+
+    const habitDrops = drops.filter((d) => d.habitId === args.habitId);
+
+    const profileDrops = await fetchDropsForHeatmap(ctx, me._id, me.timezone);
+
+    const enriched = await Promise.all(
+      habitDrops.map(async (drop) => {
+        const author = await ctx.db.get(drop.ownerId);
+        if (!author) return null;
+        const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
+        const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
+        const authorHeatmap = buildHeatmap(profileDrops, drop.habitId ?? undefined);
+        const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
+        const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
+        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
+      }),
+    );
+    return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
+  },
+});
+
 export const recentForProfile = query({
   args: { profileId: v.id("profiles"), limit: v.optional(v.number()) },
   returns: v.array(enrichedDropShape),

@@ -3,7 +3,7 @@ import type { Id } from "@commit/convex/dataModel";
 import { fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
 import { router, useLocalSearchParams } from "expo-router";
-import { Fragment, useMemo } from "react";
+import { useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MiniHeatmap } from "@/components/MiniHeatmap";
-import { ProfileDropRow } from "@/components/ProfileDropRow";
 import { useDropDraft } from "@/lib/dropDraft";
 import { theme } from "@/lib/theme";
 
@@ -32,21 +31,17 @@ export default function HabitDetail() {
 
   const me = useQuery(api.profiles.me);
   const allHabits = useQuery(api.habits.list, {});
-  const recentDrops = useQuery(
-    api.drops.recentForProfile,
-    me ? { profileId: me._id, limit: 50 } : "skip",
-  );
   const heatmapData = useQuery(api.drops.heatmapForHabit, { habitId });
   const archive = useMutation(api.habits.archive);
   const startDropDraft = useDropDraft((s) => s.start);
 
   const habit = useMemo(() => allHabits?.find((h) => h._id === habitId), [allHabits, habitId]);
-  const habitDrops = useMemo(
-    () => recentDrops?.filter((d) => d.drop.habitId === habitId) ?? [],
-    [recentDrops, habitId],
+  const totalDrops = useMemo(
+    () => heatmapData?.reduce((sum, e) => sum + e.total, 0) ?? 0,
+    [heatmapData],
   );
 
-  if (allHabits === undefined || me === undefined) {
+  if (allHabits === undefined) {
     return (
       <View style={[styles.root, styles.center]}>
         <ActivityIndicator color={theme.text.primary} />
@@ -66,7 +61,6 @@ export default function HabitDetail() {
   }
 
   const dueToday = habit.lastDropDayKey === undefined; // simplified — real check is in habits.dueToday query
-  const totalDrops = habitDrops.length;
 
   const onArchive = () => {
     Alert.alert(
@@ -120,17 +114,12 @@ export default function HabitDetail() {
           <Text style={styles.dropBtnText}>Drop on this habit</Text>
         </Pressable>
 
-        <Text style={styles.sectionLabel}>Recent drops</Text>
-        {habitDrops.length === 0 ? (
-          <Text style={styles.emptyDrops}>No drops on this habit yet.</Text>
-        ) : (
-          habitDrops.map((item, idx) => (
-            <Fragment key={item.drop._id}>
-              {idx > 0 && <View style={styles.divider} />}
-              <ProfileDropRow drop={item.drop} photoUrl={item.photoUrl} />
-            </Fragment>
-          ))
-        )}
+        <Pressable
+          style={({ pressed }) => [styles.viewDropsBtn, pressed && { opacity: 0.6 }]}
+          onPress={() => router.push(`/(app)/habit/drops/${habitId}`)}
+        >
+          <Text style={styles.viewDropsText}>View habit drops</Text>
+        </Pressable>
 
         <Pressable
           style={({ pressed }) => [styles.archiveBtn, pressed && { opacity: 0.6 }]}
@@ -229,19 +218,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dropBtnText: { color: theme.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "700" },
-  sectionLabel: {
-    color: theme.text.tertiary,
-    fontSize: 11,
-    fontFamily: fonts.mono,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginTop: 32,
-    marginBottom: 12,
-    marginHorizontal: -20,
+  viewDropsBtn: {
+    alignSelf: "center",
+    marginTop: 24,
+    paddingVertical: 10,
     paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
   },
-  emptyDrops: { color: theme.text.muted, fontSize: 14, fontFamily: fonts.sans },
-  divider: { height: 1, backgroundColor: theme.divide, marginLeft: 68, marginHorizontal: -20 },
-  archiveBtn: { alignSelf: "center", paddingVertical: 14, paddingHorizontal: 24, marginTop: 32 },
+  viewDropsText: {
+    color: theme.text.secondary,
+    fontSize: 13,
+    fontFamily: fonts.sans,
+    fontWeight: "500",
+  },
+  archiveBtn: { alignSelf: "center", paddingVertical: 14, paddingHorizontal: 24, marginTop: 16 },
   archiveText: { color: "#ff6b6b", fontSize: 14, fontFamily: fonts.sans },
 });
