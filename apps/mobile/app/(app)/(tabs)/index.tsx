@@ -105,11 +105,9 @@ export default function Today() {
         <Text style={styles.subtitle}>
           {isEmpty
             ? "Add the first thing you want to keep doing."
-            : atMax
-              ? "Max. 3 habits. Archive one to add a new one."
-              : dueHabits.length === 0
-                ? "Nothing due today. Come back tomorrow."
-                : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
+            : dueHabits.length === 0
+              ? "Nothing due today. Come back tomorrow."
+              : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
         </Text>
       </View>
 
@@ -173,7 +171,11 @@ export default function Today() {
         />
       )}
 
-      <BottomBar onAdd={() => setShowAdd(true)} disabled={atMax} />
+      <BottomBar
+        onAdd={() => setShowAdd(true)}
+        disabled={atMax}
+        hint={atMax ? "Max. 3 habits. Archive one to add a new one." : undefined}
+      />
 
       <Modal visible={showAdd} animationType="slide" transparent>
         <KeyboardAvoidingView
