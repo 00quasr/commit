@@ -69,7 +69,7 @@ export function MemoriesGrid({ drops, timezone, onViewAll, onTileTap }: Memories
   return (
     <View style={styles.wrapper}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🔒 Your Memories</Text>
+        <Text style={styles.headerTitle}>🔒 Your Drops</Text>
         <Text style={styles.headerMeta}>Only visible to you.</Text>
       </View>
 
@@ -83,7 +83,7 @@ export function MemoriesGrid({ drops, timezone, onViewAll, onTileTap }: Memories
         style={({ pressed }) => [styles.viewAllBtn, pressed && { opacity: 0.6 }]}
         onPress={onViewAll}
       >
-        <Text style={styles.viewAllText}>View all my Memories</Text>
+        <Text style={styles.viewAllText}>View all my Drops</Text>
       </Pressable>
     </View>
   );

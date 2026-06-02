@@ -104,7 +104,7 @@ export default function Memories() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={styles.topBar}>
-        <Text style={styles.title}>Your Memories</Text>
+        <Text style={styles.title}>Your Drops</Text>
         <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.6 }]}
