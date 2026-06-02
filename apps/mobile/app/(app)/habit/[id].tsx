@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   dropBtnText: { color: theme.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "700" },
   viewDropsBtn: {
     alignSelf: "center",
-    marginTop: 14,
+    marginTop: 24,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
@@ -233,6 +233,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontWeight: "500",
   },
-  archiveBtn: { alignSelf: "center", paddingVertical: 14, paddingHorizontal: 24, marginTop: 32 },
+  archiveBtn: { alignSelf: "center", paddingVertical: 14, paddingHorizontal: 24, marginTop: 16 },
   archiveText: { color: "#ff6b6b", fontSize: 14, fontFamily: fonts.sans },
 });
