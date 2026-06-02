@@ -90,6 +90,14 @@ export default function AppLayout() {
           gestureEnabled: true,
         }}
       />
+      <Stack.Screen
+        name="archived-habits"
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+          gestureEnabled: true,
+        }}
+      />
       <Stack.Screen name="day/[dayKey]" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
