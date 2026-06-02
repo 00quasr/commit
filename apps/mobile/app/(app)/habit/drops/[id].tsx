@@ -28,7 +28,7 @@ export default function HabitDrops() {
           style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.6 }]}
           hitSlop={12}
         >
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>✕</Text>
         </Pressable>
       </View>
 
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   backButton: { padding: 4 },
-  backText: { color: theme.text.secondary, fontSize: 16, fontFamily: fonts.sans },
+  backText: { color: theme.text.tertiary, fontSize: 18 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: { color: theme.text.muted, fontSize: 14, fontFamily: fonts.sans },
   list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
