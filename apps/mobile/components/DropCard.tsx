@@ -1,4 +1,4 @@
-import type { Doc, Id } from "@commit/convex/dataModel";
+import type { Doc } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { Image } from "expo-image";
 import { memo, useRef, type RefObject } from "react";
@@ -20,7 +20,6 @@ export interface DropCardProps {
   photoUrl: string | null;
   authorHeatmap: Array<{ dayKey: string; count: number }>;
   habitColor: string | null;
-  onVisible?: (dropId: Id<"drops">) => void;
   scrollRef?: RefObject<FlatList | null>;
 }
 
