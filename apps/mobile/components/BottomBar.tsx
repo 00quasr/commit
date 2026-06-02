@@ -4,8 +4,6 @@ import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 
-const HINT_BLOCK_HEIGHT = 26;
-
 export interface BottomBarProps {
   onAdd: () => void;
   disabled?: boolean;
@@ -15,6 +13,7 @@ export interface BottomBarProps {
 export function BottomBar({ onAdd, disabled, hint }: BottomBarProps) {
   const insets = useSafeAreaInsets();
   const hintOpacity = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -37,25 +36,41 @@ export function BottomBar({ onAdd, disabled, hint }: BottomBarProps) {
     }, 1600);
   };
 
-  const bottomOffset = insets.bottom + 12 - (hint ? HINT_BLOCK_HEIGHT : 0);
+  const onPressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.93,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onPressOut = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const bottomOffset = insets.bottom + 12;
   return (
     <View style={[styles.wrap, { bottom: bottomOffset }]} pointerEvents="box-none">
-      <Pressable
-        style={({ pressed }) => [
-          styles.btn,
-          pressed && !disabled && { opacity: 0.7 },
-          disabled && { opacity: 0.3 },
-        ]}
-        onPress={disabled ? flashHint : onAdd}
-        hitSlop={8}
-      >
-        <Text style={styles.plusIcon}>+</Text>
-      </Pressable>
       {hint ? (
         <Animated.Text style={[styles.hint, { opacity: hintOpacity }]} numberOfLines={1}>
           {hint}
         </Animated.Text>
       ) : null}
+      <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, disabled && { opacity: 0.3 }]}>
+        <Pressable
+          style={styles.btn}
+          onPress={disabled ? flashHint : onAdd}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          hitSlop={8}
+        >
+          <Text style={styles.plusIcon}>+</Text>
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
@@ -90,7 +105,7 @@ const styles = StyleSheet.create({
     color: theme.text.tertiary,
     fontSize: 12,
     fontFamily: fonts.sans,
-    marginTop: 10,
+    marginBottom: 16,
     textAlign: "center",
     paddingHorizontal: 20,
   },
