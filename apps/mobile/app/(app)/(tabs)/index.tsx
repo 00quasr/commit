@@ -23,6 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
 import { Heatmap } from "@/components/Heatmap";
 import { HabitRow } from "@/components/HabitRow";
+import { useDropDraft } from "@/lib/dropDraft";
 
 const CYCLE_PRESETS: Array<{ label: string; days: number }> = [
   { label: "Daily", days: 1 },
@@ -38,6 +39,7 @@ export default function Today() {
   const allHabits = useQuery(api.habits.list, {});
   const createHabit = useMutation(api.habits.create);
   const archiveHabit = useMutation(api.habits.archive);
+  const startDropDraft = useDropDraft((s) => s.start);
 
   const [showAdd, setShowAdd] = useState(false);
   const [draftText, setDraftText] = useState("");
@@ -163,6 +165,10 @@ export default function Today() {
                   color={item.color}
                   doneToday={doneToday}
                   onPress={() => router.push(`/habit/${item._id}`)}
+                  onLongPress={() => {
+                    startDropDraft(item._id);
+                    router.push("/drop/camera");
+                  }}
                 />
               </Swipeable>
             );

@@ -8,6 +8,7 @@ export interface HabitRowProps {
   color?: string;
   doneToday?: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
 function cycleLabel(cycleDays: number): string {
@@ -17,10 +18,21 @@ function cycleLabel(cycleDays: number): string {
   return `every ${cycleDays} days`;
 }
 
-export function HabitRow({ text, cycleDays, color, doneToday = false, onPress }: HabitRowProps) {
+export function HabitRow({
+  text,
+  cycleDays,
+  color,
+  doneToday = false,
+  onPress,
+  onLongPress,
+}: HabitRowProps) {
   const accentColor = color ?? theme.text.muted;
   return (
-    <Pressable style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]} onPress={onPress}>
+    <Pressable
+      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+      onPress={onPress}
+      onLongPress={onLongPress}
+    >
       <View
         style={[
           styles.checkbox,
