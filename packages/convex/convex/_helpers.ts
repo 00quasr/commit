@@ -158,6 +158,7 @@ export function buildMultiColorHeatmap(
     const habits = dayMap
       ? [...dayMap.entries()]
           .sort((a, b) => a[1] - b[1])
+          .slice(-3)
           .map(([habitId]) => ({
             habitId,
             color: resolveHabitColor(habitId, habitColorMap.get(habitId)),
