@@ -18,7 +18,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import Swipeable from "react-native-gesture-handler/Swipeable";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
 import { Heatmap } from "@/components/Heatmap";
@@ -38,7 +37,6 @@ export default function Today() {
   const dueHabits = useQuery(api.habits.dueToday, {});
   const allHabits = useQuery(api.habits.list, {});
   const createHabit = useMutation(api.habits.create);
-  const archiveHabit = useMutation(api.habits.archive);
   const startDropDraft = useDropDraft((s) => s.start);
 
   const [showAdd, setShowAdd] = useState(false);
@@ -145,30 +143,17 @@ export default function Today() {
             const doneToday =
               section.title === "Not due today" && item.lastDropDayKey !== undefined;
             return (
-              <Swipeable
-                renderRightActions={() => (
-                  <View style={styles.archiveAction}>
-                    <Text style={styles.archiveText}>Archive</Text>
-                  </View>
-                )}
-                onSwipeableRightOpen={() => {
-                  void archiveHabit({ habitId: item._id });
+              <HabitRow
+                text={item.text}
+                cycleDays={item.cycleDays}
+                color={item.color}
+                doneToday={doneToday}
+                onPress={() => router.push(`/habit/${item._id}`)}
+                onLongPress={() => {
+                  startDropDraft(item._id);
+                  router.push("/drop/camera");
                 }}
-                rightThreshold={48}
-                friction={1.6}
-              >
-                <HabitRow
-                  text={item.text}
-                  cycleDays={item.cycleDays}
-                  color={item.color}
-                  doneToday={doneToday}
-                  onPress={() => router.push(`/habit/${item._id}`)}
-                  onLongPress={() => {
-                    startDropDraft(item._id);
-                    router.push("/drop/camera");
-                  }}
-                />
-              </Swipeable>
+              />
             );
           }}
           ItemSeparatorComponent={() => <View style={styles.sep} />}
@@ -346,20 +331,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sep: { height: 1, backgroundColor: theme.divide, marginLeft: 56 },
-  archiveAction: {
-    backgroundColor: "#1a0e0e",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    borderLeftWidth: 1,
-    borderLeftColor: "#3a1414",
-  },
-  archiveText: {
-    color: "#ff8a8a",
-    fontSize: 13,
-    fontFamily: fonts.mono,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
   emptyWrap: {
     alignItems: "center",
     justifyContent: "center",
