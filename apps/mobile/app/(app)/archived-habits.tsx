@@ -73,7 +73,7 @@ export default function ArchivedHabits() {
                         Deletes on {deleteOnLabel(habit.scheduledDeleteAt!)}
                       </Text>
                     ) : (
-                      <Text style={styles.meta}>
+                      <Text style={[styles.meta, habit.dropCount === 0 && styles.metaZero]}>
                         {cycleLabel(habit.cycleDays)} · {habit.dropCount} drops
                       </Text>
                     )}
@@ -188,6 +188,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.mono,
     marginTop: 2,
     letterSpacing: 0.5,
+  },
+  metaZero: {
+    color: "#E05252",
   },
   deleteCountdown: {
     color: theme.text.muted,
