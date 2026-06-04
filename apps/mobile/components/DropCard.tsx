@@ -18,7 +18,11 @@ export interface DropCardProps {
   drop: Doc<"drops">;
   author: Doc<"profiles">;
   photoUrl: string | null;
-  authorHeatmap: Array<{ dayKey: string; count: number }>;
+  authorHeatmap: Array<{
+    dayKey: string;
+    total: number;
+    habits: { habitId: string; color: string }[];
+  }>;
   habitColor: string | null;
   scrollRef?: RefObject<FlatList | null>;
 }
@@ -181,11 +185,7 @@ export const DropCard = memo(function DropCard({
       </View>
       <View style={styles.statsPanelDivider} />
       <View style={styles.statsPanelRight}>
-        <FeedMiniHeatmap
-          data={authorHeatmap}
-          timezone={author.timezone}
-          color={habitColor ?? "#444444"}
-        />
+        <FeedMiniHeatmap data={authorHeatmap} timezone={author.timezone} />
       </View>
     </View>
   );

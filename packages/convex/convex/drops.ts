@@ -1,9 +1,10 @@
 import { dayKeyInTimezone, shouldLockFeed, streakAfterDrop } from "@commit/domain";
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
-  buildHeatmap,
+  buildMultiColorHeatmap,
   countTodaysFriendDrops,
   dayKeyForCaller,
   fetchDropsForHeatmap,
@@ -59,7 +60,11 @@ const profileShape = v.object({
   createdAt: v.number(),
 });
 
-const heatmapEntryShape = v.object({ dayKey: v.string(), count: v.number() });
+const heatmapEntryShape = v.object({
+  dayKey: v.string(),
+  total: v.number(),
+  habits: v.array(v.object({ habitId: v.string(), color: v.string() })),
+});
 
 const enrichedDropShape = v.object({
   drop: dropShape,
@@ -72,6 +77,27 @@ const enrichedDropShape = v.object({
   authorHeatmap: v.array(heatmapEntryShape),
   habitColor: v.union(v.string(), v.null()),
 });
+
+async function fetchHabitColorMap(
+  ctx: QueryCtx | MutationCtx,
+  drops: Doc<"drops">[],
+): Promise<Map<string, string>> {
+  const seenIds = new Set<string>();
+  const map = new Map<string, string>();
+  await Promise.all(
+    drops
+      .filter((d) => {
+        if (!d.habitId || seenIds.has(d.habitId)) return false;
+        seenIds.add(d.habitId);
+        return true;
+      })
+      .map(async (drop) => {
+        const habit = await ctx.db.get(drop.habitId!);
+        if (habit?.color) map.set(drop.habitId!, habit.color);
+      }),
+  );
+  return map;
+}
 
 const MAX_CAPTION = 100;
 const MAX_TAGS = 5;
@@ -279,15 +305,17 @@ export const feedForUser = query({
     ]);
     const allDrops = [...friendDrops, ...ownDrops].sort((a, b) => b.createdAt - a.createdAt);
 
-    // Fetch raw drops once per unique author; per-drop heatmaps are built
-    // in memory filtered to the drop's habitId to avoid cross-habit merging.
+    // Fetch raw drops and habit colors once per unique author.
     const authorIds = [...new Set(allDrops.map((d) => d.ownerId))];
     const rawDropsByAuthor = new Map<string, Awaited<ReturnType<typeof fetchDropsForHeatmap>>>();
+    const colorMapsByAuthor = new Map<string, Map<string, string>>();
     await Promise.all(
       authorIds.map(async (authorId) => {
         const profile = await ctx.db.get(authorId);
         if (!profile) return;
-        rawDropsByAuthor.set(authorId, await fetchDropsForHeatmap(ctx, authorId, profile.timezone));
+        const drops = await fetchDropsForHeatmap(ctx, authorId, profile.timezone);
+        rawDropsByAuthor.set(authorId, drops);
+        colorMapsByAuthor.set(authorId, await fetchHabitColorMap(ctx, drops));
       }),
     );
 
@@ -298,7 +326,8 @@ export const feedForUser = query({
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
         const authorDrops = rawDropsByAuthor.get(drop.ownerId) ?? [];
-        const authorHeatmap = buildHeatmap(authorDrops, drop.habitId ?? undefined);
+        const colorMap = colorMapsByAuthor.get(drop.ownerId) ?? new Map();
+        const authorHeatmap = buildMultiColorHeatmap(authorDrops, colorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
         return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
@@ -479,6 +508,7 @@ export const forDay = query({
     const profileDrops = profileDoc
       ? await fetchDropsForHeatmap(ctx, args.profileId, profileDoc.timezone)
       : [];
+    const profileColorMap = await fetchHabitColorMap(ctx, profileDrops);
 
     const enriched = await Promise.all(
       visible.map(async (drop) => {
@@ -486,7 +516,7 @@ export const forDay = query({
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
-        const authorHeatmap = buildHeatmap(profileDrops, drop.habitId ?? undefined);
+        const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
         return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
@@ -511,6 +541,7 @@ export const forHabit = query({
     const habitDrops = drops.filter((d) => d.habitId === args.habitId);
 
     const profileDrops = await fetchDropsForHeatmap(ctx, me._id, me.timezone);
+    const profileColorMap = await fetchHabitColorMap(ctx, profileDrops);
 
     const enriched = await Promise.all(
       habitDrops.map(async (drop) => {
@@ -518,7 +549,7 @@ export const forHabit = query({
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
-        const authorHeatmap = buildHeatmap(profileDrops, drop.habitId ?? undefined);
+        const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
         return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
@@ -553,6 +584,7 @@ export const recentForProfile = query({
     const profileDrops = profileDoc
       ? await fetchDropsForHeatmap(ctx, args.profileId, profileDoc.timezone)
       : [];
+    const profileColorMap = await fetchHabitColorMap(ctx, profileDrops);
 
     const enriched = await Promise.all(
       visible.map(async (drop) => {
@@ -560,7 +592,7 @@ export const recentForProfile = query({
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
-        const authorHeatmap = buildHeatmap(profileDrops, drop.habitId ?? undefined);
+        const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
         return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };

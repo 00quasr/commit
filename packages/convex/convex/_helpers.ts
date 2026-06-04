@@ -132,20 +132,39 @@ export async function fetchDropsForHeatmap(
 }
 
 /**
- * Aggregates raw drops into a per-day count array. When `habitId` is provided,
- * only drops for that specific habit are counted — fixes the streak-per-color
- * bug where habits sharing a color merged into one inflated streak.
+ * Aggregates raw drops into a per-day entry with total count and per-habit
+ * color bands, matching the Today-page heatmap style.
  */
-export function buildHeatmap(
+export function buildMultiColorHeatmap(
   drops: Doc<"drops">[],
-  habitId?: Id<"habits">,
-): { dayKey: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const d of drops) {
-    if (habitId !== undefined && d.habitId !== habitId) continue;
-    counts.set(d.dayKey, (counts.get(d.dayKey) ?? 0) + 1);
+  habitColorMap: Map<string, string>,
+): { dayKey: string; total: number; habits: { habitId: string; color: string }[] }[] {
+  const totalByDay = new Map<string, number>();
+  const dayHabitFirstAt = new Map<string, Map<string, number>>();
+
+  for (const drop of drops) {
+    totalByDay.set(drop.dayKey, (totalByDay.get(drop.dayKey) ?? 0) + 1);
+    if (drop.habitId) {
+      if (!dayHabitFirstAt.has(drop.dayKey)) dayHabitFirstAt.set(drop.dayKey, new Map());
+      const dayMap = dayHabitFirstAt.get(drop.dayKey)!;
+      const prev = dayMap.get(drop.habitId);
+      if (prev === undefined || drop.createdAt < prev) dayMap.set(drop.habitId, drop.createdAt);
+    }
   }
-  return [...counts.entries()].map(([dayKey, count]) => ({ dayKey, count }));
+
+  return [...totalByDay.keys()].map((dayKey) => {
+    const total = totalByDay.get(dayKey)!;
+    const dayMap = dayHabitFirstAt.get(dayKey);
+    const habits = dayMap
+      ? [...dayMap.entries()]
+          .sort((a, b) => a[1] - b[1])
+          .map(([habitId]) => ({
+            habitId,
+            color: resolveHabitColor(habitId, habitColorMap.get(habitId)),
+          }))
+      : [];
+    return { dayKey, total, habits };
+  });
 }
 
 /**
