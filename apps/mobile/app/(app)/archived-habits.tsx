@@ -73,7 +73,9 @@ export default function ArchivedHabits() {
                         Deletes on {deleteOnLabel(habit.scheduledDeleteAt!)}
                       </Text>
                     ) : (
-                      <Text style={styles.meta}>{cycleLabel(habit.cycleDays)}</Text>
+                      <Text style={styles.meta}>
+                        {cycleLabel(habit.cycleDays)} · {habit.dropCount} drops
+                      </Text>
                     )}
                   </View>
                   {pendingDelete ? (
@@ -195,9 +197,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   actions: {
-    flexDirection: "column",
+    flexDirection: "row",
     gap: 6,
-    alignItems: "flex-end",
+    alignItems: "center",
   },
   reactivateBtn: {
     paddingVertical: 6,

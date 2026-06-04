@@ -166,14 +166,28 @@ export const list = query({
 
 export const listArchived = query({
   args: {},
-  returns: v.array(habitShape),
+  returns: v.array(v.object({ ...habitShape.fields, dropCount: v.number() })),
   handler: async (ctx) => {
     const me = await requireCallerProfile(ctx);
-    return await ctx.db
+    const habits = await ctx.db
       .query("habits")
       .withIndex("by_owner_archived", (q) => q.eq("ownerId", me._id).eq("archived", true))
       .order("desc")
       .collect();
+
+    const allDrops = await ctx.db
+      .query("drops")
+      .withIndex("by_owner_created", (q) => q.eq("ownerId", me._id))
+      .collect();
+
+    const countByHabit = new Map<string, number>();
+    for (const drop of allDrops) {
+      if (drop.habitId) {
+        countByHabit.set(drop.habitId, (countByHabit.get(drop.habitId) ?? 0) + 1);
+      }
+    }
+
+    return habits.map((h) => ({ ...h, dropCount: countByHabit.get(h._id) ?? 0 }));
   },
 });
 
