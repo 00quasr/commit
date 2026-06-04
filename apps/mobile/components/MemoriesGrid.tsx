@@ -86,18 +86,20 @@ export function MemoriesGrid({
         <View style={styles.row}>{row2.map(renderTile)}</View>
       </View>
 
-      <Pressable
-        style={({ pressed }) => [styles.viewAllBtn, pressed && { opacity: 0.6 }]}
-        onPress={onViewAll}
-      >
-        <Text style={styles.viewAllText}>View all my Drops</Text>
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [styles.viewAllBtn, styles.archiveBtn, pressed && { opacity: 0.6 }]}
-        onPress={onViewArchive}
-      >
-        <Text style={styles.viewAllText}>Habit Archive</Text>
-      </Pressable>
+      <View style={styles.actionsRow}>
+        <Pressable
+          style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
+          onPress={onViewAll}
+        >
+          <Text style={styles.actionText}>View all my Drops</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.6 }]}
+          onPress={onViewArchive}
+        >
+          <Text style={styles.actionText}>Habit Archive</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -175,19 +177,22 @@ const styles = StyleSheet.create({
   numTextToday: {
     color: "#000",
   },
-  archiveBtn: {
-    marginTop: 8,
-  },
-  viewAllBtn: {
-    alignSelf: "center",
+  actionsRow: {
+    flexDirection: "row",
+    gap: 10,
     marginTop: 14,
+  },
+  actionBtn: {
+    flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  viewAllText: {
+  actionText: {
     color: theme.text.secondary,
     fontSize: 13,
     fontFamily: fonts.sans,
