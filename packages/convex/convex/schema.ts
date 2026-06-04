@@ -48,6 +48,10 @@ export default defineSchema({
     // Hex color from the preset habitColors palette. Optional so existing rows
     // without a color remain valid; UI falls back to a default.
     color: v.optional(v.string()),
+    // Unix ms timestamp after which this habit and its drops are permanently
+    // deleted by the daily cron. Set by habits.scheduleDelete; cleared by
+    // habits.cancelScheduledDelete.
+    scheduledDeleteAt: v.optional(v.number()),
   }).index("by_owner_archived", ["ownerId", "archived"]),
 
   drops: defineTable({

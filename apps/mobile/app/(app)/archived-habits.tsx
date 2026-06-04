@@ -13,10 +13,17 @@ function cycleLabel(cycleDays: number): string {
   return `every ${cycleDays} days`;
 }
 
+function deleteOnLabel(scheduledDeleteAt: number): string {
+  const date = new Date(scheduledDeleteAt);
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 export default function ArchivedHabits() {
   const activeHabits = useQuery(api.habits.list);
   const archivedHabits = useQuery(api.habits.listArchived);
   const unarchive = useMutation(api.habits.unarchive);
+  const scheduleDelete = useMutation(api.habits.scheduleDelete);
+  const cancelScheduledDelete = useMutation(api.habits.cancelScheduledDelete);
 
   const atLimit = (activeHabits?.length ?? 0) >= 3;
 
@@ -47,33 +54,63 @@ export default function ArchivedHabits() {
           ) : (
             archivedHabits.map((habit) => {
               const accent = habit.color ?? theme.text.muted;
+              const pendingDelete = habit.scheduledDeleteAt !== undefined;
               return (
-                <View key={habit._id} style={styles.row}>
+                <View
+                  key={habit._id}
+                  style={[styles.row, pendingDelete && styles.rowPendingDelete]}
+                >
                   <View style={[styles.colorDot, { backgroundColor: accent }]} />
                   <View style={styles.body}>
-                    <Text style={styles.habitText} numberOfLines={2}>
+                    <Text
+                      style={[styles.habitText, pendingDelete && styles.habitTextPendingDelete]}
+                      numberOfLines={2}
+                    >
                       {habit.text}
                     </Text>
-                    <Text style={styles.meta}>{cycleLabel(habit.cycleDays)}</Text>
+                    {pendingDelete ? (
+                      <Text style={styles.deleteCountdown}>
+                        Deletes on {deleteOnLabel(habit.scheduledDeleteAt!)}
+                      </Text>
+                    ) : (
+                      <Text style={styles.meta}>{cycleLabel(habit.cycleDays)}</Text>
+                    )}
                   </View>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.reactivateBtn,
-                      atLimit && styles.reactivateBtnDisabled,
-                      pressed && !atLimit && { opacity: 0.6 },
-                    ]}
-                    onPress={atLimit ? undefined : () => void unarchive({ habitId: habit._id })}
-                    disabled={atLimit}
-                  >
-                    <Text
-                      style={[
-                        styles.reactivateBtnText,
-                        atLimit && styles.reactivateBtnTextDisabled,
-                      ]}
+                  {pendingDelete ? (
+                    <Pressable
+                      style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.6 }]}
+                      onPress={() => void cancelScheduledDelete({ habitId: habit._id })}
                     >
-                      Reactivate
-                    </Text>
-                  </Pressable>
+                      <Text style={styles.cancelBtnText}>Undo</Text>
+                    </Pressable>
+                  ) : (
+                    <View style={styles.actions}>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.reactivateBtn,
+                          atLimit && styles.reactivateBtnDisabled,
+                          pressed && !atLimit && { opacity: 0.6 },
+                        ]}
+                        onPress={atLimit ? undefined : () => void unarchive({ habitId: habit._id })}
+                        disabled={atLimit}
+                      >
+                        <Text
+                          style={[
+                            styles.reactivateBtnText,
+                            atLimit && styles.reactivateBtnTextDisabled,
+                          ]}
+                        >
+                          Reactivate
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.6 }]}
+                        onPress={() => void scheduleDelete({ habitId: habit._id })}
+                      >
+                        <Text style={styles.deleteBtnText}>Delete</Text>
+                      </Pressable>
+                    </View>
+                  )}
                 </View>
               );
             })
@@ -125,6 +162,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.divide,
   },
+  rowPendingDelete: {
+    opacity: 0.5,
+  },
   colorDot: {
     width: 10,
     height: 10,
@@ -137,12 +177,27 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     lineHeight: 21,
   },
+  habitTextPendingDelete: {
+    textDecorationLine: "line-through",
+  },
   meta: {
     color: theme.text.muted,
     fontSize: 11,
     fontFamily: fonts.mono,
     marginTop: 2,
     letterSpacing: 0.5,
+  },
+  deleteCountdown: {
+    color: theme.text.muted,
+    fontSize: 11,
+    fontFamily: fonts.mono,
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  actions: {
+    flexDirection: "column",
+    gap: 6,
+    alignItems: "flex-end",
   },
   reactivateBtn: {
     paddingVertical: 6,
@@ -162,5 +217,31 @@ const styles = StyleSheet.create({
   },
   reactivateBtnTextDisabled: {
     color: theme.text.muted,
+  },
+  deleteBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#E05252",
+  },
+  deleteBtnText: {
+    color: "#E05252",
+    fontSize: 13,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+  },
+  cancelBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.text.muted,
+  },
+  cancelBtnText: {
+    color: theme.text.muted,
+    fontSize: 13,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
   },
 });
