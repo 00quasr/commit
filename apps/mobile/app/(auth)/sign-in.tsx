@@ -1,4 +1,5 @@
-import { useOAuth, useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { useAuth, useClerk, useOAuth, useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { Redirect } from "expo-router";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
@@ -18,8 +19,15 @@ function useWarmUpBrowser() {
   }, []);
 }
 
+function isSessionExistsError(err: unknown): boolean {
+  const clerkErrors = (err as { errors?: { code?: string }[] })?.errors;
+  return !!clerkErrors?.some((e) => e.code === "session_exists" || e.code === "already_signed_in");
+}
+
 export default function SignInScreen() {
   useWarmUpBrowser();
+  const { isSignedIn } = useAuth();
+  const { signOut } = useClerk();
   const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
   const { signIn, setActive: setActiveSignIn, isLoaded: signInLoaded } = useSignIn();
   const { signUp, setActive: setActiveSignUp, isLoaded: signUpLoaded } = useSignUp();
@@ -65,11 +73,22 @@ export default function SignInScreen() {
         await setActiveOAuth({ session: createdSessionId });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Google sign-in failed");
+      if (isSessionExistsError(err)) {
+        // Stale Clerk session in cache but useAuth() didn't pick it up.
+        // Clear it so the next attempt starts from a clean state.
+        try {
+          await signOut();
+        } catch {
+          // signOut errors are not actionable here — we're already recovering from a desync.
+        }
+        setError("Session was stale — please tap Continue with Google again.");
+      } else {
+        setError(err instanceof Error ? err.message : "Google sign-in failed");
+      }
     } finally {
       setBusy(false);
     }
-  }, [startOAuthFlow]);
+  }, [startOAuthFlow, signOut]);
 
   const onSendCode = useCallback(async () => {
     if (!isLoaded || !signIn || !signUp || cooldown > 0) return;
@@ -90,6 +109,16 @@ export default function SignInScreen() {
       setStage("code-sent");
       startCooldown();
     } catch (err: unknown) {
+      // Stale Clerk session blocking a fresh sign-in attempt: clear and ask the user to retry.
+      if (isSessionExistsError(err)) {
+        try {
+          await signOut();
+        } catch {
+          // signOut errors are not actionable here — we're already recovering from a desync.
+        }
+        setError("Session was stale — please tap Email me a code again.");
+        return;
+      }
       // Clerk returns this code when the email has no Clerk account yet
       const clerkErrors = (err as { errors?: { code: string }[] })?.errors;
       if (clerkErrors?.some((e) => e.code === "form_identifier_not_found")) {
@@ -100,6 +129,15 @@ export default function SignInScreen() {
           setStage("code-sent");
           startCooldown();
         } catch (signUpErr) {
+          if (isSessionExistsError(signUpErr)) {
+            try {
+              await signOut();
+            } catch {
+              // signOut errors are not actionable here — we're already recovering from a desync.
+            }
+            setError("Session was stale — please tap Email me a code again.");
+            return;
+          }
           setError(signUpErr instanceof Error ? signUpErr.message : "Could not send code");
         }
       } else {
@@ -108,7 +146,7 @@ export default function SignInScreen() {
     } finally {
       setBusy(false);
     }
-  }, [cooldown, email, isLoaded, signIn, signUp, startCooldown]);
+  }, [cooldown, email, isLoaded, signIn, signOut, signUp, startCooldown]);
 
   const onVerifyCode = useCallback(async () => {
     if (!isLoaded) return;
@@ -145,6 +183,11 @@ export default function SignInScreen() {
   const sendCodeDisabled = busy || cooldown > 0;
   const sendCodeLabel = cooldown > 0 ? `Resend code (${cooldown}s)` : "Resend code";
   const emailCodeLabel = cooldown > 0 ? `Email me a code (${cooldown}s)` : "Email me a code";
+
+  // Defensive: the (auth) layout already redirects when signed in, but if Clerk's
+  // useAuth() flips to signed-in after the screen mounts, send the user to the app
+  // instead of leaving them stranded on this form.
+  if (isSignedIn) return <Redirect href="/(app)" />;
 
   return (
     <View style={styles.root}>
