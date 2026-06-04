@@ -78,7 +78,9 @@ export default function SignInScreen() {
         // Clear it so the next attempt starts from a clean state.
         try {
           await signOut();
-        } catch {}
+        } catch {
+          // signOut errors are not actionable here — we're already recovering from a desync.
+        }
         setError("Session was stale — please tap Continue with Google again.");
       } else {
         setError(err instanceof Error ? err.message : "Google sign-in failed");
@@ -111,7 +113,9 @@ export default function SignInScreen() {
       if (isSessionExistsError(err)) {
         try {
           await signOut();
-        } catch {}
+        } catch {
+          // signOut errors are not actionable here — we're already recovering from a desync.
+        }
         setError("Session was stale — please tap Email me a code again.");
         return;
       }
@@ -128,7 +132,9 @@ export default function SignInScreen() {
           if (isSessionExistsError(signUpErr)) {
             try {
               await signOut();
-            } catch {}
+            } catch {
+              // signOut errors are not actionable here — we're already recovering from a desync.
+            }
             setError("Session was stale — please tap Email me a code again.");
             return;
           }
