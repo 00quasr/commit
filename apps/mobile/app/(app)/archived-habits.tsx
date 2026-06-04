@@ -73,8 +73,11 @@ export default function ArchivedHabits() {
                         Deletes on {deleteOnLabel(habit.scheduledDeleteAt!)}
                       </Text>
                     ) : (
-                      <Text style={[styles.meta, habit.dropCount === 0 && styles.metaZero]}>
-                        {cycleLabel(habit.cycleDays)} · {habit.dropCount} drops
+                      <Text style={styles.meta}>
+                        {cycleLabel(habit.cycleDays)} ·{" "}
+                        <Text style={habit.dropCount === 0 ? styles.metaZero : undefined}>
+                          {habit.dropCount} drops
+                        </Text>
                       </Text>
                     )}
                   </View>
