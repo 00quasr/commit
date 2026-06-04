@@ -23,7 +23,7 @@ export interface DropCardProps {
     total: number;
     habits: { habitId: string; color: string }[];
   }>;
-  habitColor: string | null;
+  habitColor?: string | null;
   scrollRef?: RefObject<FlatList | null>;
 }
 
@@ -80,7 +80,6 @@ export const DropCard = memo(function DropCard({
   author,
   photoUrl,
   authorHeatmap,
-  habitColor,
   scrollRef,
 }: DropCardProps) {
   const posX = useSharedValue(0);
