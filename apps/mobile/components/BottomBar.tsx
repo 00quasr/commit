@@ -56,9 +56,11 @@ export function BottomBar({ onAdd, disabled, hint }: BottomBarProps) {
   return (
     <View style={[styles.wrap, { bottom: bottomOffset }]} pointerEvents="box-none">
       {hint ? (
-        <Animated.Text style={[styles.hint, { opacity: hintOpacity }]} numberOfLines={1}>
-          {hint}
-        </Animated.Text>
+        <Animated.View style={[styles.hintWrap, { opacity: hintOpacity }]} pointerEvents="none">
+          <Text style={styles.hint} numberOfLines={2}>
+            {hint}
+          </Text>
+        </Animated.View>
       ) : null}
       <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, disabled && { opacity: 0.3 }]}>
         <Pressable
@@ -101,12 +103,25 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontWeight: "300",
   },
+  hintWrap: {
+    marginBottom: 16,
+    maxWidth: 320,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "rgba(20,20,20,0.92)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.divide,
+    shadowColor: "#000",
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+  },
   hint: {
-    color: theme.text.tertiary,
+    color: theme.text.secondary,
     fontSize: 12,
     fontFamily: fonts.sans,
-    marginBottom: 16,
     textAlign: "center",
-    paddingHorizontal: 20,
+    lineHeight: 16,
   },
 });
