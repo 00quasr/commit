@@ -13,7 +13,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MiniHeatmap } from "@/components/MiniHeatmap";
 import { useDropDraft } from "@/lib/dropDraft";
 import { theme } from "@/lib/theme";
@@ -35,6 +35,8 @@ export default function HabitDetail() {
   const archive = useMutation(api.habits.archive);
   const startDropDraft = useDropDraft((s) => s.start);
   const [archiveModalVisible, setArchiveModalVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const habit = useMemo(() => allHabits?.find((h) => h._id === habitId), [allHabits, habitId]);
   const totalDrops = useMemo(
@@ -108,9 +110,32 @@ export default function HabitDetail() {
         </View>
       </Modal>
 
-      <Header />
+      <Modal
+        transparent
+        visible={menuVisible}
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
+          <View style={[styles.menuCard, { top: insets.top + 48 }]}>
+            <Pressable
+              style={({ pressed }) => [styles.menuItem, pressed && { opacity: 0.6 }]}
+              onPress={() => {
+                setMenuVisible(false);
+                onArchive();
+              }}
+            >
+              <Text style={[styles.menuItemText, styles.menuItemDanger]}>Archive habit</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <Header onMenu={() => setMenuVisible(true)} />
+
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 160 }]}
+      >
         <Text style={styles.text}>{habit.text}</Text>
         <View style={styles.metaRow}>
           <Text style={styles.metaPill}>{cycleLabel(habit.cycleDays)}</Text>
@@ -127,33 +152,28 @@ export default function HabitDetail() {
             <MiniHeatmap data={heatmapData} timezone={me.timezone} />
           </View>
         )}
+      </ScrollView>
 
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
         <Pressable
           style={({ pressed }) => [styles.dropBtn, pressed && { opacity: 0.7 }]}
           onPress={onDrop}
         >
           <Text style={styles.dropBtnText}>Drop on this habit</Text>
         </Pressable>
-
         <Pressable
           style={({ pressed }) => [styles.viewDropsBtn, pressed && { opacity: 0.6 }]}
           onPress={() => router.push(`/(app)/habit/drops/${habitId}`)}
+          hitSlop={8}
         >
           <Text style={styles.viewDropsText}>View habit drops</Text>
         </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [styles.archiveBtn, pressed && { opacity: 0.6 }]}
-          onPress={onArchive}
-        >
-          <Text style={styles.archiveText}>Archive habit</Text>
-        </Pressable>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
-function Header() {
+function Header({ onMenu }: { onMenu?: () => void }) {
   return (
     <View style={styles.header}>
       <Pressable
@@ -163,6 +183,15 @@ function Header() {
       >
         <Text style={styles.backText}>← Back</Text>
       </Pressable>
+      {onMenu && (
+        <Pressable
+          onPress={onMenu}
+          style={({ pressed }) => [styles.menuBtn, pressed && { opacity: 0.6 }]}
+          hitSlop={12}
+        >
+          <Text style={styles.menuBtnText}>•••</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -182,10 +211,30 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   placeholder: { color: theme.text.muted, fontSize: 14, fontFamily: fonts.mono },
-  header: { paddingHorizontal: 20, paddingVertical: 12 },
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   back: { alignSelf: "flex-start" },
   backText: { color: theme.text.secondary, fontSize: 16, fontFamily: fonts.sans },
-  scroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 64 },
+  menuBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+  },
+  menuBtnText: {
+    color: theme.text.secondary,
+    fontSize: 18,
+    fontFamily: fonts.sans,
+    fontWeight: "700",
+    letterSpacing: -1,
+  },
+  scroll: { paddingHorizontal: 20, paddingTop: 12 },
   text: {
     color: theme.text.primary,
     fontSize: 28,
@@ -231,8 +280,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
     letterSpacing: 0.5,
   },
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: theme.bg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.borderHairline,
+  },
   dropBtn: {
-    marginTop: 24,
     paddingVertical: 16,
     borderRadius: 12,
     backgroundColor: theme.text.primary,
@@ -241,21 +300,45 @@ const styles = StyleSheet.create({
   dropBtnText: { color: theme.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "700" },
   viewDropsBtn: {
     alignSelf: "center",
-    marginTop: 24,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   viewDropsText: {
-    color: theme.text.secondary,
+    color: theme.text.tertiary,
     fontSize: 13,
     fontFamily: fonts.sans,
     fontWeight: "500",
   },
-  archiveBtn: { alignSelf: "center", paddingVertical: 14, paddingHorizontal: 24, marginTop: 16 },
-  archiveText: { color: "#ff6b6b", fontSize: 14, fontFamily: fonts.sans },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  menuCard: {
+    position: "absolute",
+    right: 16,
+    minWidth: 180,
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    paddingVertical: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.divide,
+    shadowColor: "#000",
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  menuItemText: {
+    color: theme.text.primary,
+    fontSize: 15,
+    fontFamily: fonts.sans,
+    fontWeight: "500",
+  },
+  menuItemDanger: { color: "#ff6b6b" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
