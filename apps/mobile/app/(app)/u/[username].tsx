@@ -5,7 +5,15 @@ import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MemoriesGrid } from "@/components/MemoriesGrid";
 
@@ -18,9 +26,12 @@ export default function UserProfile() {
     api.friendships.statusWith,
     target ? { otherProfileId: target._id } : "skip",
   );
+  // Only the self view shows the MemoriesGrid — friend profiles intentionally
+  // hide drops since the feed already surfaces them.
+  const isSelfQuery = me && target && me._id === target._id;
   const recent = useQuery(
     api.drops.recentForProfile,
-    target ? { profileId: target._id, limit: 14 } : "skip",
+    isSelfQuery ? { profileId: target._id, limit: 14 } : "skip",
   );
 
   const sendRequest = useMutation(api.friendships.request);
@@ -53,13 +64,30 @@ export default function UserProfile() {
 
   const onPrimary = async () => {
     if (!status || busy) return;
+    if (status.status === "accepted" && status.friendshipId) {
+      const friendshipId = status.friendshipId;
+      Alert.alert(
+        "Remove friend?",
+        `You and ${target.username} will no longer see each other's friends-only drops.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: () => {
+              setBusy(true);
+              declineRequest({ friendshipId }).finally(() => setBusy(false));
+            },
+          },
+        ],
+      );
+      return;
+    }
     setBusy(true);
     try {
       if (status.status === "none") {
         await sendRequest({ otherProfileId: target._id });
       } else if (status.status === "pending_outgoing" && status.friendshipId) {
-        await declineRequest({ friendshipId: status.friendshipId });
-      } else if (status.status === "accepted" && status.friendshipId) {
         await declineRequest({ friendshipId: status.friendshipId });
       }
     } finally {
@@ -163,48 +191,19 @@ export default function UserProfile() {
           </View>
         ) : null}
 
-        {recent === undefined ? (
-          <ActivityIndicator color={theme.text.primary} style={{ marginTop: 16 }} />
-        ) : isSelf ? (
-          <MemoriesGrid
-            drops={recent}
-            timezone={target.timezone}
-            onViewAll={() => router.push("/(app)/memories")}
-            onViewArchive={() => router.push("/(app)/archived-habits")}
-            onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
-          />
-        ) : recent.length === 0 ? (
-          <View style={styles.emptyRecent}>
-            <Text style={styles.emptyText}>No drops visible yet.</Text>
-          </View>
-        ) : (
-          <View style={styles.recentList}>
-            <Text style={styles.sectionLabel}>RECENT DROPS</Text>
-            {recent.map((item) => (
-              <Pressable
-                key={item.drop._id}
-                onPress={() => router.push(`/(app)/day/${item.drop.dayKey}`)}
-                style={({ pressed }) => [styles.recentRow, pressed && { opacity: 0.7 }]}
-              >
-                {item.photoUrl ? (
-                  <Image
-                    source={{ uri: item.photoUrl }}
-                    style={styles.recentThumb}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View style={[styles.recentThumb, styles.recentThumbFallback]} />
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text numberOfLines={2} style={styles.recentCaption}>
-                    {item.drop.caption || item.drop.dayKey}
-                  </Text>
-                  <Text style={styles.recentMeta}>{item.drop.dayKey}</Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
+        {isSelf ? (
+          recent === undefined ? (
+            <ActivityIndicator color={theme.text.primary} style={{ marginTop: 16 }} />
+          ) : (
+            <MemoriesGrid
+              drops={recent}
+              timezone={target.timezone}
+              onViewAll={() => router.push("/(app)/memories")}
+              onViewArchive={() => router.push("/(app)/archived-habits")}
+              onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
+            />
+          )
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -337,45 +336,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: fonts.sans,
     fontWeight: "500",
-  },
-  sectionLabel: {
-    color: theme.text.muted,
-    fontSize: 11,
-    fontFamily: fonts.mono,
-    letterSpacing: 1,
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  recentList: { paddingTop: 8 },
-  recentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  recentThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    backgroundColor: theme.blockElevated,
-  },
-  recentThumbFallback: { backgroundColor: theme.blockElevated },
-  recentCaption: {
-    color: theme.text.primary,
-    fontSize: 14,
-    fontFamily: fonts.sans,
-  },
-  recentMeta: {
-    color: theme.text.tertiary,
-    fontSize: 11,
-    fontFamily: fonts.mono,
-    marginTop: 2,
-  },
-  emptyRecent: { paddingHorizontal: 20, paddingTop: 24, alignItems: "center" },
-  emptyText: {
-    color: theme.text.muted,
-    fontSize: 13,
-    fontFamily: fonts.sans,
   },
 });
