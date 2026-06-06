@@ -36,6 +36,8 @@ export default defineSchema({
     ownerId: v.id("profiles"),
     text: v.string(),
     cycleDays: v.number(), // 1 = daily, 2 = every 2 days, ... 31 = monthly
+    // When set, overrides cycleDays: habit is due only on these weekdays (0=Sun … 6=Sat).
+    customDays: v.optional(v.array(v.number())),
     // dayKey at habit creation in the owner's timezone. Stored explicitly so
     // dueToday queries don't depend on _creationTime (which can drift from
     // vi.useFakeTimers in tests, and whose timezone interpretation could

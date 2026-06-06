@@ -28,7 +28,19 @@ import { useDropDraft } from "@/lib/dropDraft";
 const CYCLE_PRESETS: Array<{ label: string; days: number }> = [
   { label: "Daily", days: 1 },
   { label: "Every 2 days", days: 2 },
-  { label: "Weekly", days: 7 },
+  { label: "Custom days", days: 0 },
+];
+
+const CUSTOM_CYCLE_SENTINEL = 0;
+
+const WEEKDAYS: Array<{ label: string; day: number }> = [
+  { label: "Mo", day: 1 },
+  { label: "Tu", day: 2 },
+  { label: "We", day: 3 },
+  { label: "Th", day: 4 },
+  { label: "Fr", day: 5 },
+  { label: "Sa", day: 6 },
+  { label: "Su", day: 0 },
 ];
 
 export default function Today() {
@@ -44,6 +56,7 @@ export default function Today() {
   const [showAdd, setShowAdd] = useState(false);
   const [draftText, setDraftText] = useState("");
   const [draftCycle, setDraftCycle] = useState<number>(1);
+  const [draftCustomDays, setDraftCustomDays] = useState<number[]>([1]);
   const [draftColor, setDraftColor] = useState<string>(habitColors[0]);
   const [busy, setBusy] = useState(false);
 
@@ -60,11 +73,19 @@ export default function Today() {
   const onAdd = async () => {
     const text = draftText.trim();
     if (!text || busy) return;
+    if (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0) return;
     setBusy(true);
     try {
-      await createHabit({ text, cycleDays: draftCycle, color: draftColor });
+      const isCustom = draftCycle === CUSTOM_CYCLE_SENTINEL;
+      await createHabit({
+        text,
+        cycleDays: isCustom ? 1 : draftCycle,
+        customDays: isCustom ? draftCustomDays : undefined,
+        color: draftColor,
+      });
       setDraftText("");
       setDraftCycle(1);
+      setDraftCustomDays([1]);
       setDraftColor(habitColors[0]);
       setShowAdd(false);
     } finally {
@@ -160,6 +181,7 @@ export default function Today() {
                 <HabitRow
                   text={item.text}
                   cycleDays={item.cycleDays}
+                  customDays={item.customDays}
                   color={item.color}
                   doneToday={doneToday}
                   onPress={() => router.push(`/habit/${item._id}`)}
@@ -217,6 +239,28 @@ export default function Today() {
                 </Pressable>
               ))}
             </View>
+            {draftCycle === CUSTOM_CYCLE_SENTINEL && (
+              <View style={styles.dayRow}>
+                {WEEKDAYS.map(({ label, day }) => {
+                  const active = draftCustomDays.includes(day);
+                  return (
+                    <Pressable
+                      key={day}
+                      style={[styles.dayChip, active && styles.dayChipActive]}
+                      onPress={() =>
+                        setDraftCustomDays((prev) =>
+                          active ? prev.filter((d) => d !== day) : [...prev, day],
+                        )
+                      }
+                    >
+                      <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
 
             <Text style={styles.fieldLabel}>Color</Text>
             <View style={styles.colorRow}>
@@ -238,9 +282,19 @@ export default function Today() {
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.add, (!draftText.trim() || busy) && styles.addDisabled]}
+                style={[
+                  styles.add,
+                  (!draftText.trim() ||
+                    busy ||
+                    (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)) &&
+                    styles.addDisabled,
+                ]}
                 onPress={() => void onAdd()}
-                disabled={!draftText.trim() || busy}
+                disabled={
+                  !draftText.trim() ||
+                  busy ||
+                  (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)
+                }
               >
                 <Text style={styles.addText}>Add</Text>
               </Pressable>
@@ -418,6 +472,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chipRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  dayRow: { flexDirection: "row", gap: 6, marginTop: 10 },
+  dayChip: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.borderHairline,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayChipActive: { backgroundColor: theme.text.primary, borderColor: theme.text.primary },
+  dayChipText: {
+    color: theme.text.secondary,
+    fontSize: 11,
+    fontFamily: fonts.mono,
+    textTransform: "uppercase",
+  },
+  dayChipTextActive: { color: theme.bg },
   colorRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   colorSwatch: { width: 28, height: 28, borderRadius: 14 },
   colorSwatchActive: { borderWidth: 2.5, borderColor: "#ffffff" },

@@ -6,10 +6,17 @@ import { router } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-function cycleLabel(cycleDays: number): string {
+const DAY_ABBREVS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+function cycleLabel(cycleDays: number, customDays?: number[]): string {
+  if (customDays && customDays.length > 0) {
+    return DISPLAY_ORDER.filter((d) => customDays.includes(d))
+      .map((d) => DAY_ABBREVS[d])
+      .join(", ");
+  }
   if (cycleDays === 1) return "daily";
   if (cycleDays === 2) return "every 2 days";
-  if (cycleDays === 7) return "weekly";
   return `every ${cycleDays} days`;
 }
 
@@ -74,7 +81,7 @@ export default function ArchivedHabits() {
                       </Text>
                     ) : (
                       <Text style={styles.meta}>
-                        {cycleLabel(habit.cycleDays)} ·{" "}
+                        {cycleLabel(habit.cycleDays, habit.customDays)} ·{" "}
                         <Text style={habit.dropCount === 0 ? styles.metaZero : undefined}>
                           {habit.dropCount} drops
                         </Text>

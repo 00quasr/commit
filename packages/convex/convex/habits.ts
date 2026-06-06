@@ -16,6 +16,7 @@ const habitShape = v.object({
   ownerId: v.id("profiles"),
   text: v.string(),
   cycleDays: v.number(),
+  customDays: v.optional(v.array(v.number())),
   createdDayKey: v.string(),
   lastDropDayKey: v.optional(v.string()),
   archived: v.boolean(),
@@ -27,6 +28,7 @@ export const create = mutation({
   args: {
     text: v.string(),
     cycleDays: v.number(),
+    customDays: v.optional(v.array(v.number())),
     color: v.string(),
   },
   returns: v.id("habits"),
@@ -39,12 +41,22 @@ export const create = mutation({
     if (text.length > MAX_TEXT) {
       throw new Error(`text exceeds ${MAX_TEXT} chars`);
     }
-    if (
-      !Number.isInteger(args.cycleDays) ||
-      args.cycleDays < MIN_CYCLE ||
-      args.cycleDays > MAX_CYCLE
-    ) {
-      throw new Error(`cycleDays must be an integer in [${MIN_CYCLE}, ${MAX_CYCLE}]`);
+    if (args.customDays !== undefined) {
+      if (args.customDays.length === 0) throw new Error("customDays cannot be empty");
+      if (args.customDays.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
+        throw new Error("customDays values must be integers in [0, 6]");
+      }
+      if (new Set(args.customDays).size !== args.customDays.length) {
+        throw new Error("customDays must not contain duplicates");
+      }
+    } else {
+      if (
+        !Number.isInteger(args.cycleDays) ||
+        args.cycleDays < MIN_CYCLE ||
+        args.cycleDays > MAX_CYCLE
+      ) {
+        throw new Error(`cycleDays must be an integer in [${MIN_CYCLE}, ${MAX_CYCLE}]`);
+      }
     }
 
     const existing = await ctx.db
@@ -59,6 +71,7 @@ export const create = mutation({
       ownerId: me._id,
       text,
       cycleDays: args.cycleDays,
+      ...(args.customDays !== undefined && { customDays: args.customDays }),
       createdDayKey: dayKeyForCaller(me),
       archived: false,
       color: args.color,
@@ -210,6 +223,7 @@ export const dueToday = query({
     return active.filter((habit) =>
       isDueToday({
         cycleDays: habit.cycleDays,
+        ...(habit.customDays !== undefined && { customDays: habit.customDays }),
         habitCreatedDayKey: habit.createdDayKey,
         lastDropDayKey: habit.lastDropDayKey,
         todayDayKey: today,
