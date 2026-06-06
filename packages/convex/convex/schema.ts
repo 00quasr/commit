@@ -13,6 +13,7 @@ const activityKind = v.union(
   v.literal("grace_card_earned"),
   v.literal("grace_card_consumed"),
   v.literal("friendship_accepted"),
+  v.literal("habit_created"),
 );
 
 export default defineSchema({
@@ -54,13 +55,17 @@ export default defineSchema({
     // deleted by the daily cron. Set by habits.scheduleDelete; cleared by
     // habits.cancelScheduledDelete.
     scheduledDeleteAt: v.optional(v.number()),
+    // Legacy: an earlier iteration of this branch wrote a per-habit
+    // "share with friends" opt-out. The UI + mutation are gone; the field
+    // is accepted here so rows already carrying it still validate. Safe
+    // to remove once the dev deployment is cleaned of these rows.
+    shareEvents: v.optional(v.boolean()),
   }).index("by_owner_archived", ["ownerId", "archived"]),
 
   drops: defineTable({
     ownerId: v.id("profiles"),
     habitId: v.optional(v.id("habits")), // optional: ad-hoc drops without a habit are allowed
     caption: v.string(),
-    tags: v.array(v.string()),
     photoFileId: v.optional(v.id("_storage")),
     voiceFileId: v.optional(v.id("_storage")),
     dayKey: v.string(),
@@ -124,7 +129,9 @@ export default defineSchema({
     kind: activityKind,
     payload: v.any(),
     createdAt: v.number(),
-  }).index("by_profile_created", ["profileId", "createdAt"]),
+  })
+    .index("by_profile_created", ["profileId", "createdAt"])
+    .index("by_profile_kind_created", ["profileId", "kind", "createdAt"]),
 
   // Public marketing waitlist for the pre-beta site. Unauthenticated writes
   // — see waitlist.add. emailLower powers idempotent dedupe.

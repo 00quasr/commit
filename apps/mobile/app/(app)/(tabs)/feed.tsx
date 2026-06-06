@@ -1,9 +1,9 @@
 import { api } from "@commit/convex/api";
-import type { Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { router } from "expo-router";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -14,18 +14,47 @@ import {
   type ViewToken,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityEventCard } from "@/components/ActivityEventCard";
 import { DropCard } from "@/components/DropCard";
+
+type DropsResult = FunctionReturnType<typeof api.drops.feedForUser>;
+type UnlockedDrops = Extract<DropsResult, { locked: false }>;
+type FeedDrop = UnlockedDrops["drops"][number];
+type FeedEvent = FunctionReturnType<typeof api.activityEvents.feedForUser>[number];
+type FeedItem =
+  | { type: "drop"; createdAt: number; key: string; item: FeedDrop }
+  | { type: "event"; createdAt: number; key: string; item: FeedEvent };
 
 export default function Feed() {
   const result = useQuery(api.drops.feedForUser, {});
+  const events = useQuery(api.activityEvents.feedForUser, {});
   const markSeen = useMutation(api.views.markSeen);
   const seenLocally = useRef(new Set<string>());
   const listRef = useRef<FlatList>(null);
 
+  const merged = useMemo<FeedItem[]>(() => {
+    if (!result || result.locked) return [];
+    const items: FeedItem[] = [];
+    for (const d of result.drops) {
+      items.push({
+        type: "drop",
+        createdAt: d.drop.createdAt,
+        key: `drop:${d.drop._id}`,
+        item: d,
+      });
+    }
+    for (const e of events ?? []) {
+      items.push({ type: "event", createdAt: e.createdAt, key: `event:${e._id}`, item: e });
+    }
+    return items.sort((a, b) => b.createdAt - a.createdAt);
+  }, [result, events]);
+
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       for (const item of viewableItems) {
-        const dropId = (item.item as { drop: { _id: Id<"drops"> } }).drop._id;
+        const entry = item.item as FeedItem;
+        if (entry.type !== "drop") continue;
+        const dropId = entry.item.drop._id;
         if (!seenLocally.current.has(dropId)) {
           seenLocally.current.add(dropId);
           void markSeen({ dropId });
@@ -79,18 +108,23 @@ export default function Feed() {
 
       <FlatList
         ref={listRef}
-        data={result.drops}
-        keyExtractor={(item) => item.drop._id}
-        renderItem={({ item }) => (
-          <DropCard
-            drop={item.drop}
-            author={item.author}
-            photoUrl={item.photoUrl}
-            authorHeatmap={item.authorHeatmap}
-            habitColor={item.habitColor}
-            scrollRef={listRef}
-          />
-        )}
+        showsVerticalScrollIndicator={false}
+        data={merged}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item }) =>
+          item.type === "drop" ? (
+            <DropCard
+              drop={item.item.drop}
+              author={item.item.author}
+              photoUrl={item.item.photoUrl}
+              authorHeatmap={item.item.authorHeatmap}
+              habitColor={item.item.habitColor}
+              scrollRef={listRef}
+            />
+          ) : (
+            <ActivityEventCard event={item.item} />
+          )
+        }
         contentContainerStyle={styles.list}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{ itemVisiblePercentThreshold: 60, minimumViewTime: 800 }}

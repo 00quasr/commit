@@ -20,7 +20,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropDraft } from "@/lib/dropDraft";
 
 const MAX_CAPTION = 100;
-const TAG_PRESETS = ["@build", "@health", "@create", "@learn", "@ship"] as const;
 
 export default function Compose() {
   const habitId = useDropDraft((s) => s.habitId);
@@ -31,19 +30,9 @@ export default function Compose() {
   const createDrop = useMutation(api.drops.create);
 
   const [caption, setCaption] = useState("");
-  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<"idle" | "uploading" | "creating">("idle");
   const [error, setError] = useState<string | null>(null);
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) => {
-      const next = new Set(prev);
-      if (next.has(tag)) next.delete(tag);
-      else next.add(tag);
-      return next;
-    });
-  };
 
   const uploadFile = async (uri: string, contentType: string): Promise<Id<"_storage">> => {
     const uploadUrl = await generateUploadUrl();
@@ -78,7 +67,6 @@ export default function Compose() {
       await createDrop({
         habitId,
         caption,
-        tags: [...selectedTags],
         visibility: "public",
         ...(photoFileId !== undefined ? { photoFileId } : {}),
       });
@@ -129,22 +117,6 @@ export default function Compose() {
           <Text style={[styles.charCount, captionOver && styles.charCountOver]}>
             {caption.length}/{MAX_CAPTION}
           </Text>
-
-          <Text style={styles.fieldLabel}>Tags</Text>
-          <View style={styles.chipRow}>
-            {TAG_PRESETS.map((tag) => {
-              const active = selectedTags.has(tag);
-              return (
-                <Pressable
-                  key={tag}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() => toggleTag(tag)}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{tag}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
 
           {error && <Text style={styles.error}>{error}</Text>}
         </ScrollView>
@@ -215,17 +187,6 @@ const styles = StyleSheet.create({
   },
   charCount: { color: "#444", fontSize: 12, fontFamily: fonts.mono, marginTop: 6 },
   charCountOver: { color: "#ff6b6b" },
-  chipRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  chip: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  chipActive: { backgroundColor: colors.fg, borderColor: colors.fg },
-  chipText: { color: "#888", fontSize: 14, fontFamily: fonts.mono },
-  chipTextActive: { color: colors.bg },
   error: { color: "#ff6b6b", fontSize: 14, marginTop: 16 },
   footer: { padding: 20, borderTopWidth: 1, borderTopColor: "#111" },
   submit: {
