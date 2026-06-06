@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
 import { Heatmap } from "@/components/Heatmap";
 import { HabitRow } from "@/components/HabitRow";
+import { PeopleIcon } from "@/components/icons";
 import { useDropDraft } from "@/lib/dropDraft";
 
 const CYCLE_PRESETS: Array<{ label: string; days: number }> = [
@@ -38,6 +39,8 @@ export default function Today() {
   const allHabits = useQuery(api.habits.list, {});
   const createHabit = useMutation(api.habits.create);
   const startDropDraft = useDropDraft((s) => s.start);
+  const pendingFriends = useQuery(api.friendships.listForUser, { status: "pending" });
+  const incomingCount = (pendingFriends ?? []).filter((r) => !r.iAmRequester).length;
 
   const [showAdd, setShowAdd] = useState(false);
   const [draftText, setDraftText] = useState("");
@@ -86,21 +89,31 @@ export default function Today() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.title}>Today</Text>
-          <Pressable
-            onPress={() => router.push("/profile")}
-            style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
-            hitSlop={8}
-          >
-            {me?.avatarUrl ? (
-              <Image source={{ uri: me.avatarUrl }} style={styles.avatar} contentFit="cover" />
-            ) : (
-              <View style={[styles.avatar, styles.avatarFallback]}>
-                <Text style={styles.avatarLetter}>
-                  {me?.username?.charAt(0).toUpperCase() ?? "?"}
-                </Text>
-              </View>
-            )}
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => router.push("/friends")}
+              style={({ pressed }) => [styles.friendsButton, pressed && { opacity: 0.7 }]}
+              hitSlop={8}
+            >
+              <PeopleIcon size={18} color={theme.text.primary} />
+              {incomingCount > 0 ? <View style={styles.badge} /> : null}
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/profile")}
+              style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
+              hitSlop={8}
+            >
+              {me?.avatarUrl ? (
+                <Image source={{ uri: me.avatarUrl }} style={styles.avatar} contentFit="cover" />
+              ) : (
+                <View style={[styles.avatar, styles.avatarFallback]}>
+                  <Text style={styles.avatarLetter}>
+                    {me?.username?.charAt(0).toUpperCase() ?? "?"}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         </View>
         <Text style={styles.subtitle}>
           {isEmpty
@@ -276,6 +289,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   avatarButton: {},
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  friendsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.blockElevated,
+  },
+  badge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#ff3b30",
+  },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.blockElevated },
   avatarFallback: { alignItems: "center", justifyContent: "center" },
   avatarLetter: {

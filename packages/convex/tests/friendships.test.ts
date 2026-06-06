@@ -291,5 +291,71 @@ describe("friendships.listForUser", () => {
   });
 });
 
+describe("friendships.statusWith", () => {
+  test("returns 'none' when no row exists between the pair", async () => {
+    const t = makeTest();
+    const { bobId } = await seedTwoProfiles(t);
+
+    const result = await t
+      .withIdentity(asAlice)
+      .query(api.friendships.statusWith, { otherProfileId: bobId });
+    expect(result).toEqual({ status: "none", friendshipId: null });
+  });
+
+  test("returns 'self' when looking up the caller's own profile", async () => {
+    const t = makeTest();
+    const { aliceId } = await seedTwoProfiles(t);
+
+    const result = await t
+      .withIdentity(asAlice)
+      .query(api.friendships.statusWith, { otherProfileId: aliceId });
+    expect(result).toEqual({ status: "self", friendshipId: null });
+  });
+
+  test("returns 'pending_outgoing' for the requester side", async () => {
+    const t = makeTest();
+    const { bobId } = await seedTwoProfiles(t);
+    const friendshipId = await t
+      .withIdentity(asAlice)
+      .mutation(api.friendships.request, { otherProfileId: bobId });
+
+    const result = await t
+      .withIdentity(asAlice)
+      .query(api.friendships.statusWith, { otherProfileId: bobId });
+    expect(result).toEqual({ status: "pending_outgoing", friendshipId });
+  });
+
+  test("returns 'pending_incoming' for the receiver side", async () => {
+    const t = makeTest();
+    const { aliceId, bobId } = await seedTwoProfiles(t);
+    const friendshipId = await t
+      .withIdentity(asAlice)
+      .mutation(api.friendships.request, { otherProfileId: bobId });
+
+    const result = await t
+      .withIdentity(asBob)
+      .query(api.friendships.statusWith, { otherProfileId: aliceId });
+    expect(result).toEqual({ status: "pending_incoming", friendshipId });
+  });
+
+  test("returns 'accepted' for both sides after acceptance", async () => {
+    const t = makeTest();
+    const { aliceId, bobId } = await seedTwoProfiles(t);
+    const friendshipId = await t
+      .withIdentity(asAlice)
+      .mutation(api.friendships.request, { otherProfileId: bobId });
+    await t.withIdentity(asBob).mutation(api.friendships.accept, { friendshipId });
+
+    const aliceView = await t
+      .withIdentity(asAlice)
+      .query(api.friendships.statusWith, { otherProfileId: bobId });
+    const bobView = await t
+      .withIdentity(asBob)
+      .query(api.friendships.statusWith, { otherProfileId: aliceId });
+    expect(aliceView).toEqual({ status: "accepted", friendshipId });
+    expect(bobView).toEqual({ status: "accepted", friendshipId });
+  });
+});
+
 // Silence unused-import warnings on the Id type (helps when adding new tests later).
 type _UnusedId = Id<"friendships">;

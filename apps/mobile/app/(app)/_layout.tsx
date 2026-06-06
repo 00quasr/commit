@@ -100,6 +100,15 @@ export default function AppLayout() {
       />
       <Stack.Screen name="day/[dayKey]" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="habit/drops/[id]" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="u/[username]" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen
+        name="friends"
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+          gestureEnabled: true,
+        }}
+      />
     </Stack>
   );
 }

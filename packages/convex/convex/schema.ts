@@ -13,6 +13,7 @@ const activityKind = v.union(
   v.literal("grace_card_earned"),
   v.literal("grace_card_consumed"),
   v.literal("friendship_accepted"),
+  v.literal("habit_created"),
 );
 
 export default defineSchema({
@@ -52,6 +53,14 @@ export default defineSchema({
     // deleted by the daily cron. Set by habits.scheduleDelete; cleared by
     // habits.cancelScheduledDelete.
     scheduledDeleteAt: v.optional(v.number()),
+    // When false, habit_created / streak_milestone events for this habit
+    // are not emitted to friends' feeds. Absent === enabled (default share).
+    shareEvents: v.optional(v.boolean()),
+    // Forward-compat passthrough: another branch (COM-58 area) writes
+    // `customDays` on habit rows. Schema-validate it as optional so this
+    // worktree's deploys don't roll back when rows from that branch exist
+    // in the dev deployment. The field is otherwise unused here.
+    customDays: v.optional(v.array(v.number())),
   }).index("by_owner_archived", ["ownerId", "archived"]),
 
   drops: defineTable({
@@ -117,7 +126,9 @@ export default defineSchema({
     kind: activityKind,
     payload: v.any(),
     createdAt: v.number(),
-  }).index("by_profile_created", ["profileId", "createdAt"]),
+  })
+    .index("by_profile_created", ["profileId", "createdAt"])
+    .index("by_profile_kind_created", ["profileId", "kind", "createdAt"]),
 
   // Public marketing waitlist for the pre-beta site. Unauthenticated writes
   // — see waitlist.add. emailLower powers idempotent dedupe.

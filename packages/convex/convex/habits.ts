@@ -55,7 +55,7 @@ export const create = mutation({
       throw new Error(`habit limit of ${MAX_HABITS} reached`);
     }
 
-    return await ctx.db.insert("habits", {
+    const habitId = await ctx.db.insert("habits", {
       ownerId: me._id,
       text,
       cycleDays: args.cycleDays,
@@ -63,6 +63,33 @@ export const create = mutation({
       archived: false,
       color: args.color,
     });
+
+    // Social commitment effect (COM-23): friends see the user start a habit.
+    // Suppressed when shareEvents is explicitly false; absent === enabled.
+    await ctx.db.insert("activityEvents", {
+      profileId: me._id,
+      kind: "habit_created",
+      payload: { habitId, text, cycleDays: args.cycleDays, color: args.color },
+      createdAt: Date.now(),
+    });
+
+    return habitId;
+  },
+});
+
+// User-facing per-habit opt-out for friend-feed events. Reads default to true
+// (absent === enabled). Writes only when the value differs to keep the patch
+// small.
+export const setShareEvents = mutation({
+  args: { habitId: v.id("habits"), share: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const me = await requireCallerProfile(ctx);
+    const habit = await ctx.db.get(args.habitId);
+    if (!habit) throw new Error("Habit not found");
+    if (habit.ownerId !== me._id) throw new Error("Not your habit");
+    await ctx.db.patch(args.habitId, { shareEvents: args.share });
+    return null;
   },
 });
 
