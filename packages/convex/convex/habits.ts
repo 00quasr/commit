@@ -163,7 +163,6 @@ export const purgeExpired = internalMutation({
         for (const drop of drops) {
           if (drop.habitId === habit._id) {
             if (drop.photoFileId) await ctx.storage.delete(drop.photoFileId);
-            if (drop.voiceFileId) await ctx.storage.delete(drop.voiceFileId);
             await ctx.db.delete(drop._id);
           }
         }

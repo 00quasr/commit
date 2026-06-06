@@ -21,7 +21,7 @@ import { accountDeletion } from "@/lib/account-deletion";
 const DELETED_ITEMS: readonly string[] = [
   "Your profile, username, and avatar",
   "All habits and their history",
-  "All drops, photos, and voice notes",
+  "All drops and photos",
   "All reactions and views you sent",
   "Friendships (both directions)",
   "Streaks, stats, and activity events",
