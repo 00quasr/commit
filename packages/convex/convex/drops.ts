@@ -12,6 +12,7 @@ import {
   resolveHabitColor,
   hasDroppedToday,
   requireCallerProfile,
+  resolveProfile,
 } from "./_helpers";
 
 /**
@@ -296,8 +297,9 @@ export const feedForUser = query({
 
     const enriched = await Promise.all(
       allDrops.map(async (drop) => {
-        const author = await ctx.db.get(drop.ownerId);
-        if (!author) return null;
+        const rawAuthor = await ctx.db.get(drop.ownerId);
+        if (!rawAuthor) return null;
+        const author = await resolveProfile(ctx, rawAuthor);
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const authorDrops = rawDropsByAuthor.get(drop.ownerId) ?? [];
         const colorMap = colorMapsByAuthor.get(drop.ownerId) ?? new Map();
@@ -487,8 +489,9 @@ export const forDay = query({
 
     const enriched = await Promise.all(
       visible.map(async (drop) => {
-        const author = await ctx.db.get(drop.ownerId);
-        if (!author) return null;
+        const rawAuthor = await ctx.db.get(drop.ownerId);
+        if (!rawAuthor) return null;
+        const author = await resolveProfile(ctx, rawAuthor);
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
@@ -519,8 +522,9 @@ export const forHabit = query({
 
     const enriched = await Promise.all(
       habitDrops.map(async (drop) => {
-        const author = await ctx.db.get(drop.ownerId);
-        if (!author) return null;
+        const rawAuthor = await ctx.db.get(drop.ownerId);
+        if (!rawAuthor) return null;
+        const author = await resolveProfile(ctx, rawAuthor);
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
@@ -573,8 +577,9 @@ export const recentForProfile = query({
 
     const enriched = await Promise.all(
       visible.map(async (drop) => {
-        const author = await ctx.db.get(drop.ownerId);
-        if (!author) return null;
+        const rawAuthor = await ctx.db.get(drop.ownerId);
+        if (!rawAuthor) return null;
+        const author = await resolveProfile(ctx, rawAuthor);
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
         const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;

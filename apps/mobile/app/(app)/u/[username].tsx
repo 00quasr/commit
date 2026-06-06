@@ -1,10 +1,14 @@
 import { api } from "@commit/convex/api";
+import type { Id } from "@commit/convex/dataModel";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
+import { AvatarCropModal } from "@/components/AvatarCropModal";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { SaveFormat, manipulateAsync } from "expo-image-manipulator";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -37,8 +41,19 @@ export default function UserProfile() {
   const sendRequest = useMutation(api.friendships.request);
   const acceptRequest = useMutation(api.friendships.accept);
   const declineRequest = useMutation(api.friendships.decline);
+  const generateUploadUrl = useMutation(api.profiles.generateUploadUrl);
+  const updateAvatar = useMutation(api.profiles.updateAvatar);
 
   const [busy, setBusy] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropData, setCropData] = useState<{
+    uri: string;
+    width: number;
+    height: number;
+  } | null>(null);
+  // Pre-fetched upload URL that starts as soon as the image is picked,
+  // so the Convex roundtrip is hidden behind the user's crop adjustment time.
+  const uploadUrlRef = useRef<Promise<string> | null>(null);
 
   if (target === undefined || me === undefined) {
     return (
@@ -61,6 +76,64 @@ export default function UserProfile() {
   }
 
   const isSelf = me?._id === target._id;
+
+  const onChangeAvatar = async () => {
+    const { status: permStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permStatus !== "granted") {
+      Alert.alert("Permission required", "Allow access to your photos to set a profile picture.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsEditing: false,
+      quality: 1,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    // Start fetching the upload URL immediately so the roundtrip runs in the
+    // background while the user adjusts the crop.
+    uploadUrlRef.current = generateUploadUrl();
+    // Downsample to max 1080px before showing the crop modal so pan/pinch
+    // gestures run on a much smaller image and feel smooth.
+    const MAX_DISPLAY = 1080;
+    const displayAsset =
+      asset.width > MAX_DISPLAY
+        ? await manipulateAsync(asset.uri, [{ resize: { width: MAX_DISPLAY } }], {
+            compress: 0.9,
+            format: SaveFormat.JPEG,
+          })
+        : { uri: asset.uri, width: asset.width, height: asset.height };
+    setCropData({ uri: displayAsset.uri, width: displayAsset.width, height: displayAsset.height });
+  };
+
+  const onCropCancel = () => {
+    uploadUrlRef.current = null;
+    setCropData(null);
+  };
+
+  const onCropConfirm = async (croppedUri: string) => {
+    setCropData(null);
+    setUploadingAvatar(true);
+    try {
+      const uploadUrl = await (uploadUrlRef.current ?? generateUploadUrl());
+      uploadUrlRef.current = null;
+      const resp = await fetch(croppedUri);
+      const blob = await resp.blob();
+      const uploadResp = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": blob.type || "image/jpeg" },
+        body: blob,
+      });
+      if (!uploadResp.ok) throw new Error(`Upload failed: ${uploadResp.status}`);
+      const { storageId } = (await uploadResp.json()) as { storageId: Id<"_storage"> };
+      await updateAvatar({ storageId });
+    } catch {
+      Alert.alert("Error", "Could not update profile picture. Please try again.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const onPrimary = async () => {
     if (!status || busy) return;
@@ -115,18 +188,38 @@ export default function UserProfile() {
     }
   };
 
+  const avatarContent = target.avatarUrl ? (
+    <Image source={{ uri: target.avatarUrl }} style={styles.avatar} contentFit="cover" />
+  ) : (
+    <View style={[styles.avatar, styles.avatarFallback]}>
+      <Text style={styles.avatarLetter}>{target.username.charAt(0).toUpperCase()}</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <TopBar showSettings={me?._id === target._id} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.headerRow}>
-          {target.avatarUrl ? (
-            <Image source={{ uri: target.avatarUrl }} style={styles.avatar} contentFit="cover" />
+          {isSelf ? (
+            <Pressable
+              onPress={() => void onChangeAvatar()}
+              disabled={uploadingAvatar}
+              style={({ pressed }) => [styles.avatarWrap, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Change profile picture"
+            >
+              {uploadingAvatar ? (
+                <View style={[styles.avatar, styles.avatarFallback]}>
+                  <ActivityIndicator color={theme.text.primary} />
+                </View>
+              ) : (
+                avatarContent
+              )}
+            </Pressable>
           ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarLetter}>{target.username.charAt(0).toUpperCase()}</Text>
-            </View>
+            avatarContent
           )}
           <View style={styles.headerText}>
             <Text style={styles.username}>{target.username}</Text>
@@ -205,6 +298,17 @@ export default function UserProfile() {
           )
         ) : null}
       </ScrollView>
+
+      {cropData && (
+        <AvatarCropModal
+          visible={true}
+          uri={cropData.uri}
+          imageWidth={cropData.width}
+          imageHeight={cropData.height}
+          onCancel={onCropCancel}
+          onConfirm={(uri) => void onCropConfirm(uri)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -276,6 +380,10 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 20,
     marginBottom: 16,
+  },
+  avatarWrap: {
+    width: 64,
+    height: 64,
   },
   avatar: {
     width: 64,

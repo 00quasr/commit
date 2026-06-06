@@ -24,6 +24,8 @@ export default defineSchema({
     // by `profiles.upsert`, so new + re-signed-in rows have it populated.
     usernameLower: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
+    // When set, avatar is served from Convex storage; takes priority over avatarUrl.
+    avatarFileId: v.optional(v.id("_storage")),
     timezone: v.string(),
     createdAt: v.number(),
   })
