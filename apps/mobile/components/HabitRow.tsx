@@ -19,7 +19,7 @@ function cycleLabel(cycleDays: number, customDays?: number[]): string {
   if (customDays && customDays.length > 0) {
     return DISPLAY_ORDER.filter((d) => customDays.includes(d))
       .map((d) => DAY_ABBREVS[d])
-      .join(", ");
+      .join(" · ");
   }
   if (cycleDays === 1) return "daily";
   if (cycleDays === 2) return "every 2 days";
