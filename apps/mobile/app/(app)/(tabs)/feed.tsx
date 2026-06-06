@@ -108,6 +108,7 @@ export default function Feed() {
 
       <FlatList
         ref={listRef}
+        showsVerticalScrollIndicator={false}
         data={merged}
         keyExtractor={(item) => item.key}
         renderItem={({ item }) =>
