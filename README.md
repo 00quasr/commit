@@ -30,7 +30,7 @@ cd packages/convex && pnpm dev
 pnpm --filter @commit/mobile dev
 ```
 
-You'll need a [Clerk](https://dashboard.clerk.com) app with the Convex integration activated, and `apps/mobile/.env` filled with `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` + `EXPO_PUBLIC_CONVEX_URL`. Full setup steps in [docs/phase-1-foundation.md](./docs/phase-1-foundation.md).
+You'll need a [Clerk](https://dashboard.clerk.com) app with the Convex integration activated, and `apps/mobile/.env` filled with `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` + `EXPO_PUBLIC_CONVEX_URL`.
 
 ## Project layout
 
@@ -43,7 +43,6 @@ packages/
   domain/    Pure-TS rules — XP, streaks, day-keys, due-today, lock
   ui-tokens/ colors · fonts · semantic
   config/    eslint · prettier · tsconfig
-docs/        Phase roadmap (Phase 0 → 6)
 ```
 
 ## Verify
@@ -56,6 +55,6 @@ pnpm test         # 115 tests
 
 —
 
-[VISION](./VISION.md) · [Roadmap](./docs/) · [LICENSE](./LICENSE)
+[LICENSE](./LICENSE)
 
 ⠀
