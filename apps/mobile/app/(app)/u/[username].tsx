@@ -6,6 +6,7 @@ import { AvatarCropModal } from "@/components/AvatarCropModal";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { SaveFormat, manipulateAsync } from "expo-image-manipulator";
 import { router, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
 import {
@@ -93,7 +94,17 @@ export default function UserProfile() {
     // Start fetching the upload URL immediately so the roundtrip runs in the
     // background while the user adjusts the crop.
     uploadUrlRef.current = generateUploadUrl();
-    setCropData({ uri: asset.uri, width: asset.width, height: asset.height });
+    // Downsample to max 1080px before showing the crop modal so pan/pinch
+    // gestures run on a much smaller image and feel smooth.
+    const MAX_DISPLAY = 1080;
+    const displayAsset =
+      asset.width > MAX_DISPLAY
+        ? await manipulateAsync(asset.uri, [{ resize: { width: MAX_DISPLAY } }], {
+            compress: 0.9,
+            format: SaveFormat.JPEG,
+          })
+        : { uri: asset.uri, width: asset.width, height: asset.height };
+    setCropData({ uri: displayAsset.uri, width: displayAsset.width, height: displayAsset.height });
   };
 
   const onCropCancel = () => {

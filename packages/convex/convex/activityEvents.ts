@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
-import { requireCallerProfile } from "./_helpers";
+import { requireCallerProfile, resolveProfile } from "./_helpers";
 
 const profileShape = v.object({
   _id: v.id("profiles"),
@@ -80,15 +80,18 @@ export const feedForUser = query({
       .slice(0, FEED_LIMIT);
 
     // Cache profiles + habits we touch to keep enrichment to one read each.
-    const profileCache = new Map<Id<"profiles">, Doc<"profiles">>();
+    type ResolvedProfile = Awaited<ReturnType<typeof resolveProfile>>;
+    const profileCache = new Map<Id<"profiles">, ResolvedProfile>();
     const habitCache = new Map<Id<"habits">, Doc<"habits"> | null>();
 
     const getProfile = async (id: Id<"profiles">) => {
       const cached = profileCache.get(id);
       if (cached) return cached;
       const p = await ctx.db.get(id);
-      if (p) profileCache.set(id, p);
-      return p;
+      if (!p) return null;
+      const resolved = await resolveProfile(ctx, p);
+      profileCache.set(id, resolved);
+      return resolved;
     };
     const getHabit = async (id: Id<"habits">) => {
       if (habitCache.has(id)) return habitCache.get(id) ?? null;

@@ -12,8 +12,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle, useSharedValue, withDecay } from "react-native-reanimated";
 
 const SCREEN_W = Dimensions.get("window").width;
 const SCREEN_H = Dimensions.get("window").height;
@@ -72,6 +72,13 @@ export function AvatarCropModal({
       const maxTY = Math.max(0, (imageHeight * s - CIRCLE_D) / 2);
       translateX.value = Math.max(-maxTX, Math.min(maxTX, savedTX.value + e.translationX));
       translateY.value = Math.max(-maxTY, Math.min(maxTY, savedTY.value + e.translationY));
+    })
+    .onEnd((e) => {
+      const s = minScale * userScale.value;
+      const maxTX = Math.max(0, (imageWidth * s - CIRCLE_D) / 2);
+      const maxTY = Math.max(0, (imageHeight * s - CIRCLE_D) / 2);
+      translateX.value = withDecay({ velocity: e.velocityX, clamp: [-maxTX, maxTX] });
+      translateY.value = withDecay({ velocity: e.velocityY, clamp: [-maxTY, maxTY] });
     });
 
   const pinchGesture = Gesture.Pinch()
@@ -141,71 +148,76 @@ export function AvatarCropModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.container}>
-        {/* Full-screen gesture area. Both image layers share the same animStyle
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={styles.container}>
+          {/* Full-screen gesture area. Both image layers share the same animStyle
             so they always show the same region — the circle layer is just clipped
             to a circle and shown at full opacity while the background is dimmed. */}
-        <GestureDetector gesture={gesture}>
-          <View style={styles.gestureArea}>
-            {/* Dimmed background image: full image visible for orientation */}
-            <Animated.View
-              style={[
-                {
-                  position: "absolute",
-                  width: imageWidth,
-                  height: imageHeight,
-                  left: (SCREEN_W - imageWidth) / 2,
-                  top: (SCREEN_H - imageHeight) / 2,
-                },
-                animStyle,
-              ]}
-            >
-              <Image
-                source={{ uri }}
-                style={{ width: imageWidth, height: imageHeight, opacity: 0.3 }}
-              />
-            </Animated.View>
-
-            {/* Circular crop area: full opacity, clipped to circle */}
-            <View style={styles.cropCircle}>
+          <GestureDetector gesture={gesture}>
+            <View style={styles.gestureArea}>
+              {/* Background image at full opacity */}
               <Animated.View
                 style={[
                   {
                     position: "absolute",
                     width: imageWidth,
                     height: imageHeight,
-                    left: (CIRCLE_D - imageWidth) / 2,
-                    top: (CIRCLE_D - imageHeight) / 2,
+                    left: (SCREEN_W - imageWidth) / 2,
+                    top: (SCREEN_H - imageHeight) / 2,
                   },
                   animStyle,
                 ]}
               >
                 <Image source={{ uri }} style={{ width: imageWidth, height: imageHeight }} />
               </Animated.View>
+
+              {/* Dark overlay dims the background without making the image itself transparent */}
+              <View
+                style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.65)" }]}
+                pointerEvents="none"
+              />
+
+              {/* Circular crop area: full opacity, clipped to circle */}
+              <View style={styles.cropCircle}>
+                <Animated.View
+                  style={[
+                    {
+                      position: "absolute",
+                      width: imageWidth,
+                      height: imageHeight,
+                      left: (CIRCLE_D - imageWidth) / 2,
+                      top: (CIRCLE_D - imageHeight) / 2,
+                    },
+                    animStyle,
+                  ]}
+                >
+                  <Image source={{ uri }} style={{ width: imageWidth, height: imageHeight }} />
+                </Animated.View>
+              </View>
             </View>
-          </View>
-        </GestureDetector>
+          </GestureDetector>
 
-        {/* Cancel — rendered after gesture area so it sits on top and receives taps first */}
-        <Pressable onPress={onCancel} style={styles.cancelBtn} hitSlop={12}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </Pressable>
-
-        {/* Choose — large white button at bottom */}
-        <View style={styles.bottomRow}>
-          <Pressable
-            onPress={() => void handleConfirm()}
-            style={styles.chooseBtn}
-            disabled={processing}
-          >
-            {processing ? (
-              <ActivityIndicator color={theme.bg} />
-            ) : (
-              <Text style={styles.chooseBtnText}>Choose</Text>
-            )}
+          {/* Cancel — rendered after gesture area so it sits on top and receives taps first */}
+          <Pressable onPress={onCancel} style={styles.cancelBtn} hitSlop={12}>
+            <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
+
+          {/* Choose — large white button at bottom */}
+          <View style={styles.bottomRow}>
+            <Pressable
+              onPress={() => void handleConfirm()}
+              style={styles.chooseBtn}
+              disabled={processing}
+            >
+              {processing ? (
+                <ActivityIndicator color={theme.bg} />
+              ) : (
+                <Text style={styles.chooseBtnText}>Choose</Text>
+              )}
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
