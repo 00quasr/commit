@@ -16,8 +16,8 @@ import {
 
 /**
  * Returns a one-time signed URL the client can POST a file to, getting back
- * a `{ storageId }` payload. The storageId becomes `photoFileId` (or
- * `voiceFileId`) on the subsequent `drops.create` call.
+ * a `{ storageId }` payload. The storageId becomes `photoFileId` on the
+ * subsequent `drops.create` call.
  *
  * Auth-gated: only signed-in profiles can request upload URLs. Each URL is
  * single-use and expires server-side after upload.
@@ -38,7 +38,6 @@ const dropShape = v.object({
   habitId: v.optional(v.id("habits")),
   caption: v.string(),
   photoFileId: v.optional(v.id("_storage")),
-  voiceFileId: v.optional(v.id("_storage")),
   dayKey: v.string(),
   createdAt: v.number(),
   visibility: v.union(v.literal("public"), v.literal("friends"), v.literal("private")),
@@ -71,7 +70,6 @@ const enrichedDropShape = v.object({
   // Resolved Convex storage URLs. Server-side resolution avoids N+1 round-trips
   // from the mobile client; URLs are signed and expire (Convex default ~1h).
   photoUrl: v.union(v.string(), v.null()),
-  voiceUrl: v.union(v.string(), v.null()),
   // Year-long drop heatmap for the author — powers the MiniHeatmap in DropCard.
   authorHeatmap: v.array(heatmapEntryShape),
   habitColor: v.union(v.string(), v.null()),
@@ -107,7 +105,6 @@ export const create = mutation({
     caption: v.string(),
     visibility: v.union(v.literal("public"), v.literal("friends"), v.literal("private")),
     photoFileId: v.optional(v.id("_storage")),
-    voiceFileId: v.optional(v.id("_storage")),
   },
   returns: v.id("drops"),
   handler: async (ctx, args) => {
@@ -169,7 +166,6 @@ export const create = mutation({
       ...(args.habitId !== undefined ? { habitId: args.habitId } : {}),
       caption: args.caption,
       ...(args.photoFileId !== undefined ? { photoFileId: args.photoFileId } : {}),
-      ...(args.voiceFileId !== undefined ? { voiceFileId: args.voiceFileId } : {}),
       dayKey,
       createdAt: now,
       visibility: args.visibility,
@@ -303,13 +299,12 @@ export const feedForUser = query({
         const author = await ctx.db.get(drop.ownerId);
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
-        const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
         const authorDrops = rawDropsByAuthor.get(drop.ownerId) ?? [];
         const colorMap = colorMapsByAuthor.get(drop.ownerId) ?? new Map();
         const authorHeatmap = buildMultiColorHeatmap(authorDrops, colorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
-        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
+        return { drop, author, photoUrl, authorHeatmap, habitColor };
       }),
     );
     const filtered = enriched.filter((e): e is NonNullable<typeof e> => e !== null);
@@ -495,11 +490,10 @@ export const forDay = query({
         const author = await ctx.db.get(drop.ownerId);
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
-        const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
         const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
-        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
+        return { drop, author, photoUrl, authorHeatmap, habitColor };
       }),
     );
     return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
@@ -528,11 +522,10 @@ export const forHabit = query({
         const author = await ctx.db.get(drop.ownerId);
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
-        const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
         const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
-        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
+        return { drop, author, photoUrl, authorHeatmap, habitColor };
       }),
     );
     return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
@@ -583,11 +576,10 @@ export const recentForProfile = query({
         const author = await ctx.db.get(drop.ownerId);
         if (!author) return null;
         const photoUrl = drop.photoFileId ? await ctx.storage.getUrl(drop.photoFileId) : null;
-        const voiceUrl = drop.voiceFileId ? await ctx.storage.getUrl(drop.voiceFileId) : null;
         const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
-        return { drop, author, photoUrl, voiceUrl, authorHeatmap, habitColor };
+        return { drop, author, photoUrl, authorHeatmap, habitColor };
       }),
     );
     return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
