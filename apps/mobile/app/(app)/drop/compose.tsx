@@ -88,7 +88,7 @@ export default function Compose() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} disabled={busy}>
-          <Text style={[styles.backText, busy && { opacity: 0.4 }]}>← Back</Text>
+          <Text style={[styles.backText, busy && { opacity: 0.4 }]}>← Retake</Text>
         </Pressable>
       </View>
 
