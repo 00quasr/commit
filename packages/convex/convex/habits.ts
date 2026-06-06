@@ -22,6 +22,9 @@ const habitShape = v.object({
   archived: v.boolean(),
   color: v.optional(v.string()),
   scheduledDeleteAt: v.optional(v.number()),
+  // Legacy field — see schema.ts comment. Kept here so habits.list /
+  // listArchived return validators accept rows that still carry it.
+  shareEvents: v.optional(v.boolean()),
 });
 
 export const create = mutation({
@@ -87,22 +90,6 @@ export const create = mutation({
     });
 
     return habitId;
-  },
-});
-
-// User-facing per-habit opt-out for friend-feed events. Reads default to true
-// (absent === enabled). Writes only when the value differs to keep the patch
-// small.
-export const setShareEvents = mutation({
-  args: { habitId: v.id("habits"), share: v.boolean() },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const me = await requireCallerProfile(ctx);
-    const habit = await ctx.db.get(args.habitId);
-    if (!habit) throw new Error("Habit not found");
-    if (habit.ownerId !== me._id) throw new Error("Not your habit");
-    await ctx.db.patch(args.habitId, { shareEvents: args.share });
-    return null;
   },
 });
 

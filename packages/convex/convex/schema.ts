@@ -55,8 +55,10 @@ export default defineSchema({
     // deleted by the daily cron. Set by habits.scheduleDelete; cleared by
     // habits.cancelScheduledDelete.
     scheduledDeleteAt: v.optional(v.number()),
-    // When false, habit_created / streak_milestone events for this habit
-    // are not emitted to friends' feeds. Absent === enabled (default share).
+    // Legacy: an earlier iteration of this branch wrote a per-habit
+    // "share with friends" opt-out. The UI + mutation are gone; the field
+    // is accepted here so rows already carrying it still validate. Safe
+    // to remove once the dev deployment is cleaned of these rows.
     shareEvents: v.optional(v.boolean()),
   }).index("by_owner_archived", ["ownerId", "archived"]),
 

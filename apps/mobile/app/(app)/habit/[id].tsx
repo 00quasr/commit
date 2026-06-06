@@ -10,7 +10,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from "react-native";
@@ -41,7 +40,6 @@ export default function HabitDetail() {
   const allHabits = useQuery(api.habits.list, {});
   const heatmapData = useQuery(api.drops.heatmapForHabit, { habitId });
   const archive = useMutation(api.habits.archive);
-  const setShareEvents = useMutation(api.habits.setShareEvents);
   const startDropDraft = useDropDraft((s) => s.start);
   const [archiveModalVisible, setArchiveModalVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -159,21 +157,6 @@ export default function HabitDetail() {
             <MiniHeatmap data={heatmapData} timezone={me.timezone} />
           </View>
         )}
-
-        <View style={styles.settingRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.settingTitle}>Share with friends</Text>
-            <Text style={styles.settingHint}>
-              Friends see when you start this habit and hit streaks.
-            </Text>
-          </View>
-          <Switch
-            value={habit.shareEvents !== false}
-            onValueChange={(v) => void setShareEvents({ habitId, share: v })}
-            trackColor={{ false: theme.blockElevated, true: theme.text.primary }}
-            thumbColor={theme.bg}
-          />
-        </View>
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
@@ -279,28 +262,6 @@ const styles = StyleSheet.create({
   duePill: { color: theme.bg, backgroundColor: theme.text.primary },
   statsGrid: { flexDirection: "row", gap: 8, marginTop: 24 },
   miniHeatmapWrap: { marginTop: 20, overflow: "hidden" },
-  settingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: theme.blockElevated,
-    borderRadius: 12,
-  },
-  settingTitle: {
-    color: theme.text.primary,
-    fontSize: 14,
-    fontFamily: fonts.sans,
-    fontWeight: "600",
-  },
-  settingHint: {
-    color: theme.text.tertiary,
-    fontSize: 12,
-    fontFamily: fonts.sans,
-    marginTop: 2,
-  },
   statBox: {
     flex: 1,
     backgroundColor: theme.blockElevated,

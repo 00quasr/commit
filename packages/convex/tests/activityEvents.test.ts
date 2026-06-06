@@ -75,41 +75,6 @@ describe("habits.create — habit_created emission", () => {
   });
 });
 
-describe("habits.setShareEvents", () => {
-  test("flips the flag and is reflected on the habit row", async () => {
-    const t = makeTest();
-    await seedProfiles(t);
-
-    const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
-      text: "code 1h",
-      cycleDays: 1,
-      color: "#5590D9",
-    });
-
-    await t.withIdentity(asAlice).mutation(api.habits.setShareEvents, {
-      habitId,
-      share: false,
-    });
-    const after = await t.run((ctx) => ctx.db.get(habitId));
-    expect(after?.shareEvents).toBe(false);
-  });
-
-  test("rejects another user's habit", async () => {
-    const t = makeTest();
-    await seedProfiles(t);
-
-    const habitId = await t.withIdentity(asAlice).mutation(api.habits.create, {
-      text: "code 1h",
-      cycleDays: 1,
-      color: "#5590D9",
-    });
-
-    await expect(
-      t.withIdentity(asBob).mutation(api.habits.setShareEvents, { habitId, share: false }),
-    ).rejects.toThrow(/Not your habit/);
-  });
-});
-
 describe("activityEvents.feedForUser", () => {
   test("returns the caller's own habit_created event", async () => {
     const t = makeTest();
@@ -162,22 +127,6 @@ describe("activityEvents.feedForUser", () => {
 
     const aliceFeed = await t.withIdentity(asAlice).query(api.activityEvents.feedForUser, {});
     expect(aliceFeed.find((e) => e.author._id === carolId)).toBeUndefined();
-  });
-
-  test("suppresses habit_created when shareEvents=false on the habit", async () => {
-    const t = makeTest();
-    const { bobId } = await seedProfiles(t);
-    await makeFriends(t, asAlice, asBob, bobId);
-
-    const habitId = await t.withIdentity(asBob).mutation(api.habits.create, {
-      text: "muted habit",
-      cycleDays: 1,
-      color: "#999999",
-    });
-    await t.withIdentity(asBob).mutation(api.habits.setShareEvents, { habitId, share: false });
-
-    const aliceFeed = await t.withIdentity(asAlice).query(api.activityEvents.feedForUser, {});
-    expect(aliceFeed.find((e) => e.habit?.habitId === habitId)).toBeUndefined();
   });
 
   test("excludes events with no surviving habit", async () => {

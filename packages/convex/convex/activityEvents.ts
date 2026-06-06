@@ -40,9 +40,8 @@ const PER_PROFILE_LIMIT = 20;
  * graph is bounded (~30 in V2 per friendships.ts) so the per-profile fan-out
  * stays cheap.
  *
- * Events whose owning habit has been deleted or has shareEvents === false
- * are filtered out. Drop-derived events fall back to no habit metadata when
- * the habit has been archived since.
+ * Events whose owning habit has been deleted are filtered out (a stale
+ * create-event referencing a missing habit is dropped, not crashed on).
  */
 export const feedForUser = query({
   args: {},
@@ -112,12 +111,9 @@ export const feedForUser = query({
           habit = await getHabit(habitIdFromPayload);
         }
 
-        // Suppress events for habits the owner has muted, or that have been
-        // deleted entirely (the create-event references a missing row).
-        if (event.kind === "habit_created") {
-          if (!habit) return null;
-          if (habit.shareEvents === false) return null;
-        }
+        // Suppress habit_created events whose habit row has been deleted —
+        // the event would otherwise render with no habit metadata.
+        if (event.kind === "habit_created" && !habit) return null;
 
         const streak =
           event.kind === "streak_milestone" &&
