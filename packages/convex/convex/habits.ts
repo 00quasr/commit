@@ -22,6 +22,9 @@ const habitShape = v.object({
   archived: v.boolean(),
   color: v.optional(v.string()),
   scheduledDeleteAt: v.optional(v.number()),
+  // Legacy field — see schema.ts comment. Kept here so habits.list /
+  // listArchived return validators accept rows that still carry it.
+  shareEvents: v.optional(v.boolean()),
 });
 
 export const create = mutation({
@@ -67,7 +70,7 @@ export const create = mutation({
       throw new Error(`habit limit of ${MAX_HABITS} reached`);
     }
 
-    return await ctx.db.insert("habits", {
+    const habitId = await ctx.db.insert("habits", {
       ownerId: me._id,
       text,
       cycleDays: args.cycleDays,
@@ -76,6 +79,17 @@ export const create = mutation({
       archived: false,
       color: args.color,
     });
+
+    // Social commitment effect (COM-23): friends see the user start a habit.
+    // Suppressed when shareEvents is explicitly false; absent === enabled.
+    await ctx.db.insert("activityEvents", {
+      profileId: me._id,
+      kind: "habit_created",
+      payload: { habitId, text, cycleDays: args.cycleDays, color: args.color },
+      createdAt: Date.now(),
+    });
+
+    return habitId;
   },
 });
 

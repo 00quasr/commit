@@ -23,4 +23,17 @@ config.resolver.nodeModulesPaths = [
 ];
 config.resolver.disableHierarchicalLookup = true;
 
+// Watchman crawls everything under monorepoRoot, which includes sibling
+// worktrees in .claude/worktrees/<other>. expo-router's require.context
+// then picks up app/ trees from those other worktrees and tries to bundle
+// them, blowing up with stale-import errors. Block worktree paths that
+// aren't ours.
+if (worktreeRoot) {
+  const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const worktreeName = path.basename(worktreeRoot);
+  config.resolver.blockList = [
+    new RegExp(`${escapeRe(monorepoRoot)}/\\.claude/worktrees/(?!${escapeRe(worktreeName)}/).+`),
+  ];
+}
+
 module.exports = config;

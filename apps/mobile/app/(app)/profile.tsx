@@ -1,133 +1,30 @@
-import { Ionicons } from "@expo/vector-icons";
 import { api } from "@commit/convex/api";
-import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useQuery } from "convex/react";
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { MemoriesGrid } from "@/components/MemoriesGrid";
+import { Redirect } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
 
 export default function Profile() {
   const me = useQuery(api.profiles.me);
-  const recent = useQuery(
-    api.drops.recentForProfile,
-    me ? { profileId: me._id, limit: 14 } : "skip",
-  );
 
   if (me === undefined) {
     return (
-      <View style={[styles.root, styles.center]}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.bg,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <ActivityIndicator color={theme.text.primary} />
       </View>
     );
   }
 
   if (me === null) {
-    return (
-      <View style={[styles.root, styles.center]}>
-        <Text style={styles.placeholder}>No profile yet — sign in flow first.</Text>
-      </View>
-    );
+    return <Redirect href="/(auth)/sign-in" />;
   }
 
-  return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
-      <View style={styles.topBar}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.6 }]}
-          hitSlop={12}
-        >
-          <Text style={styles.backText}>✕</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.headerRow}>
-          {me.avatarUrl ? (
-            <Image source={{ uri: me.avatarUrl }} style={styles.avatar} contentFit="cover" />
-          ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarLetter}>{me.username.charAt(0).toUpperCase()}</Text>
-            </View>
-          )}
-          <View style={styles.headerText}>
-            <Text style={styles.username}>{me.username}</Text>
-            <Text style={styles.tz}>{me.timezone}</Text>
-          </View>
-          <Pressable
-            onPress={() => router.push("/(app)/settings")}
-            style={({ pressed }) => [styles.settingsButton, pressed && { opacity: 0.6 }]}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
-          >
-            <Ionicons name="settings-outline" size={22} color={theme.text.secondary} />
-          </Pressable>
-        </View>
-
-        {recent === undefined ? (
-          <ActivityIndicator color={theme.text.primary} style={{ marginTop: 16 }} />
-        ) : (
-          <MemoriesGrid
-            drops={recent}
-            timezone={me.timezone}
-            onViewAll={() => router.push("/(app)/memories")}
-            onViewArchive={() => router.push("/(app)/archived-habits")}
-            onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
-          />
-        )}
-      </ScrollView>
-    </SafeAreaView>
-  );
+  return <Redirect href={`/u/${me.username}`} />;
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.bg },
-  center: { alignItems: "center", justifyContent: "center" },
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  backButton: { padding: 4 },
-  backText: { color: theme.text.tertiary, fontSize: 18 },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.blockElevated,
-  },
-  scroll: { paddingTop: 8, paddingBottom: 80 },
-  placeholder: { color: theme.text.muted, fontSize: 14, fontFamily: fonts.mono },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: theme.blockElevated },
-  avatarFallback: { alignItems: "center", justifyContent: "center" },
-  avatarLetter: {
-    color: theme.text.primary,
-    fontSize: 28,
-    fontFamily: fonts.sans,
-    fontWeight: "600",
-  },
-  headerText: { flex: 1 },
-  username: {
-    color: theme.text.primary,
-    fontSize: 22,
-    fontFamily: fonts.sans,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  tz: { color: theme.text.tertiary, fontSize: 13, fontFamily: fonts.mono, marginTop: 2 },
-});

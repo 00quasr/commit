@@ -125,6 +125,43 @@ export const decline = mutation({
   },
 });
 
+// Returns the current friendship state between caller and another profile.
+// Drives the action button on /(app)/u/[username] (Add friend / Pending /
+// Accept+Decline / Friends). Self-lookup returns "none" — UI hides the button.
+export const statusWith = query({
+  args: { otherProfileId: v.id("profiles") },
+  returns: v.object({
+    status: v.union(
+      v.literal("none"),
+      v.literal("pending_outgoing"),
+      v.literal("pending_incoming"),
+      v.literal("accepted"),
+      v.literal("self"),
+    ),
+    friendshipId: v.union(v.id("friendships"), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const me = await requireCallerProfile(ctx);
+    if (me._id === args.otherProfileId) {
+      return { status: "self" as const, friendshipId: null };
+    }
+    const { low, high } = canonicalPair(me._id, args.otherProfileId);
+    const f = await ctx.db
+      .query("friendships")
+      .withIndex("by_pair", (q) => q.eq("pairLow", low).eq("pairHigh", high))
+      .unique();
+    if (!f) return { status: "none" as const, friendshipId: null };
+    if (f.status === "accepted") {
+      return { status: "accepted" as const, friendshipId: f._id };
+    }
+    return {
+      status:
+        f.requesterId === me._id ? ("pending_outgoing" as const) : ("pending_incoming" as const),
+      friendshipId: f._id,
+    };
+  },
+});
+
 export const listForUser = query({
   args: {
     status: v.optional(v.union(v.literal("pending"), v.literal("accepted"))),
