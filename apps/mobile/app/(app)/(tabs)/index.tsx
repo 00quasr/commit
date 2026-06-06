@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   },
   heatmapWrap: { marginBottom: 8 },
   emptyScroll: { flexGrow: 1, paddingBottom: 120 },
-  list: { paddingBottom: 120 },
+  list: { paddingBottom: 180 },
   sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   sectionTitle: {
     color: theme.text.muted,
