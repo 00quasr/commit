@@ -2,11 +2,12 @@ import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
+import { AvatarCropModal } from "@/components/AvatarCropModal";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -44,6 +45,14 @@ export default function UserProfile() {
 
   const [busy, setBusy] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropData, setCropData] = useState<{
+    uri: string;
+    width: number;
+    height: number;
+  } | null>(null);
+  // Pre-fetched upload URL that starts as soon as the image is picked,
+  // so the Convex roundtrip is hidden behind the user's crop adjustment time.
+  const uploadUrlRef = useRef<Promise<string> | null>(null);
 
   if (target === undefined || me === undefined) {
     return (
@@ -75,17 +84,30 @@ export default function UserProfile() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images",
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1,
     });
     if (result.canceled || !result.assets[0]) return;
 
-    const uri = result.assets[0].uri;
+    const asset = result.assets[0];
+    // Start fetching the upload URL immediately so the roundtrip runs in the
+    // background while the user adjusts the crop.
+    uploadUrlRef.current = generateUploadUrl();
+    setCropData({ uri: asset.uri, width: asset.width, height: asset.height });
+  };
+
+  const onCropCancel = () => {
+    uploadUrlRef.current = null;
+    setCropData(null);
+  };
+
+  const onCropConfirm = async (croppedUri: string) => {
+    setCropData(null);
     setUploadingAvatar(true);
     try {
-      const uploadUrl = await generateUploadUrl();
-      const resp = await fetch(uri);
+      const uploadUrl = await (uploadUrlRef.current ?? generateUploadUrl());
+      uploadUrlRef.current = null;
+      const resp = await fetch(croppedUri);
       const blob = await resp.blob();
       const uploadResp = await fetch(uploadUrl, {
         method: "POST",
@@ -184,9 +206,6 @@ export default function UserProfile() {
               ) : (
                 avatarContent
               )}
-              <View style={styles.avatarEditBadge}>
-                <Text style={styles.avatarEditBadgeText}>+</Text>
-              </View>
             </Pressable>
           ) : (
             avatarContent
@@ -268,6 +287,17 @@ export default function UserProfile() {
           )
         ) : null}
       </ScrollView>
+
+      {cropData && (
+        <AvatarCropModal
+          visible={true}
+          uri={cropData.uri}
+          imageWidth={cropData.width}
+          imageHeight={cropData.height}
+          onCancel={onCropCancel}
+          onConfirm={(uri) => void onCropConfirm(uri)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -343,7 +373,6 @@ const styles = StyleSheet.create({
   avatarWrap: {
     width: 64,
     height: 64,
-    position: "relative",
   },
   avatar: {
     width: 64,
@@ -357,26 +386,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontFamily: fonts.sans,
     fontWeight: "600",
-  },
-  avatarEditBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: theme.text.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: theme.bg,
-  },
-  avatarEditBadgeText: {
-    color: theme.bg,
-    fontSize: 14,
-    lineHeight: 16,
-    fontFamily: fonts.sans,
-    fontWeight: "700",
   },
   headerText: { flex: 1 },
   username: {

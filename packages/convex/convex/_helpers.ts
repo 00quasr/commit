@@ -2,6 +2,24 @@ import { dayKeyInTimezone } from "@commit/domain";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
+export async function resolveProfile(ctx: QueryCtx, profile: Doc<"profiles">) {
+  let avatarUrl = profile.avatarUrl;
+  if (profile.avatarFileId) {
+    const url = await ctx.storage.getUrl(profile.avatarFileId);
+    if (url) avatarUrl = url;
+  }
+  return {
+    _id: profile._id,
+    _creationTime: profile._creationTime,
+    clerkUserId: profile.clerkUserId,
+    username: profile.username,
+    ...(profile.usernameLower !== undefined ? { usernameLower: profile.usernameLower } : {}),
+    ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+    timezone: profile.timezone,
+    createdAt: profile.createdAt,
+  };
+}
+
 const HABIT_COLORS = [
   "#5590D9",
   "#52B788",

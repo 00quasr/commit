@@ -1,8 +1,6 @@
 import { ConvexError, v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import type { QueryCtx } from "./_generated/server";
-import { requireCallerProfile } from "./_helpers";
+import { requireCallerProfile, resolveProfile } from "./_helpers";
 
 const profileShape = v.object({
   _id: v.id("profiles"),
@@ -14,25 +12,6 @@ const profileShape = v.object({
   timezone: v.string(),
   createdAt: v.number(),
 });
-
-// Maps a raw DB profile to the return shape, resolving Convex storage avatars.
-async function resolveProfile(ctx: QueryCtx, profile: Doc<"profiles">) {
-  let avatarUrl = profile.avatarUrl;
-  if (profile.avatarFileId) {
-    const url = await ctx.storage.getUrl(profile.avatarFileId);
-    if (url) avatarUrl = url;
-  }
-  return {
-    _id: profile._id,
-    _creationTime: profile._creationTime,
-    clerkUserId: profile.clerkUserId,
-    username: profile.username,
-    ...(profile.usernameLower !== undefined ? { usernameLower: profile.usernameLower } : {}),
-    ...(avatarUrl !== undefined ? { avatarUrl } : {}),
-    timezone: profile.timezone,
-    createdAt: profile.createdAt,
-  };
-}
 
 export const me = query({
   args: {},
