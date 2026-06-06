@@ -79,6 +79,7 @@ export default function Feed() {
 
       <FlatList
         ref={listRef}
+        showsVerticalScrollIndicator={false}
         data={result.drops}
         keyExtractor={(item) => item.drop._id}
         renderItem={({ item }) => (

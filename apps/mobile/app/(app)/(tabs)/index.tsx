@@ -135,7 +135,7 @@ export default function Today() {
       </View>
 
       {isEmpty ? (
-        <ScrollView contentContainerStyle={styles.emptyScroll}>
+        <ScrollView contentContainerStyle={styles.emptyScroll} showsVerticalScrollIndicator={false}>
           <StatsAndHeatmap
             stats={stats}
             heatmapData={heatmapData ?? []}
@@ -150,6 +150,7 @@ export default function Today() {
         <SectionList
           sections={sections}
           keyExtractor={(item) => item._id}
+          showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <StatsAndHeatmap
               stats={stats}
