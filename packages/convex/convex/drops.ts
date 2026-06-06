@@ -37,7 +37,6 @@ const dropShape = v.object({
   ownerId: v.id("profiles"),
   habitId: v.optional(v.id("habits")),
   caption: v.string(),
-  tags: v.array(v.string()),
   photoFileId: v.optional(v.id("_storage")),
   voiceFileId: v.optional(v.id("_storage")),
   dayKey: v.string(),
@@ -100,25 +99,12 @@ async function fetchHabitColorMap(
 }
 
 const MAX_CAPTION = 100;
-const MAX_TAGS = 5;
 const STREAK_MILESTONES = new Set([7, 14, 30, 60, 100]);
-
-function normalizeTags(input: string[]): string[] {
-  const seen = new Set<string>();
-  for (const raw of input) {
-    const t = raw.trim().toLowerCase();
-    if (t.length > 0) {
-      seen.add(t);
-    }
-  }
-  return [...seen];
-}
 
 export const create = mutation({
   args: {
     habitId: v.optional(v.id("habits")),
     caption: v.string(),
-    tags: v.array(v.string()),
     visibility: v.union(v.literal("public"), v.literal("friends"), v.literal("private")),
     photoFileId: v.optional(v.id("_storage")),
     voiceFileId: v.optional(v.id("_storage")),
@@ -130,12 +116,6 @@ export const create = mutation({
     // Validate caption.
     if (args.caption.length > MAX_CAPTION) {
       throw new Error(`caption exceeds ${MAX_CAPTION} chars`);
-    }
-
-    // Normalize and validate tags.
-    const tags = normalizeTags(args.tags);
-    if (tags.length > MAX_TAGS) {
-      throw new Error(`too many tags (max ${MAX_TAGS})`);
     }
 
     // Verify linked habit if provided.
@@ -188,7 +168,6 @@ export const create = mutation({
       ownerId: me._id,
       ...(args.habitId !== undefined ? { habitId: args.habitId } : {}),
       caption: args.caption,
-      tags,
       ...(args.photoFileId !== undefined ? { photoFileId: args.photoFileId } : {}),
       ...(args.voiceFileId !== undefined ? { voiceFileId: args.voiceFileId } : {}),
       dayKey,

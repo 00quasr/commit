@@ -228,7 +228,6 @@ describe("habits.dueToday", () => {
     await t.withIdentity(asAlice).mutation(api.drops.create, {
       habitId,
       caption: "did it",
-      tags: [],
       visibility: "friends",
     });
 
@@ -249,7 +248,6 @@ describe("habits.dueToday", () => {
     await t.withIdentity(asAlice).mutation(api.drops.create, {
       habitId,
       caption: "done",
-      tags: [],
       visibility: "friends",
     });
 
@@ -294,7 +292,6 @@ describe("habits.dueToday", () => {
     await t.withIdentity(asAlice).mutation(api.drops.create, {
       habitId,
       caption: "first",
-      tags: [],
       visibility: "friends",
     });
 

@@ -25,7 +25,6 @@ const asAlice = { subject: "user_alice" };
 
 const baseDropArgs = {
   caption: "shipped",
-  tags: ["@build"],
   visibility: "friends" as const,
 };
 
@@ -79,26 +78,6 @@ describe("drops.create — basic", () => {
     expect(drop?.habitId).toBe(habitId);
     const habit = await t.run((ctx) => ctx.db.get(habitId));
     expect(habit?.lastDropDayKey).toBe("2026-05-07");
-  });
-
-  test("normalizes tags: lowercase + dedupe, max 5 enforced", async () => {
-    const t = makeTest();
-    await seedAlice(t);
-    vi.useFakeTimers().setSystemTime(new Date("2026-05-07T12:00:00Z"));
-
-    const dropId = await t.withIdentity(asAlice).mutation(api.drops.create, {
-      ...baseDropArgs,
-      tags: ["  @Build  ", "@build", "@HEALTH", " ", ""],
-    });
-    const drop = await t.run((ctx) => ctx.db.get(dropId));
-    expect(drop?.tags.sort()).toEqual(["@build", "@health"].sort());
-
-    await expect(
-      t.withIdentity(asAlice).mutation(api.drops.create, {
-        ...baseDropArgs,
-        tags: ["a", "b", "c", "d", "e", "f"],
-      }),
-    ).rejects.toThrow(/too many tags/);
   });
 
   test("rejects caption longer than 100 chars", async () => {

@@ -76,7 +76,6 @@ export default function Compose() {
       await createDrop({
         habitId,
         caption,
-        tags: [],
         visibility: "public",
         ...(photoFileId !== undefined ? { photoFileId } : {}),
         ...(voiceFileId !== undefined ? { voiceFileId } : {}),
