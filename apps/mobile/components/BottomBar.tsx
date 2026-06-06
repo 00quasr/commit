@@ -1,6 +1,6 @@
 import { fonts } from "@commit/ui-tokens";
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 
@@ -8,9 +8,10 @@ export interface BottomBarProps {
   onAdd: () => void;
   disabled?: boolean;
   hint?: string;
+  translateY?: Animated.AnimatedInterpolation<number>;
 }
 
-export function BottomBar({ onAdd, disabled, hint }: BottomBarProps) {
+export function BottomBar({ onAdd, disabled, hint, translateY }: BottomBarProps) {
   const insets = useSafeAreaInsets();
   const hintOpacity = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -54,7 +55,14 @@ export function BottomBar({ onAdd, disabled, hint }: BottomBarProps) {
 
   const bottomOffset = insets.bottom + 12;
   return (
-    <View style={[styles.wrap, { bottom: bottomOffset }]} pointerEvents="box-none">
+    <Animated.View
+      style={[
+        styles.wrap,
+        { bottom: bottomOffset },
+        translateY ? { transform: [{ translateY }] } : undefined,
+      ]}
+      pointerEvents="box-none"
+    >
       {hint ? (
         <Animated.View style={[styles.hintWrap, { opacity: hintOpacity }]} pointerEvents="none">
           <Text style={styles.hint} numberOfLines={2}>
@@ -73,7 +81,7 @@ export function BottomBar({ onAdd, disabled, hint }: BottomBarProps) {
           <Text style={styles.plusIcon}>+</Text>
         </Pressable>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 
