@@ -1,4 +1,4 @@
-import { dayKeyInTimezone, shouldLockFeed, streakAfterDrop } from "@commit/domain";
+import { canonicalPair, dayKeyInTimezone, shouldLockFeed, streakAfterDrop } from "@commit/domain";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
@@ -568,6 +568,18 @@ export const recentForProfile = query({
     const isOwnProfile = me._id === args.profileId;
     const limit = args.limit ?? 20;
 
+    // Cross-profile callers see friends-tier drops only when an accepted
+    // friendship row exists between caller and owner.
+    let isFriend = false;
+    if (!isOwnProfile) {
+      const { low, high } = canonicalPair(me._id, args.profileId);
+      const f = await ctx.db
+        .query("friendships")
+        .withIndex("by_pair", (q) => q.eq("pairLow", low).eq("pairHigh", high))
+        .unique();
+      isFriend = f?.status === "accepted";
+    }
+
     const drops = await ctx.db
       .query("drops")
       .withIndex("by_owner_created", (q) => q.eq("ownerId", args.profileId))
@@ -577,7 +589,7 @@ export const recentForProfile = query({
     const visible = drops.filter((d) => {
       if (isOwnProfile) return true;
       if (d.visibility === "public") return true;
-      // Friends-tier requires friendship lookup — Phase 4.
+      if (d.visibility === "friends" && isFriend) return true;
       return false;
     });
 
