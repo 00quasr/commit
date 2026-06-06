@@ -457,15 +457,15 @@ function StatsArea({
             />
             <View style={styles.statsLine}>
               <View style={styles.statBlock}>
-                <Text style={styles.statBigValue}>{streak}</Text>
-                <Text style={styles.statBigLabel}>DAY STREAK</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statBlock}>
                 <Text style={styles.statBigValue}>{drops}</Text>
                 <Text style={styles.statBigLabel}>
                   {drops === 1 ? "TOTAL DROP" : "TOTAL DROPS"}
                 </Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBlock}>
+                <Text style={styles.statBigValue}>{streak}</Text>
+                <Text style={styles.statBigLabel}>DAY STREAK</Text>
               </View>
             </View>
           </View>
@@ -651,12 +651,12 @@ const styles = StyleSheet.create({
   },
   statBigValue: {
     color: theme.text.primary,
-    fontSize: 32,
+    fontSize: 22,
     fontFamily: fonts.sans,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
-    letterSpacing: -0.8,
-    lineHeight: 36,
+    letterSpacing: -0.4,
+    lineHeight: 26,
   },
   statBigLabel: {
     color: theme.text.tertiary,
