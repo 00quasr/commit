@@ -1,5 +1,8 @@
 import { ConvexError, v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
+import { requireCallerProfile } from "./_helpers";
 
 const profileShape = v.object({
   _id: v.id("profiles"),
@@ -12,21 +15,28 @@ const profileShape = v.object({
   createdAt: v.number(),
 });
 
+// Maps a raw DB profile to the return shape, resolving Convex storage avatars.
+async function resolveProfile(ctx: QueryCtx, profile: Doc<"profiles">) {
+  let avatarUrl = profile.avatarUrl;
+  if (profile.avatarFileId) {
+    const url = await ctx.storage.getUrl(profile.avatarFileId);
+    if (url) avatarUrl = url;
+  }
+  return {
+    _id: profile._id,
+    _creationTime: profile._creationTime,
+    clerkUserId: profile.clerkUserId,
+    username: profile.username,
+    ...(profile.usernameLower !== undefined ? { usernameLower: profile.usernameLower } : {}),
+    ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+    timezone: profile.timezone,
+    createdAt: profile.createdAt,
+  };
+}
+
 export const me = query({
   args: {},
-  returns: v.union(
-    v.null(),
-    v.object({
-      _id: v.id("profiles"),
-      _creationTime: v.number(),
-      clerkUserId: v.string(),
-      username: v.string(),
-      usernameLower: v.optional(v.string()),
-      avatarUrl: v.optional(v.string()),
-      timezone: v.string(),
-      createdAt: v.number(),
-    }),
-  ),
+  returns: v.union(v.null(), profileShape),
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
@@ -34,7 +44,8 @@ export const me = query({
       .query("profiles")
       .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.subject))
       .unique();
-    return profile;
+    if (!profile) return null;
+    return resolveProfile(ctx, profile);
   },
 });
 
@@ -117,6 +128,25 @@ export const upsert = mutation({
   },
 });
 
+export const generateUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    await requireCallerProfile(ctx);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const updateAvatar = mutation({
+  args: { storageId: v.id("_storage") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const me = await requireCallerProfile(ctx);
+    await ctx.db.patch(me._id, { avatarFileId: args.storageId });
+    return null;
+  },
+});
+
 // Looks up a profile by exact username (case-insensitive, accepts optional
 // leading "@"). Returns null if no user matches.
 export const getByUsername = query({
@@ -129,7 +159,8 @@ export const getByUsername = query({
       .query("profiles")
       .withIndex("by_username_lower", (q) => q.eq("usernameLower", lower))
       .unique();
-    return profile;
+    if (!profile) return null;
+    return resolveProfile(ctx, profile);
   },
 });
 
@@ -162,6 +193,6 @@ export const searchByUsernamePrefix = query({
       )
       .take(limit + 1);
     const filtered = identity ? rows.filter((p) => p.clerkUserId !== identity.subject) : rows;
-    return filtered.slice(0, limit);
+    return Promise.all(filtered.slice(0, limit).map((p) => resolveProfile(ctx, p)));
   },
 });

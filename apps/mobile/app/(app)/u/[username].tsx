@@ -1,8 +1,10 @@
 import { api } from "@commit/convex/api";
+import type { Id } from "@commit/convex/dataModel";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
@@ -37,8 +39,11 @@ export default function UserProfile() {
   const sendRequest = useMutation(api.friendships.request);
   const acceptRequest = useMutation(api.friendships.accept);
   const declineRequest = useMutation(api.friendships.decline);
+  const generateUploadUrl = useMutation(api.profiles.generateUploadUrl);
+  const updateAvatar = useMutation(api.profiles.updateAvatar);
 
   const [busy, setBusy] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   if (target === undefined || me === undefined) {
     return (
@@ -61,6 +66,41 @@ export default function UserProfile() {
   }
 
   const isSelf = me?._id === target._id;
+
+  const onChangeAvatar = async () => {
+    const { status: permStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permStatus !== "granted") {
+      Alert.alert("Permission required", "Allow access to your photos to set a profile picture.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    const uri = result.assets[0].uri;
+    setUploadingAvatar(true);
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const resp = await fetch(uri);
+      const blob = await resp.blob();
+      const uploadResp = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": blob.type || "image/jpeg" },
+        body: blob,
+      });
+      if (!uploadResp.ok) throw new Error(`Upload failed: ${uploadResp.status}`);
+      const { storageId } = (await uploadResp.json()) as { storageId: Id<"_storage"> };
+      await updateAvatar({ storageId });
+    } catch {
+      Alert.alert("Error", "Could not update profile picture. Please try again.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const onPrimary = async () => {
     if (!status || busy) return;
@@ -115,18 +155,41 @@ export default function UserProfile() {
     }
   };
 
+  const avatarContent = target.avatarUrl ? (
+    <Image source={{ uri: target.avatarUrl }} style={styles.avatar} contentFit="cover" />
+  ) : (
+    <View style={[styles.avatar, styles.avatarFallback]}>
+      <Text style={styles.avatarLetter}>{target.username.charAt(0).toUpperCase()}</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <TopBar showSettings={me?._id === target._id} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.headerRow}>
-          {target.avatarUrl ? (
-            <Image source={{ uri: target.avatarUrl }} style={styles.avatar} contentFit="cover" />
+          {isSelf ? (
+            <Pressable
+              onPress={() => void onChangeAvatar()}
+              disabled={uploadingAvatar}
+              style={({ pressed }) => [styles.avatarWrap, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Change profile picture"
+            >
+              {uploadingAvatar ? (
+                <View style={[styles.avatar, styles.avatarFallback]}>
+                  <ActivityIndicator color={theme.text.primary} />
+                </View>
+              ) : (
+                avatarContent
+              )}
+              <View style={styles.avatarEditBadge}>
+                <Text style={styles.avatarEditBadgeText}>+</Text>
+              </View>
+            </Pressable>
           ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarLetter}>{target.username.charAt(0).toUpperCase()}</Text>
-            </View>
+            avatarContent
           )}
           <View style={styles.headerText}>
             <Text style={styles.username}>{target.username}</Text>
@@ -277,6 +340,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
+  avatarWrap: {
+    width: 64,
+    height: 64,
+    position: "relative",
+  },
   avatar: {
     width: 64,
     height: 64,
@@ -289,6 +357,26 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontFamily: fonts.sans,
     fontWeight: "600",
+  },
+  avatarEditBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: theme.text.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: theme.bg,
+  },
+  avatarEditBadgeText: {
+    color: theme.bg,
+    fontSize: 14,
+    lineHeight: 16,
+    fontFamily: fonts.sans,
+    fontWeight: "700",
   },
   headerText: { flex: 1 },
   username: {
