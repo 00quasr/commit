@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@commit/convex/api";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
@@ -10,7 +10,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MemoriesGrid } from "@/components/MemoriesGrid";
 
 export default function Profile() {
-  const { signOut } = useAuth();
   const me = useQuery(api.profiles.me);
   const recent = useQuery(
     api.drops.recentForProfile,
@@ -58,6 +57,15 @@ export default function Profile() {
             <Text style={styles.username}>{me.username}</Text>
             <Text style={styles.tz}>{me.timezone}</Text>
           </View>
+          <Pressable
+            onPress={() => router.push("/(app)/settings")}
+            style={({ pressed }) => [styles.settingsButton, pressed && { opacity: 0.6 }]}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+          >
+            <Ionicons name="settings-outline" size={22} color={theme.text.secondary} />
+          </Pressable>
         </View>
 
         {recent === undefined ? (
@@ -71,13 +79,6 @@ export default function Profile() {
             onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
           />
         )}
-
-        <Pressable
-          style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.6 }]}
-          onPress={() => void signOut()}
-        >
-          <Text style={styles.signOutText}>Sign out</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -95,6 +96,14 @@ const styles = StyleSheet.create({
   },
   backButton: { padding: 4 },
   backText: { color: theme.text.tertiary, fontSize: 18 },
+  settingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.blockElevated,
+  },
   scroll: { paddingTop: 8, paddingBottom: 80 },
   placeholder: { color: theme.text.muted, fontSize: 14, fontFamily: fonts.mono },
   headerRow: {
@@ -121,11 +130,4 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   tz: { color: theme.text.tertiary, fontSize: 13, fontFamily: fonts.mono, marginTop: 2 },
-  signOut: {
-    alignSelf: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginTop: 32,
-  },
-  signOutText: { color: theme.text.tertiary, fontSize: 14, fontFamily: fonts.sans },
 });

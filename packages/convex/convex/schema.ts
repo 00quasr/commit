@@ -92,7 +92,10 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_drop", ["dropId"])
-    .index("by_drop_reactor", ["dropId", "reactorId"]),
+    .index("by_drop_reactor", ["dropId", "reactorId"])
+    // GDPR delete needs to enumerate every reaction authored by a leaving
+    // user so it can decrement reactionCount on each affected drop.
+    .index("by_reactor", ["reactorId"]),
 
   views: defineTable({
     dropId: v.id("drops"),
@@ -100,7 +103,9 @@ export default defineSchema({
     viewedAt: v.number(),
   })
     .index("by_drop", ["dropId"])
-    .index("by_drop_viewer", ["dropId", "viewerId"]),
+    .index("by_drop_viewer", ["dropId", "viewerId"])
+    // GDPR delete needs to enumerate every view authored by a leaving user.
+    .index("by_viewer", ["viewerId"]),
 
   userStats: defineTable({
     profileId: v.id("profiles"),
