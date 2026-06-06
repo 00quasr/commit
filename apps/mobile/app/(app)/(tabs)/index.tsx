@@ -1,11 +1,13 @@
 import { api } from "@commit/convex/api";
+import type { Id } from "@commit/convex/dataModel";
 import { fonts, habitColors } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useRef, useMemo, useState } from "react";
 import {
+  Animated,
   ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
@@ -20,7 +22,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
 import { Heatmap } from "@/components/Heatmap";
 import { HabitRow } from "@/components/HabitRow";
@@ -45,6 +47,8 @@ const WEEKDAYS: Array<{ label: string; day: number }> = [
   { label: "Su", day: 0 },
 ];
 
+const BAR_SLIDE_DIST = 200;
+
 export default function Today() {
   const me = useQuery(api.profiles.me);
   const stats = useQuery(api.userStats.forCaller, {});
@@ -63,6 +67,60 @@ export default function Today() {
   const [draftCustomDays, setDraftCustomDays] = useState<number[]>([1]);
   const [draftColor, setDraftColor] = useState<string>(habitColors[0]);
   const [busy, setBusy] = useState(false);
+
+  const [selectedHabitId, setSelectedHabitId] = useState<Id<"habits"> | null>(null);
+  const selectionAnim = useRef(new Animated.Value(0)).current;
+
+  const habitHeatmapData = useQuery(
+    api.drops.heatmapForHabit,
+    selectedHabitId ? { habitId: selectedHabitId } : "skip",
+  );
+
+  const selectedHabit = useMemo(
+    () => allHabits?.find((h) => h._id === selectedHabitId) ?? null,
+    [allHabits, selectedHabitId],
+  );
+
+  const habitTotalDrops = useMemo(
+    () => habitHeatmapData?.reduce((sum, e) => sum + e.total, 0) ?? 0,
+    [habitHeatmapData],
+  );
+
+  const bottomBarTranslateY = selectionAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, BAR_SLIDE_DIST],
+  });
+  const actionBarTranslateY = selectionAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [BAR_SLIDE_DIST, 0],
+  });
+  const cumulativeOpacity = selectionAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
+  const habitCardOpacity = selectionAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  const selectHabit = (id: Id<"habits">) => {
+    if (selectedHabitId === id) {
+      Animated.timing(selectionAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(
+        () => setSelectedHabitId(null),
+      );
+    } else if (selectedHabitId !== null) {
+      setSelectedHabitId(id);
+    } else {
+      setSelectedHabitId(id);
+      Animated.timing(selectionAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+    }
+  };
+
+  const deselectHabit = () => {
+    Animated.timing(selectionAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() =>
+      setSelectedHabitId(null),
+    );
+  };
 
   const sections = useMemo(() => {
     if (!dueHabits || !allHabits) return [];
@@ -108,6 +166,20 @@ export default function Today() {
   const isEmpty = allHabits.length === 0;
   const atMax = allHabits.length >= 3;
 
+  const statsArea = (
+    <StatsArea
+      stats={stats}
+      cumulativeHeatmapData={heatmapData ?? []}
+      habitHeatmapData={habitHeatmapData}
+      selectedHabit={selectedHabit}
+      habitTotalDrops={habitTotalDrops}
+      timezone={me?.timezone ?? "UTC"}
+      cumulativeOpacity={cumulativeOpacity}
+      habitCardOpacity={habitCardOpacity}
+      isHabitSelected={selectedHabitId !== null}
+    />
+  );
+
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={styles.header}>
@@ -150,11 +222,7 @@ export default function Today() {
 
       {isEmpty ? (
         <ScrollView contentContainerStyle={styles.emptyScroll} showsVerticalScrollIndicator={false}>
-          <StatsAndHeatmap
-            stats={stats}
-            heatmapData={heatmapData ?? []}
-            timezone={me?.timezone ?? "UTC"}
-          />
+          {statsArea}
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyTitle}>Quiet start.</Text>
             <Text style={styles.emptyHint}>Tap + to commit to your first habit.</Text>
@@ -165,13 +233,7 @@ export default function Today() {
           sections={sections}
           keyExtractor={(item) => item._id}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <StatsAndHeatmap
-              stats={stats}
-              heatmapData={heatmapData ?? []}
-              timezone={me?.timezone ?? "UTC"}
-            />
-          }
+          ListHeaderComponent={statsArea}
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
@@ -199,7 +261,7 @@ export default function Today() {
                   customDays={item.customDays}
                   color={item.color}
                   doneToday={doneToday}
-                  onPress={() => router.push(`/habit/${item._id}`)}
+                  onPress={() => selectHabit(item._id)}
                   onLongPress={() => {
                     startDropDraft(item._id);
                     router.push("/drop/camera");
@@ -218,7 +280,22 @@ export default function Today() {
         onAdd={() => setShowAdd(true)}
         disabled={atMax}
         hint={atMax ? "Max. 3 habits. Archive one to add a new one." : undefined}
+        translateY={bottomBarTranslateY}
       />
+
+      {selectedHabit && (
+        <HabitActionBar
+          habit={selectedHabit}
+          translateY={actionBarTranslateY}
+          isVisible={selectedHabitId !== null}
+          onDrop={() => {
+            startDropDraft(selectedHabit._id);
+            router.push("/drop/camera");
+          }}
+          onViewDrops={() => router.push(`/(app)/habit/drops/${selectedHabit._id}`)}
+          onClose={deselectHabit}
+        />
+      )}
 
       <Modal visible={showAdd} animationType="slide" transparent>
         <KeyboardAvoidingView
@@ -325,45 +402,166 @@ const HEATMAP_COLS = 22;
 const CARD_MARGIN_H = 16;
 const CARD_PADDING_H = 16;
 
-function StatsAndHeatmap({
+type HeatmapEntry = { dayKey: string; total: number; habits: { habitId: string; color: string }[] };
+type HabitLike = {
+  _id: Id<"habits">;
+  text: string;
+  cycleDays: number;
+  customDays?: number[];
+  lastDropDayKey?: string;
+};
+
+function StatsArea({
   stats,
-  heatmapData,
+  cumulativeHeatmapData,
+  habitHeatmapData,
+  selectedHabit,
+  habitTotalDrops,
   timezone,
+  cumulativeOpacity,
+  habitCardOpacity,
+  isHabitSelected,
 }: {
   stats: { streak: number; totalDrops: number } | null | undefined;
-  heatmapData: { dayKey: string; total: number; habits: { habitId: string; color: string }[] }[];
+  cumulativeHeatmapData: HeatmapEntry[];
+  habitHeatmapData: HeatmapEntry[] | undefined;
+  selectedHabit: HabitLike | null;
+  habitTotalDrops: number;
   timezone: string;
+  cumulativeOpacity: Animated.AnimatedInterpolation<number>;
+  habitCardOpacity: Animated.AnimatedInterpolation<number>;
+  isHabitSelected: boolean;
 }) {
   const { width: screenWidth } = useWindowDimensions();
   const heatmapWidth = screenWidth - CARD_MARGIN_H * 2 - CARD_PADDING_H * 2;
   const streak = stats?.streak ?? 0;
   const drops = stats?.totalDrops ?? 0;
+
   return (
     <View style={styles.statsSection}>
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardHeaderLabel}>YOUR COMMITMENT</Text>
-        </View>
-        <Heatmap
-          data={heatmapData}
-          timezone={timezone}
-          width={heatmapWidth}
-          cols={HEATMAP_COLS}
-          paddingH={0}
-        />
-        <View style={styles.statsLine}>
-          <View style={styles.statBlock}>
-            <Text style={styles.statBigValue}>{streak}</Text>
-            <Text style={styles.statBigLabel}>DAY STREAK</Text>
+      <View>
+        <Animated.View
+          style={{ opacity: cumulativeOpacity }}
+          pointerEvents={isHabitSelected ? "none" : "box-none"}
+        >
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardHeaderLabel}>YOUR COMMITMENT</Text>
+            </View>
+            <Heatmap
+              data={cumulativeHeatmapData}
+              timezone={timezone}
+              width={heatmapWidth}
+              cols={HEATMAP_COLS}
+              paddingH={0}
+            />
+            <View style={styles.statsLine}>
+              <View style={styles.statBlock}>
+                <Text style={styles.statBigValue}>{streak}</Text>
+                <Text style={styles.statBigLabel}>DAY STREAK</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBlock}>
+                <Text style={styles.statBigValue}>{drops}</Text>
+                <Text style={styles.statBigLabel}>
+                  {drops === 1 ? "TOTAL DROP" : "TOTAL DROPS"}
+                </Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBlock}>
-            <Text style={styles.statBigValue}>{drops}</Text>
-            <Text style={styles.statBigLabel}>{drops === 1 ? "TOTAL DROP" : "TOTAL DROPS"}</Text>
-          </View>
-        </View>
+        </Animated.View>
+
+        {selectedHabit && (
+          <Animated.View
+            style={{ position: "absolute", left: 0, right: 0, top: 0, opacity: habitCardOpacity }}
+            pointerEvents="none"
+          >
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardHeaderLabel} numberOfLines={1}>
+                  {selectedHabit.text.toUpperCase()}
+                </Text>
+              </View>
+              <Heatmap
+                data={habitHeatmapData ?? []}
+                timezone={timezone}
+                width={heatmapWidth}
+                cols={HEATMAP_COLS}
+                paddingH={0}
+              />
+              <View style={styles.statsLine}>
+                <View style={styles.statBlock}>
+                  <Text style={styles.statBigValue}>{habitTotalDrops}</Text>
+                  <Text style={styles.statBigLabel}>
+                    {habitTotalDrops === 1 ? "TOTAL DROP" : "TOTAL DROPS"}
+                  </Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statBlock}>
+                  <Text style={styles.statBigValue} numberOfLines={1}>
+                    {selectedHabit.lastDropDayKey ?? "—"}
+                  </Text>
+                  <Text style={styles.statBigLabel}>LAST DROP</Text>
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+        )}
       </View>
     </View>
+  );
+}
+
+function HabitActionBar({
+  habit,
+  translateY,
+  isVisible,
+  onDrop,
+  onViewDrops,
+  onClose,
+}: {
+  habit: HabitLike;
+  translateY: Animated.AnimatedInterpolation<number>;
+  isVisible: boolean;
+  onDrop: () => void;
+  onViewDrops: () => void;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Animated.View
+      style={[
+        styles.habitActionBar,
+        { paddingBottom: insets.bottom + 12, transform: [{ translateY }] },
+      ]}
+      pointerEvents={isVisible ? "box-none" : "none"}
+    >
+      <View style={styles.habitBarHeader}>
+        <Text style={styles.habitBarTitle} numberOfLines={1}>
+          {habit.text}
+        </Text>
+        <Pressable
+          onPress={onClose}
+          hitSlop={12}
+          style={({ pressed }) => [styles.habitBarClose, pressed && { opacity: 0.5 }]}
+        >
+          <Text style={styles.habitBarCloseText}>✕</Text>
+        </Pressable>
+      </View>
+      <Pressable
+        style={({ pressed }) => [styles.dropBtn, pressed && { opacity: 0.7 }]}
+        onPress={onDrop}
+      >
+        <Text style={styles.dropBtnText}>Drop on this habit</Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.viewDropsBtn, pressed && { opacity: 0.6 }]}
+        onPress={onViewDrops}
+        hitSlop={8}
+      >
+        <Text style={styles.viewDropsText}>View habit drops</Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -439,27 +637,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: fonts.mono,
     letterSpacing: 1.4,
-  },
-  todayPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  todayPillDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#4aa3ff",
-  },
-  todayPillText: {
-    color: theme.text.secondary,
-    fontSize: 10,
-    fontFamily: fonts.mono,
-    letterSpacing: 1.2,
+    flex: 1,
   },
   statsLine: {
     flexDirection: "row",
@@ -492,6 +670,57 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     backgroundColor: theme.divide,
     marginVertical: 4,
+  },
+  habitActionBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    backgroundColor: theme.bg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.borderHairline,
+  },
+  habitBarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  habitBarTitle: {
+    flex: 1,
+    color: theme.text.primary,
+    fontSize: 16,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+  },
+  habitBarClose: {
+    paddingLeft: 12,
+  },
+  habitBarCloseText: {
+    color: theme.text.tertiary,
+    fontSize: 18,
+    fontFamily: fonts.sans,
+  },
+  dropBtn: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: theme.text.primary,
+    alignItems: "center",
+  },
+  dropBtnText: { color: theme.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "700" },
+  viewDropsBtn: {
+    alignSelf: "center",
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  viewDropsText: {
+    color: theme.text.tertiary,
+    fontSize: 13,
+    fontFamily: fonts.sans,
+    fontWeight: "500",
   },
   emptyScroll: { flexGrow: 1, paddingBottom: 120 },
   list: { paddingBottom: 180 },
@@ -537,7 +766,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
-  // Sheet
   modalRoot: { flex: 1, justifyContent: "flex-end" },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
   sheet: {
