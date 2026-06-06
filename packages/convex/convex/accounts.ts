@@ -9,7 +9,7 @@ import { action, internalMutation } from "./_generated/server";
  * The public `deleteMyAccount` action orchestrates:
  *   1. internal mutation `purgeMyData` — removes every row owned by the
  *      caller and collects storage file IDs to delete.
- *   2. `ctx.storage.delete` for each photo/voice file.
+ *   2. `ctx.storage.delete` for each photo file.
  *   3. Clerk admin API `DELETE /v1/users/{id}` — removes the auth identity.
  *
  * Ordering: Convex data → storage files → Clerk. If the Clerk delete fails
@@ -49,7 +49,6 @@ export const purgeMyData = internalMutation({
       .collect();
     for (const drop of drops) {
       if (drop.photoFileId) storageIds.push(drop.photoFileId);
-      if (drop.voiceFileId) storageIds.push(drop.voiceFileId);
 
       const reactionsOnDrop = await ctx.db
         .query("reactions")
