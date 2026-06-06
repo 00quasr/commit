@@ -1,15 +1,15 @@
-import { useAuth, useUser } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/clerk-expo";
 import { api } from "@commit/convex/api";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { Redirect, Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
+import { accountDeletion } from "@/lib/account-deletion";
+import { ChooseUsername } from "@/components/ChooseUsername";
 
 export default function AppLayout() {
   const { isLoaded, isSignedIn, signOut } = useAuth();
-  const { user } = useUser();
   const profile = useQuery(api.profiles.me);
-  const upsertProfile = useMutation(api.profiles.upsert);
   const [timedOut, setTimedOut] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -30,18 +30,11 @@ export default function AppLayout() {
     if (timedOut) void signOut();
   }, [timedOut, signOut]);
 
+  // Reset the deletion flag whenever the user is signed out, so a future
+  // sign-in starts from a clean slate.
   useEffect(() => {
-    if (!isSignedIn || !user || profile !== null) return;
-    const username =
-      user.username ??
-      user.firstName?.toLowerCase() ??
-      user.emailAddresses[0]?.emailAddress.split("@")[0] ??
-      `user${Date.now()}`;
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    upsertProfile({ username, avatarUrl: user.imageUrl || undefined, timezone }).catch(() => {
-      void signOut();
-    });
-  }, [isSignedIn, user, profile, upsertProfile, signOut]);
+    if (!isSignedIn) accountDeletion.inProgress = false;
+  }, [isSignedIn]);
 
   if (!isLoaded || (isSignedIn && profile === undefined)) {
     return (
@@ -54,13 +47,8 @@ export default function AppLayout() {
   }
   if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
   if (profile === null) {
-    return (
-      <View
-        style={{ flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}
-      >
-        <ActivityIndicator color="#fff" />
-      </View>
-    );
+    // Signed in via Clerk but no Convex profile yet — first-run username picker.
+    return <ChooseUsername />;
   }
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -92,6 +80,14 @@ export default function AppLayout() {
       />
       <Stack.Screen
         name="archived-habits"
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+          gestureEnabled: true,
+        }}
+      />
+      <Stack.Screen
+        name="settings"
         options={{
           presentation: "modal",
           animation: "slide_from_bottom",

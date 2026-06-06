@@ -1,4 +1,3 @@
-import { useAuth } from "@clerk/clerk-expo";
 import { api } from "@commit/convex/api";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
@@ -13,7 +12,6 @@ import { MemoriesGrid } from "@/components/MemoriesGrid";
 export default function UserProfile() {
   const { username: raw } = useLocalSearchParams<{ username: string }>();
   const username = (raw ?? "").replace(/^@/, "");
-  const { signOut } = useAuth();
   const me = useQuery(api.profiles.me);
   const target = useQuery(api.profiles.getByUsername, username ? { username } : "skip");
   const status = useQuery(
@@ -91,7 +89,7 @@ export default function UserProfile() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <TopBar />
+      <TopBar showSettings={me?._id === target._id} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.headerRow}>
@@ -207,23 +205,27 @@ export default function UserProfile() {
             ))}
           </View>
         )}
-
-        {isSelf ? (
-          <Pressable
-            style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.6 }]}
-            onPress={() => void signOut()}
-          >
-            <Text style={styles.signOutText}>Sign out</Text>
-          </Pressable>
-        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function TopBar() {
+function TopBar({ showSettings = false }: { showSettings?: boolean }) {
   return (
     <View style={styles.topBar}>
+      {showSettings ? (
+        <Pressable
+          onPress={() => router.push("/(app)/settings")}
+          style={({ pressed }) => [styles.settingsButton, pressed && { opacity: 0.6 }]}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+        >
+          <Text style={styles.settingsGlyph}>⚙</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.settingsButton} />
+      )}
       <Pressable
         onPress={() => router.back()}
         style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.6 }]}
@@ -240,13 +242,21 @@ const styles = StyleSheet.create({
   center: { alignItems: "center", justifyContent: "center" },
   topBar: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 4,
   },
   backButton: { padding: 4 },
   backText: { color: theme.text.tertiary, fontSize: 18 },
+  settingsButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsGlyph: { color: theme.text.secondary, fontSize: 20 },
   scroll: { paddingTop: 8, paddingBottom: 80 },
   notFoundTitle: {
     color: theme.text.primary,
@@ -366,17 +376,6 @@ const styles = StyleSheet.create({
   emptyText: {
     color: theme.text.muted,
     fontSize: 13,
-    fontFamily: fonts.sans,
-  },
-  signOut: {
-    alignSelf: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginTop: 32,
-  },
-  signOutText: {
-    color: theme.text.tertiary,
-    fontSize: 14,
     fontFamily: fonts.sans,
   },
 });

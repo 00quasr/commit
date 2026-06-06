@@ -19,10 +19,17 @@ import { MiniHeatmap } from "@/components/MiniHeatmap";
 import { useDropDraft } from "@/lib/dropDraft";
 import { theme } from "@/lib/theme";
 
-function cycleLabel(cycleDays: number): string {
+const DAY_ABBREVS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+function cycleLabel(cycleDays: number, customDays?: number[]): string {
+  if (customDays && customDays.length > 0) {
+    return DISPLAY_ORDER.filter((d) => customDays.includes(d))
+      .map((d) => DAY_ABBREVS[d])
+      .join(" · ");
+  }
   if (cycleDays === 1) return "daily";
   if (cycleDays === 2) return "every 2 days";
-  if (cycleDays === 7) return "weekly";
   return `every ${cycleDays} days`;
 }
 
@@ -138,7 +145,7 @@ export default function HabitDetail() {
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 160 }]}>
         <Text style={styles.text}>{habit.text}</Text>
         <View style={styles.metaRow}>
-          <Text style={styles.metaPill}>{cycleLabel(habit.cycleDays)}</Text>
+          <Text style={styles.metaPill}>{cycleLabel(habit.cycleDays, habit.customDays)}</Text>
           {dueToday && <Text style={[styles.metaPill, styles.duePill]}>due today</Text>}
         </View>
 

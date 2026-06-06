@@ -5,22 +5,31 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 export interface HabitRowProps {
   text: string;
   cycleDays: number;
+  customDays?: number[];
   color?: string;
   doneToday?: boolean;
   onPress: () => void;
   onLongPress?: () => void;
 }
 
-function cycleLabel(cycleDays: number): string {
+const DAY_ABBREVS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+function cycleLabel(cycleDays: number, customDays?: number[]): string {
+  if (customDays && customDays.length > 0) {
+    return DISPLAY_ORDER.filter((d) => customDays.includes(d))
+      .map((d) => DAY_ABBREVS[d])
+      .join(" · ");
+  }
   if (cycleDays === 1) return "daily";
   if (cycleDays === 2) return "every 2 days";
-  if (cycleDays === 7) return "weekly";
   return `every ${cycleDays} days`;
 }
 
 export function HabitRow({
   text,
   cycleDays,
+  customDays,
   color,
   doneToday = false,
   onPress,
@@ -47,7 +56,7 @@ export function HabitRow({
         <Text style={[styles.text, doneToday && styles.textDone]} numberOfLines={2}>
           {text}
         </Text>
-        <Text style={styles.meta}>{cycleLabel(cycleDays)}</Text>
+        <Text style={styles.meta}>{cycleLabel(cycleDays, customDays)}</Text>
       </View>
     </Pressable>
   );

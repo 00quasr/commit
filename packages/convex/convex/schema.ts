@@ -37,6 +37,8 @@ export default defineSchema({
     ownerId: v.id("profiles"),
     text: v.string(),
     cycleDays: v.number(), // 1 = daily, 2 = every 2 days, ... 31 = monthly
+    // When set, overrides cycleDays: habit is due only on these weekdays (0=Sun … 6=Sat).
+    customDays: v.optional(v.array(v.number())),
     // dayKey at habit creation in the owner's timezone. Stored explicitly so
     // dueToday queries don't depend on _creationTime (which can drift from
     // vi.useFakeTimers in tests, and whose timezone interpretation could
@@ -56,11 +58,6 @@ export default defineSchema({
     // When false, habit_created / streak_milestone events for this habit
     // are not emitted to friends' feeds. Absent === enabled (default share).
     shareEvents: v.optional(v.boolean()),
-    // Forward-compat passthrough: another branch (COM-58 area) writes
-    // `customDays` on habit rows. Schema-validate it as optional so this
-    // worktree's deploys don't roll back when rows from that branch exist
-    // in the dev deployment. The field is otherwise unused here.
-    customDays: v.optional(v.array(v.number())),
   }).index("by_owner_archived", ["ownerId", "archived"]),
 
   drops: defineTable({
@@ -101,7 +98,10 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_drop", ["dropId"])
-    .index("by_drop_reactor", ["dropId", "reactorId"]),
+    .index("by_drop_reactor", ["dropId", "reactorId"])
+    // GDPR delete needs to enumerate every reaction authored by a leaving
+    // user so it can decrement reactionCount on each affected drop.
+    .index("by_reactor", ["reactorId"]),
 
   views: defineTable({
     dropId: v.id("drops"),
@@ -109,7 +109,9 @@ export default defineSchema({
     viewedAt: v.number(),
   })
     .index("by_drop", ["dropId"])
-    .index("by_drop_viewer", ["dropId", "viewerId"]),
+    .index("by_drop_viewer", ["dropId", "viewerId"])
+    // GDPR delete needs to enumerate every view authored by a leaving user.
+    .index("by_viewer", ["viewerId"]),
 
   userStats: defineTable({
     profileId: v.id("profiles"),

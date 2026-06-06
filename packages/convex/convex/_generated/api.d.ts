@@ -9,6 +9,7 @@
  */
 
 import type * as _helpers from "../_helpers.js";
+import type * as accounts from "../accounts.js";
 import type * as activityEvents from "../activityEvents.js";
 import type * as crons from "../crons.js";
 import type * as drops from "../drops.js";
@@ -28,6 +29,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   _helpers: typeof _helpers;
+  accounts: typeof accounts;
   activityEvents: typeof activityEvents;
   crons: typeof crons;
   drops: typeof drops;

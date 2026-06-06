@@ -26,8 +26,9 @@ const convex = new ConvexReactClient(convexUrl, {
 
 export default function RootLayout() {
   return (
-    // Required ancestor for react-native-gesture-handler primitives used downstream.
-    // Expo Go's host does NOT add this automatically on SDK 54, despite earlier assumptions.
+    // Required ancestor for `Swipeable` and any other react-native-gesture-handler
+    // primitive used downstream (Today screen swipe-to-archive). Expo Go's host
+    // does NOT add this automatically on SDK 54, despite earlier assumptions.
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>

@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 const profileShape = v.object({
@@ -38,6 +38,33 @@ export const me = query({
   },
 });
 
+/**
+ * Live availability check for the choose-username onboarding screen. The same
+ * format rule + uniqueness check that `upsert` enforces, exposed as a fast
+ * read so the client can render a typeahead indicator without going through
+ * the mutation (which would throw and surface as a dev LogBox error).
+ */
+export const usernameAvailable = query({
+  args: { username: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const usernameLower = args.username.trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,20}$/.test(usernameLower)) return false;
+
+    const identity = await ctx.auth.getUserIdentity();
+    const ownClerkUserId = identity?.subject;
+
+    const collision = await ctx.db
+      .query("profiles")
+      .withIndex("by_username_lower", (q) => q.eq("usernameLower", usernameLower))
+      .unique();
+    // The caller's own current username (if any) counts as available so the
+    // Settings editor can show "Available" for the value already in the input.
+    if (!collision) return true;
+    return collision.clerkUserId === ownClerkUserId;
+  },
+});
+
 export const upsert = mutation({
   args: {
     username: v.string(),
@@ -59,7 +86,10 @@ export const upsert = mutation({
       .withIndex("by_username_lower", (q) => q.eq("usernameLower", usernameLower))
       .unique();
     if (collision && collision.clerkUserId !== identity.subject) {
-      throw new Error(`username "${args.username}" is already taken`);
+      throw new ConvexError({
+        code: "username_taken",
+        message: `username "${args.username}" is already taken`,
+      });
     }
 
     const existing = await ctx.db
