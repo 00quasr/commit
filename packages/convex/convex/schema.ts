@@ -66,7 +66,6 @@ export default defineSchema({
     ownerId: v.id("profiles"),
     habitId: v.optional(v.id("habits")), // optional: ad-hoc drops without a habit are allowed
     caption: v.string(),
-    tags: v.array(v.string()),
     photoFileId: v.optional(v.id("_storage")),
     voiceFileId: v.optional(v.id("_storage")),
     dayKey: v.string(),

@@ -255,16 +255,6 @@ export const DropCard = memo(function DropCard({
       )}
 
       {drop.caption.length > 0 && <Text style={styles.caption}>{drop.caption}</Text>}
-
-      {drop.tags.length > 0 && (
-        <View style={styles.tagRow}>
-          {drop.tags.map((tag) => (
-            <Text key={tag} style={styles.tag}>
-              {tag}
-            </Text>
-          ))}
-        </View>
-      )}
     </View>
   );
 });
@@ -346,13 +336,4 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
   },
-  tagRow: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    paddingTop: 8,
-  },
-  tag: { color: "#888", fontSize: 13, fontFamily: fonts.mono },
 });
