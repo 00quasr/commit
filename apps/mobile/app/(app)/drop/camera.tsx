@@ -6,7 +6,6 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Linking,
   Platform,
   Pressable,
@@ -20,7 +19,6 @@ import { useDropDraft } from "@/lib/dropDraft";
 type Facing = "back" | "front";
 
 export default function CameraScreen() {
-  const photoUri = useDropDraft((s) => s.photoUri);
   const setPhoto = useDropDraft((s) => s.setPhoto);
   const cancel = useDropDraft((s) => s.cancel);
 
@@ -65,14 +63,13 @@ export default function CameraScreen() {
           format: SaveFormat.JPEG,
         });
         setPhoto(cropped.uri);
+        router.push("/drop/compose");
       }
     } finally {
       setCapturing(false);
     }
   };
 
-  const onUse = () => router.push("/drop/compose");
-  const onRetake = () => setPhoto(null);
   const onCancel = () => {
     cancel();
     router.replace("/(tabs)");
@@ -111,33 +108,6 @@ export default function CameraScreen() {
           <Text style={styles.cancelInline}>Cancel drop</Text>
         </Pressable>
       </SafeAreaView>
-    );
-  }
-
-  // Preview after capture.
-  if (photoUri) {
-    return (
-      <View style={styles.root}>
-        <SafeAreaView style={styles.previewWrap} edges={["top", "bottom"]}>
-          <View style={styles.previewFrameWrap}>
-            <View style={styles.previewFrame}>
-              <Image
-                source={{ uri: photoUri }}
-                style={StyleSheet.absoluteFillObject}
-                resizeMode="cover"
-              />
-            </View>
-          </View>
-          <View style={styles.previewButtons}>
-            <Pressable style={styles.retake} onPress={onRetake}>
-              <Text style={styles.retakeText}>Retake</Text>
-            </Pressable>
-            <Pressable style={styles.use} onPress={onUse}>
-              <Text style={styles.useText}>Use photo</Text>
-            </Pressable>
-          </View>
-        </SafeAreaView>
-      </View>
     );
   }
 
@@ -248,32 +218,4 @@ const styles = StyleSheet.create({
   },
   permButtonText: { color: colors.bg, fontSize: 16, fontFamily: fonts.sans, fontWeight: "600" },
   cancelInline: { color: "#666", fontSize: 14, fontFamily: fonts.sans },
-  // Preview
-  previewWrap: { flex: 1, justifyContent: "space-between", paddingHorizontal: 20 },
-  previewFrameWrap: { flex: 1, justifyContent: "center" },
-  previewFrame: {
-    width: "100%",
-    aspectRatio: 3 / 4,
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: "#111",
-  },
-  previewButtons: { flexDirection: "row", gap: 8, paddingBottom: 8, paddingTop: 16 },
-  retake: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#333",
-    alignItems: "center",
-  },
-  retakeText: { color: "#888", fontSize: 16, fontFamily: fonts.sans },
-  use: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: colors.fg,
-    alignItems: "center",
-  },
-  useText: { color: colors.bg, fontSize: 17, fontFamily: fonts.sans, fontWeight: "700" },
 });
