@@ -14,6 +14,7 @@ export const habitColors = [
   "#40B4C4", // teal
   "#D46BAA", // pink
   "#C4D454", // yellow-green
+  "#5B5BD6", // indigo
 ] as const;
 
 export type HabitColor = (typeof habitColors)[number];
