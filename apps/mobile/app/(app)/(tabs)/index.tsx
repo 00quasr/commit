@@ -17,6 +17,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -320,6 +321,10 @@ export default function Today() {
   );
 }
 
+const HEATMAP_COLS = 22;
+const CARD_MARGIN_H = 16;
+const CARD_PADDING_H = 16;
+
 function StatsAndHeatmap({
   stats,
   heatmapData,
@@ -329,20 +334,34 @@ function StatsAndHeatmap({
   heatmapData: { dayKey: string; total: number; habits: { habitId: string; color: string }[] }[];
   timezone: string;
 }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const heatmapWidth = screenWidth - CARD_MARGIN_H * 2 - CARD_PADDING_H * 2;
+  const streak = stats?.streak ?? 0;
+  const drops = stats?.totalDrops ?? 0;
   return (
     <View style={styles.statsSection}>
-      <View style={styles.statsGrid}>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats?.totalDrops ?? 0}</Text>
-          <Text style={styles.statLabel}>DROPS</Text>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardHeaderLabel}>YOUR COMMITMENT</Text>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats?.streak ?? 0}</Text>
-          <Text style={styles.statLabel}>STREAK</Text>
+        <Heatmap
+          data={heatmapData}
+          timezone={timezone}
+          width={heatmapWidth}
+          cols={HEATMAP_COLS}
+          paddingH={0}
+        />
+        <View style={styles.statsLine}>
+          <View style={styles.statBlock}>
+            <Text style={styles.statBigValue}>{streak}</Text>
+            <Text style={styles.statBigLabel}>DAY STREAK</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBlock}>
+            <Text style={styles.statBigValue}>{drops}</Text>
+            <Text style={styles.statBigLabel}>{drops === 1 ? "TOTAL DROP" : "TOTAL DROPS"}</Text>
+          </View>
         </View>
-      </View>
-      <View style={styles.heatmapWrap}>
-        <Heatmap data={heatmapData} timezone={timezone} />
       </View>
     </View>
   );
@@ -399,29 +418,81 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   statsSection: { paddingBottom: 8 },
-  statsGrid: { flexDirection: "row", paddingHorizontal: 20, gap: 8, marginBottom: 16 },
-  statBox: {
-    flex: 1,
+  card: {
+    marginHorizontal: CARD_MARGIN_H,
+    paddingHorizontal: CARD_PADDING_H,
+    paddingTop: 16,
+    paddingBottom: 18,
     backgroundColor: theme.blockElevated,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.borderHairline,
+  },
+  cardHeader: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
-  statValue: {
-    color: theme.text.primary,
-    fontSize: 22,
-    fontFamily: fonts.sans,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-  },
-  statLabel: {
+  cardHeaderLabel: {
     color: theme.text.tertiary,
     fontSize: 11,
     fontFamily: fonts.mono,
-    marginTop: 2,
-    letterSpacing: 0.5,
+    letterSpacing: 1.4,
   },
-  heatmapWrap: { marginBottom: 8 },
+  todayPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  todayPillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#4aa3ff",
+  },
+  todayPillText: {
+    color: theme.text.secondary,
+    fontSize: 10,
+    fontFamily: fonts.mono,
+    letterSpacing: 1.2,
+  },
+  statsLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    marginTop: 18,
+  },
+  statBlock: {
+    alignItems: "center",
+    flex: 1,
+  },
+  statBigValue: {
+    color: theme.text.primary,
+    fontSize: 32,
+    fontFamily: fonts.sans,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -0.8,
+    lineHeight: 36,
+  },
+  statBigLabel: {
+    color: theme.text.tertiary,
+    fontSize: 10,
+    fontFamily: fonts.mono,
+    letterSpacing: 1.4,
+    marginTop: 4,
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: "stretch",
+    backgroundColor: theme.divide,
+    marginVertical: 4,
+  },
   emptyScroll: { flexGrow: 1, paddingBottom: 120 },
   list: { paddingBottom: 180 },
   sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
