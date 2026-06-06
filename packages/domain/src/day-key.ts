@@ -46,3 +46,12 @@ function parseDayKey(key: string): [number, number, number] {
   }
   return [Number(match[1]), Number(match[2]) - 1, Number(match[3])];
 }
+
+/**
+ * Returns the day-of-week for a "YYYY-MM-DD" day key.
+ * 0 = Sunday, 1 = Monday, …, 6 = Saturday (matches Date.prototype.getUTCDay).
+ */
+export function dayKeyWeekday(dayKey: string): number {
+  const [year, month, day] = parseDayKey(dayKey);
+  return new Date(Date.UTC(year, month, day)).getUTCDay();
+}
