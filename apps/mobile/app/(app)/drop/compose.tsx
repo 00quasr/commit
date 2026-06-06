@@ -17,7 +17,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { useDropDraft } from "@/lib/dropDraft";
 
 const MAX_CAPTION = 100;
@@ -26,8 +25,6 @@ const TAG_PRESETS = ["@build", "@health", "@create", "@learn", "@ship"] as const
 export default function Compose() {
   const habitId = useDropDraft((s) => s.habitId);
   const photoUri = useDropDraft((s) => s.photoUri);
-  const voiceUri = useDropDraft((s) => s.voiceUri);
-  const setVoice = useDropDraft((s) => s.setVoice);
   const cancel = useDropDraft((s) => s.cancel);
 
   const generateUploadUrl = useMutation(api.drops.generateUploadUrl);
@@ -71,16 +68,10 @@ export default function Compose() {
     setError(null);
     try {
       let photoFileId: Id<"_storage"> | undefined;
-      let voiceFileId: Id<"_storage"> | undefined;
 
-      if (photoUri || voiceUri) {
+      if (photoUri) {
         setStage("uploading");
-        if (photoUri) {
-          photoFileId = await uploadFile(photoUri, "image/jpeg");
-        }
-        if (voiceUri) {
-          voiceFileId = await uploadFile(voiceUri, "audio/m4a");
-        }
+        photoFileId = await uploadFile(photoUri, "image/jpeg");
       }
 
       setStage("creating");
@@ -90,7 +81,6 @@ export default function Compose() {
         tags: [...selectedTags],
         visibility: "public",
         ...(photoFileId !== undefined ? { photoFileId } : {}),
-        ...(voiceFileId !== undefined ? { voiceFileId } : {}),
       });
       cancel();
       router.replace("/(tabs)");
@@ -139,9 +129,6 @@ export default function Compose() {
           <Text style={[styles.charCount, captionOver && styles.charCountOver]}>
             {caption.length}/{MAX_CAPTION}
           </Text>
-
-          <Text style={styles.fieldLabel}>Voice memo</Text>
-          <VoiceRecorder uri={voiceUri} onChange={setVoice} />
 
           <Text style={styles.fieldLabel}>Tags</Text>
           <View style={styles.chipRow}>
