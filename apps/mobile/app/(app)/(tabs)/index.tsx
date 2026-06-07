@@ -111,8 +111,21 @@ export default function Today() {
     } else if (selectedHabitId !== null) {
       setSelectedHabitId(id);
     } else {
+      // Mount the habit card overlay and HabitActionBar first, and let the native
+      // UI thread finish laying them out before kicking off the native-driven fade —
+      // starting the animation in the same tick as the mount makes the first frames
+      // stutter. The deselect path avoids this by keeping those views mounted
+      // throughout the animation and only tearing them down once it completes.
       setSelectedHabitId(id);
-      Animated.timing(selectionAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          Animated.timing(selectionAnim, {
+            toValue: 1,
+            duration: 220,
+            useNativeDriver: true,
+          }).start();
+        });
+      });
     }
   };
 
