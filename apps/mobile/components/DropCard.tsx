@@ -25,6 +25,10 @@ export interface DropCardProps {
   }>;
   habitColor?: string | null;
   scrollRef?: RefObject<FlatList | null>;
+  // Drives expo-image's load priority so cards near the top of the feed win
+  // the network/decode queue over ones further down — keeps top-down lazy
+  // loading invisible instead of photos popping in out of scroll order.
+  imagePriority?: "low" | "normal" | "high";
 }
 
 function timeAgo(ms: number): string {
@@ -81,6 +85,7 @@ export const DropCard = memo(function DropCard({
   photoUrl,
   authorHeatmap,
   scrollRef,
+  imagePriority = "normal",
 }: DropCardProps) {
   const posX = useSharedValue(0);
   const posY = useSharedValue(0);
@@ -235,6 +240,7 @@ export const DropCard = memo(function DropCard({
             style={styles.photo}
             contentFit="cover"
             transition={120}
+            priority={imagePriority}
           />
           <GestureDetector gesture={pan}>
             <Animated.View style={[styles.statsOverlay, animStyle]}>

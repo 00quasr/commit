@@ -25,6 +25,16 @@ type FeedItem =
   | { type: "drop"; createdAt: number; key: string; item: FeedDrop }
   | { type: "event"; createdAt: number; key: string; item: FeedEvent };
 
+// Cards near the top of the feed are visible the instant the screen mounts,
+// so they should win the image-loading queue over ones the user hasn't
+// scrolled to yet — this keeps photos appearing top-down instead of popping
+// in out of order.
+function imagePriorityForIndex(index: number): "low" | "normal" | "high" {
+  if (index < 2) return "high";
+  if (index < 6) return "normal";
+  return "low";
+}
+
 export default function Feed() {
   const result = useQuery(api.drops.feedForUser, {});
   const events = useQuery(api.activityEvents.feedForUser, {});
@@ -111,7 +121,7 @@ export default function Feed() {
         showsVerticalScrollIndicator={false}
         data={merged}
         keyExtractor={(item) => item.key}
-        renderItem={({ item }) =>
+        renderItem={({ item, index }) =>
           item.type === "drop" ? (
             <DropCard
               drop={item.item.drop}
@@ -120,6 +130,7 @@ export default function Feed() {
               authorHeatmap={item.item.authorHeatmap}
               habitColor={item.item.habitColor}
               scrollRef={listRef}
+              imagePriority={imagePriorityForIndex(index)}
             />
           ) : (
             <ActivityEventCard event={item.item} />
