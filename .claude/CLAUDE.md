@@ -27,10 +27,12 @@
 
 - After implementing a ticket, ask the user whether to test it in the iOS simulator before creating the PR
 - Always use the main repo's expo binary (not `npx expo`) and run from `apps/mobile`
-- **Always start Metro/Expo on port 8081.** If port 8081 is already in use, kill the process occupying it before starting — do not let Expo fall back to 8082 or any other port. Only use a different port if the user explicitly requests it:
+- **Use a fixed port per platform so iOS and Android can be tested in parallel without conflicts: iOS → port 8081, Android → port 8082.** If the relevant port is already in use, kill the process occupying it before starting — do not let Expo fall back to a different port. Only deviate if the user explicitly requests it:
   ```
-  lsof -ti:8081 | xargs kill -9 2>/dev/null || true
+  lsof -ti:8081 | xargs kill -9 2>/dev/null || true   # iOS
+  lsof -ti:8082 | xargs kill -9 2>/dev/null || true   # Android
   ```
+- For Android, mirror the iOS flow below but substitute `--port 8082` / `run:android` and the 8082 kill command — this lets an iOS ticket and an Android ticket be tested side by side.
 - **JS-only changes** (most tickets):
   1. Check if the app is already installed on the simulator. If not, run the native build once from the main repo:
      ```
