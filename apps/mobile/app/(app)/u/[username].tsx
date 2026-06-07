@@ -33,7 +33,17 @@ export default function UserProfile() {
   const { username: raw } = useLocalSearchParams<{ username: string }>();
   const username = (raw ?? "").replace(/^@/, "");
   const me = useQuery(api.profiles.me);
-  const target = useQuery(api.profiles.getByUsername, username ? { username } : "skip");
+  // `me` already carries the full profile shape (it's loaded before this
+  // screen is reachable, e.g. for the Today screen avatar). When the route
+  // is our own username, use it directly instead of waiting on a second
+  // `getByUsername` round trip — avoids a loading flash on every visit to
+  // our own profile.
+  const isOwnUsername = !!me && me.username === username;
+  const fetchedTarget = useQuery(
+    api.profiles.getByUsername,
+    username && !isOwnUsername ? { username } : "skip",
+  );
+  const target = isOwnUsername ? me : fetchedTarget;
   const status = useQuery(
     api.friendships.statusWith,
     target ? { otherProfileId: target._id } : "skip",
@@ -302,17 +312,16 @@ export default function UserProfile() {
         ) : null}
 
         {isSelf ? (
-          recent === undefined ? (
-            <ActivityIndicator color={theme.text.primary} style={{ marginTop: 16 }} />
-          ) : (
-            <MemoriesGrid
-              drops={recent}
-              timezone={target.timezone}
-              onViewAll={() => router.push("/(app)/memories")}
-              onViewArchive={() => router.push("/(app)/archived-habits")}
-              onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
-            />
-          )
+          // Render the grid layout immediately and let it fill in photos as
+          // `recent` resolves, rather than blocking the whole profile behind
+          // this (relatively heavy) year-heatmap query.
+          <MemoriesGrid
+            drops={recent ?? []}
+            timezone={target.timezone}
+            onViewAll={() => router.push("/(app)/memories")}
+            onViewArchive={() => router.push("/(app)/archived-habits")}
+            onTileTap={(dayKey) => router.push(`/(app)/day/${dayKey}`)}
+          />
         ) : null}
 
         {isFriendQuery ? (
