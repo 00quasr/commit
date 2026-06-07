@@ -17,11 +17,19 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Heatmap } from "@/components/Heatmap";
 import { MemoriesGrid } from "@/components/MemoriesGrid";
 
+const HEATMAP_COLS = 22;
+const CARD_MARGIN_H = 20;
+const CARD_PADDING_H = 16;
+
 export default function UserProfile() {
+  const { width: screenWidth } = useWindowDimensions();
+  const heatmapWidth = screenWidth - CARD_MARGIN_H * 2 - CARD_PADDING_H * 2;
   const { username: raw } = useLocalSearchParams<{ username: string }>();
   const username = (raw ?? "").replace(/^@/, "");
   const me = useQuery(api.profiles.me);
@@ -36,6 +44,15 @@ export default function UserProfile() {
   const recent = useQuery(
     api.drops.recentForProfile,
     isSelfQuery ? { profileId: target._id, limit: 14 } : "skip",
+  );
+  const isFriendQuery = !isSelfQuery && status?.status === "accepted";
+  const friendHeatmap = useQuery(
+    api.drops.heatmapForProfile,
+    target && isFriendQuery ? { profileId: target._id } : "skip",
+  );
+  const friendStats = useQuery(
+    api.userStats.forProfile,
+    target && isFriendQuery ? { profileId: target._id } : "skip",
   );
 
   const sendRequest = useMutation(api.friendships.request);
@@ -297,6 +314,40 @@ export default function UserProfile() {
             />
           )
         ) : null}
+
+        {isFriendQuery ? (
+          friendHeatmap === undefined ? (
+            <ActivityIndicator color={theme.text.primary} style={{ marginTop: 16 }} />
+          ) : (
+            <View style={styles.commitmentCard}>
+              <View style={styles.commitmentHeader}>
+                <Text style={styles.commitmentHeaderLabel}>
+                  {target.username.toUpperCase()}&apos;S COMMITMENT
+                </Text>
+              </View>
+              <Heatmap
+                data={friendHeatmap}
+                timezone={target.timezone}
+                width={heatmapWidth}
+                cols={HEATMAP_COLS}
+                paddingH={0}
+              />
+              <View style={styles.commitmentStatsLine}>
+                <View style={styles.commitmentStatBlock}>
+                  <Text style={styles.commitmentStatValue}>{friendStats?.totalDrops ?? 0}</Text>
+                  <Text style={styles.commitmentStatLabel}>
+                    {(friendStats?.totalDrops ?? 0) === 1 ? "TOTAL DROP" : "TOTAL DROPS"}
+                  </Text>
+                </View>
+                <View style={styles.commitmentStatDivider} />
+                <View style={styles.commitmentStatBlock}>
+                  <Text style={styles.commitmentStatValue}>{friendStats?.streak ?? 0}</Text>
+                  <Text style={styles.commitmentStatLabel}>DAY STREAK</Text>
+                </View>
+              </View>
+            </View>
+          )
+        ) : null}
       </ScrollView>
 
       {cropData && (
@@ -444,5 +495,60 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: fonts.sans,
     fontWeight: "500",
+  },
+  commitmentCard: {
+    marginHorizontal: CARD_MARGIN_H,
+    paddingHorizontal: CARD_PADDING_H,
+    paddingTop: 16,
+    paddingBottom: 18,
+    backgroundColor: theme.blockElevated,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.borderHairline,
+  },
+  commitmentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  commitmentHeaderLabel: {
+    color: theme.text.tertiary,
+    fontSize: 11,
+    fontFamily: fonts.mono,
+    letterSpacing: 1.4,
+    flex: 1,
+  },
+  commitmentStatsLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    marginTop: 18,
+  },
+  commitmentStatBlock: {
+    alignItems: "center",
+    flex: 1,
+  },
+  commitmentStatValue: {
+    color: theme.text.primary,
+    fontSize: 22,
+    fontFamily: fonts.sans,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -0.4,
+    lineHeight: 26,
+  },
+  commitmentStatLabel: {
+    color: theme.text.tertiary,
+    fontSize: 10,
+    fontFamily: fonts.mono,
+    letterSpacing: 1.4,
+    marginTop: 4,
+  },
+  commitmentStatDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: "stretch",
+    backgroundColor: theme.divide,
+    marginVertical: 4,
   },
 });
