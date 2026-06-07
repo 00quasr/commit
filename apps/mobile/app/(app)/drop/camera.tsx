@@ -6,7 +6,6 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Linking,
   Platform,
   Pressable,
@@ -14,6 +13,12 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropDraft } from "@/lib/dropDraft";
 
@@ -30,7 +35,8 @@ export default function CameraScreen() {
   const [capturing, setCapturing] = useState(false);
   const [facing, setFacing] = useState<Facing>("back");
   const [flash, setFlash] = useState<FlashMode>("auto");
-  const screenFlashOpacity = useRef(new Animated.Value(0)).current;
+  const screenFlashOpacity = useSharedValue(0);
+  const screenFlashStyle = useAnimatedStyle(() => ({ opacity: screenFlashOpacity.value }));
 
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
@@ -46,11 +52,9 @@ export default function CameraScreen() {
     try {
       if (useScreenFlash) {
         await new Promise<void>((resolve) => {
-          Animated.timing(screenFlashOpacity, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-          }).start(() => resolve());
+          screenFlashOpacity.value = withTiming(1, { duration: 100 }, () => {
+            runOnJS(resolve)();
+          });
         });
       }
       const photo = await cameraRef.current.takePictureAsync({
@@ -58,11 +62,7 @@ export default function CameraScreen() {
         skipProcessing: false,
       });
       if (useScreenFlash) {
-        Animated.timing(screenFlashOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
+        screenFlashOpacity.value = withTiming(0, { duration: 200 });
       }
       if (photo?.uri) {
         const { width: pw, height: ph } = photo;
@@ -153,7 +153,7 @@ export default function CameraScreen() {
           {/* Front camera has no physical flash — briefly flash the screen white instead */}
           <Animated.View
             pointerEvents="none"
-            style={[styles.screenFlashOverlay, { opacity: screenFlashOpacity }]}
+            style={[styles.screenFlashOverlay, screenFlashStyle]}
           />
         </View>
       </View>
