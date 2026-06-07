@@ -144,6 +144,7 @@ export default function CameraScreen() {
             style={StyleSheet.absoluteFillObject}
             facing={facing}
             flash={flash}
+            animateShutter={false}
             {...(Platform.OS === "android" ? { ratio: "4:3" } : {})}
           />
           {/* Front camera has no physical flash — briefly flash the screen white instead */}
