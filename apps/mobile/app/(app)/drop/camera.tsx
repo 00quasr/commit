@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Linking,
   Platform,
   Pressable,
@@ -17,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropDraft } from "@/lib/dropDraft";
 
 type Facing = "back" | "front";
+type FlashMode = "auto" | "on" | "off";
 
 export default function CameraScreen() {
   const setPhoto = useDropDraft((s) => s.setPhoto);
@@ -26,6 +28,8 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [facing, setFacing] = useState<Facing>("back");
+  const [flash, setFlash] = useState<FlashMode>("auto");
+  const screenFlashOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
@@ -36,11 +40,28 @@ export default function CameraScreen() {
   const onCapture = async () => {
     if (!cameraRef.current || capturing) return;
     setCapturing(true);
+    const useScreenFlash = facing === "front" && flash !== "off";
     try {
+      if (useScreenFlash) {
+        await new Promise<void>((resolve) => {
+          Animated.timing(screenFlashOpacity, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }).start(() => resolve());
+        });
+      }
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         skipProcessing: false,
       });
+      if (useScreenFlash) {
+        Animated.timing(screenFlashOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      }
       if (photo?.uri) {
         const { width: pw, height: ph } = photo;
         const targetRatio = 3 / 4;
@@ -77,6 +98,7 @@ export default function CameraScreen() {
   const toggleFacing = () => {
     if (!capturing) setFacing((f) => (f === "back" ? "front" : "back"));
   };
+  const cycleFlash = () => setFlash((f) => (f === "auto" ? "on" : f === "on" ? "off" : "auto"));
 
   if (!permission) {
     return (
@@ -121,7 +143,13 @@ export default function CameraScreen() {
             ref={cameraRef}
             style={StyleSheet.absoluteFillObject}
             facing={facing}
+            flash={flash}
             {...(Platform.OS === "android" ? { ratio: "4:3" } : {})}
+          />
+          {/* Front camera has no physical flash — briefly flash the screen white instead */}
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.screenFlashOverlay, { opacity: screenFlashOpacity }]}
           />
         </View>
       </View>
@@ -135,8 +163,29 @@ export default function CameraScreen() {
         </View>
 
         <View style={styles.bottomRow}>
-          {/* Left spacer mirrors flip button for centering */}
-          <View style={styles.sideSlot} />
+          <View style={styles.sideSlot}>
+            <Pressable
+              onPress={cycleFlash}
+              hitSlop={12}
+              disabled={capturing}
+              style={({ pressed }) => [pressed && { opacity: 0.6 }, capturing && { opacity: 0.4 }]}
+            >
+              <View style={styles.flashIconWrap}>
+                <Ionicons
+                  name={
+                    flash === "on"
+                      ? "flash"
+                      : flash === "off"
+                        ? "flash-off-outline"
+                        : "flash-outline"
+                  }
+                  size={26}
+                  color={colors.fg}
+                />
+                {flash === "auto" && <Text style={styles.flashAutoBadge}>A</Text>}
+              </View>
+            </Pressable>
+          </View>
 
           <Pressable
             style={({ pressed }) => [
@@ -171,6 +220,7 @@ const styles = StyleSheet.create({
   // Live camera
   cameraContainer: { flex: 1, justifyContent: "center" },
   cameraFrame: { width: "100%", aspectRatio: 3 / 4, overflow: "hidden" },
+  screenFlashOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "#fff" },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "space-between",
@@ -190,6 +240,16 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sideSlot: { width: 60, alignItems: "center" },
+  flashIconWrap: { alignItems: "center", justifyContent: "center" },
+  flashAutoBadge: {
+    position: "absolute",
+    bottom: -3,
+    right: -4,
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.fg,
+    fontFamily: fonts.sans,
+  },
   captureBtn: {
     width: 80,
     height: 80,
