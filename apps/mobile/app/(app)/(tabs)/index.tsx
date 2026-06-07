@@ -81,6 +81,13 @@ export default function Today() {
     [allHabits, selectedHabitId],
   );
 
+  // Pre-mount the habit-card overlay and HabitActionBar with a placeholder habit
+  // (off-screen, hidden via the same `selectionAnim`-driven transforms/opacity) so
+  // their layout is already settled before the user ever taps a habit. This lets
+  // selectHabit start the show animation immediately, matching the hide animation,
+  // instead of waiting for a freshly-mounted view to lay itself out.
+  const displayHabit = selectedHabitId === null ? (allHabits?.[0] ?? null) : selectedHabit;
+
   const habitTotalDrops = useMemo(
     () => habitHeatmapData?.reduce((sum, e) => sum + e.total, 0) ?? 0,
     [habitHeatmapData],
@@ -111,21 +118,14 @@ export default function Today() {
     } else if (selectedHabitId !== null) {
       setSelectedHabitId(id);
     } else {
-      // Mount the habit card overlay and HabitActionBar first, and let the native
-      // UI thread finish laying them out before kicking off the native-driven fade —
-      // starting the animation in the same tick as the mount makes the first frames
-      // stutter. The deselect path avoids this by keeping those views mounted
-      // throughout the animation and only tearing them down once it completes.
+      // Start the native-driven animation before triggering the state update —
+      // setSelectedHabitId schedules a heavier re-render (new heatmap query, action
+      // bar content, list update) whose native UI updates would otherwise queue
+      // ahead of the animation-start command on the bridge, delaying the visible
+      // start on Android. Firing .start() first matches deselectHabit's ordering,
+      // which already feels instant.
+      Animated.timing(selectionAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
       setSelectedHabitId(id);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          Animated.timing(selectionAnim, {
-            toValue: 1,
-            duration: 220,
-            useNativeDriver: true,
-          }).start();
-        });
-      });
     }
   };
 
@@ -184,7 +184,7 @@ export default function Today() {
       stats={stats}
       cumulativeHeatmapData={heatmapData ?? []}
       habitHeatmapData={habitHeatmapData}
-      selectedHabit={selectedHabit}
+      displayHabit={displayHabit}
       habitTotalDrops={habitTotalDrops}
       timezone={me?.timezone ?? "UTC"}
       cumulativeOpacity={cumulativeOpacity}
@@ -296,16 +296,16 @@ export default function Today() {
         translateY={bottomBarTranslateY}
       />
 
-      {selectedHabit && (
+      {displayHabit && (
         <HabitActionBar
-          habit={selectedHabit}
+          habit={displayHabit}
           translateY={actionBarTranslateY}
           isVisible={selectedHabitId !== null}
           onDrop={() => {
-            startDropDraft(selectedHabit._id);
+            startDropDraft(displayHabit._id);
             router.push("/drop/camera");
           }}
-          onViewDrops={() => router.push(`/(app)/habit/drops/${selectedHabit._id}`)}
+          onViewDrops={() => router.push(`/(app)/habit/drops/${displayHabit._id}`)}
           onClose={deselectHabit}
         />
       )}
@@ -428,7 +428,7 @@ function StatsArea({
   stats,
   cumulativeHeatmapData,
   habitHeatmapData,
-  selectedHabit,
+  displayHabit,
   habitTotalDrops,
   timezone,
   cumulativeOpacity,
@@ -438,7 +438,7 @@ function StatsArea({
   stats: { streak: number; totalDrops: number } | null | undefined;
   cumulativeHeatmapData: HeatmapEntry[];
   habitHeatmapData: HeatmapEntry[] | undefined;
-  selectedHabit: HabitLike | null;
+  displayHabit: HabitLike | null;
   habitTotalDrops: number;
   timezone: string;
   cumulativeOpacity: Animated.AnimatedInterpolation<number>;
@@ -484,7 +484,7 @@ function StatsArea({
           </View>
         </Animated.View>
 
-        {selectedHabit && (
+        {displayHabit && (
           <Animated.View
             style={{ position: "absolute", left: 0, right: 0, top: 0, opacity: habitCardOpacity }}
             pointerEvents="none"
@@ -492,7 +492,7 @@ function StatsArea({
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardHeaderLabel} numberOfLines={1}>
-                  {selectedHabit.text.toUpperCase()}
+                  {displayHabit.text.toUpperCase()}
                 </Text>
               </View>
               <Heatmap
@@ -512,7 +512,7 @@ function StatsArea({
                 <View style={styles.statDivider} />
                 <View style={styles.statBlock}>
                   <Text style={styles.statBigValue} numberOfLines={1}>
-                    {selectedHabit.lastDropDayKey ?? "—"}
+                    {displayHabit.lastDropDayKey ?? "—"}
                   </Text>
                   <Text style={styles.statBigLabel}>LAST DROP</Text>
                 </View>
