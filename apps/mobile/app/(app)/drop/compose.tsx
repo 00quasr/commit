@@ -3,7 +3,7 @@ import type { Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation } from "convex/react";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -33,6 +33,9 @@ export default function Compose() {
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<"idle" | "uploading" | "creating">("idle");
   const [error, setError] = useState<string | null>(null);
+  // Synchronous guard against double-taps: `busy` only takes effect after a
+  // re-render, which is too slow to block two onPress calls fired back to back.
+  const submittingRef = useRef(false);
 
   const uploadFile = async (uri: string, contentType: string): Promise<Id<"_storage">> => {
     const uploadUrl = await generateUploadUrl();
@@ -51,8 +54,9 @@ export default function Compose() {
   };
 
   const onSubmit = async () => {
-    if (!habitId || busy) return;
+    if (!habitId || submittingRef.current) return;
     if (caption.length > MAX_CAPTION) return;
+    submittingRef.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -72,9 +76,12 @@ export default function Compose() {
       });
       cancel();
       router.replace("/(tabs)");
+      // Stay busy/disabled on success — the screen is still mounted and
+      // tappable during the replace transition, and resetting here re-enables
+      // "Drop" long enough for a second tap to create a duplicate drop.
     } catch (err) {
       setError(err instanceof Error ? err.message : "Drop failed");
-    } finally {
+      submittingRef.current = false;
       setBusy(false);
       setStage("idle");
     }
