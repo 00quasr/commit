@@ -26,6 +26,7 @@ export default function CameraScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
+  const capturingRef = useRef(false);
   const [capturing, setCapturing] = useState(false);
   const [facing, setFacing] = useState<Facing>("back");
   const [flash, setFlash] = useState<FlashMode>("auto");
@@ -38,7 +39,8 @@ export default function CameraScreen() {
   }, [permission, requestPermission]);
 
   const onCapture = async () => {
-    if (!cameraRef.current || capturing) return;
+    if (!cameraRef.current || capturingRef.current) return;
+    capturingRef.current = true;
     setCapturing(true);
     const useScreenFlash = facing === "front" && flash !== "off";
     try {
@@ -87,6 +89,7 @@ export default function CameraScreen() {
         router.push("/drop/compose");
       }
     } finally {
+      capturingRef.current = false;
       setCapturing(false);
     }
   };
