@@ -195,7 +195,7 @@ export default function Today() {
               {incomingCount > 0 ? <View style={styles.badge} /> : null}
             </Pressable>
             <Pressable
-              onPress={() => router.push("/profile")}
+              onPress={() => router.push(me?.username ? `/u/${me.username}` : "/profile")}
               style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
               hitSlop={8}
             >
