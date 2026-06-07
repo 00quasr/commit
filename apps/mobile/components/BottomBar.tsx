@@ -1,6 +1,12 @@
 import { fonts } from "@commit/ui-tokens";
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
+import Animated, {
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 
@@ -8,13 +14,13 @@ export interface BottomBarProps {
   onAdd: () => void;
   disabled?: boolean;
   hint?: string;
-  translateY?: Animated.AnimatedInterpolation<number>;
+  translateY?: SharedValue<number>;
 }
 
 export function BottomBar({ onAdd, disabled, hint, translateY }: BottomBarProps) {
   const insets = useSafeAreaInsets();
-  const hintOpacity = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const hintOpacity = useSharedValue(0);
+  const scaleAnim = useSharedValue(1);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -27,54 +33,40 @@ export function BottomBar({ onAdd, disabled, hint, translateY }: BottomBarProps)
   const flashHint = () => {
     if (!hint) return;
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    Animated.timing(hintOpacity, {
-      toValue: 1,
-      duration: 0,
-      useNativeDriver: true,
-    }).start();
+    hintOpacity.value = 1;
     hideTimer.current = setTimeout(() => {
-      Animated.timing(hintOpacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      hintOpacity.value = withTiming(0, { duration: 300 });
     }, 1200);
   };
 
   const onPressIn = () => {
-    Animated.timing(scaleAnim, {
-      toValue: 0.93,
-      duration: 100,
-      useNativeDriver: true,
-    }).start();
+    scaleAnim.value = withTiming(0.93, { duration: 100 });
   };
 
   const onPressOut = () => {
-    Animated.timing(scaleAnim, {
-      toValue: 1,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
+    scaleAnim.value = withTiming(1, { duration: 150 });
   };
+
+  const slideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY?.value ?? 0 }],
+  }));
+  const hintStyle = useAnimatedStyle(() => ({ opacity: hintOpacity.value }));
+  const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scaleAnim.value }] }));
 
   const bottomOffset = insets.bottom + 12;
   return (
     <Animated.View
-      style={[
-        styles.wrap,
-        { bottom: bottomOffset },
-        translateY ? { transform: [{ translateY }] } : undefined,
-      ]}
+      style={[styles.wrap, { bottom: bottomOffset }, slideStyle]}
       pointerEvents="box-none"
     >
       {hint ? (
-        <Animated.View style={[styles.hintWrap, { opacity: hintOpacity }]} pointerEvents="none">
+        <Animated.View style={[styles.hintWrap, hintStyle]} pointerEvents="none">
           <Text style={styles.hint} numberOfLines={2}>
             {hint}
           </Text>
         </Animated.View>
       ) : null}
-      <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, disabled && { opacity: 0.3 }]}>
+      <Animated.View style={[scaleStyle, disabled && { opacity: 0.3 }]}>
         <Pressable
           style={styles.btn}
           onPress={disabled ? flashHint : onAdd}

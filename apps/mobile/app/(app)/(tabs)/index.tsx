@@ -5,9 +5,8 @@ import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useRef, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  Animated,
   ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
@@ -21,6 +20,15 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import Animated, {
+  type SharedValue,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
@@ -69,7 +77,10 @@ export default function Today() {
   const [busy, setBusy] = useState(false);
 
   const [selectedHabitId, setSelectedHabitId] = useState<Id<"habits"> | null>(null);
-  const selectionAnim = useRef(new Animated.Value(0)).current;
+  // 0 = no habit selected (cumulative card + bottom bar shown),
+  // 1 = a habit is selected (habit card + action bar shown). Drives every
+  // selection transition on the UI thread via Reanimated worklets.
+  const selectionAnim = useSharedValue(0);
 
   const habitHeatmapData = useQuery(
     api.drops.heatmapForHabit,
@@ -93,47 +104,34 @@ export default function Today() {
     [habitHeatmapData],
   );
 
-  const bottomBarTranslateY = selectionAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, BAR_SLIDE_DIST],
-  });
-  const actionBarTranslateY = selectionAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [BAR_SLIDE_DIST, 0],
-  });
-  const cumulativeOpacity = selectionAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0],
-  });
-  const habitCardOpacity = selectionAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
+  // Bottom bar slides down out of view as a habit is selected; the action bar
+  // slides up into its place. Derived on the UI thread and handed to BottomBar
+  // as a shared value so it stays decoupled from BAR_SLIDE_DIST.
+  const bottomBarTranslateY = useDerivedValue(() => selectionAnim.value * BAR_SLIDE_DIST);
+
+  const hideSelection = () => {
+    selectionAnim.value = withTiming(0, { duration: 220 }, (finished) => {
+      if (finished) runOnJS(setSelectedHabitId)(null);
+    });
+  };
 
   const selectHabit = (id: Id<"habits">) => {
     if (selectedHabitId === id) {
-      Animated.timing(selectionAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(
-        () => setSelectedHabitId(null),
-      );
+      hideSelection();
     } else if (selectedHabitId !== null) {
       setSelectedHabitId(id);
     } else {
-      // Start the native-driven animation before triggering the state update —
-      // setSelectedHabitId schedules a heavier re-render (new heatmap query, action
-      // bar content, list update) whose native UI updates would otherwise queue
-      // ahead of the animation-start command on the bridge, delaying the visible
-      // start on Android. Firing .start() first matches deselectHabit's ordering,
-      // which already feels instant.
-      Animated.timing(selectionAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+      // Reanimated runs this animation as a worklet on the UI thread, so it starts
+      // immediately regardless of when the (heavier) setSelectedHabitId re-render
+      // lands — no bridge "start" command to queue behind native UI updates. This
+      // is exactly the class of Android-only lag the migration away from Animated
+      // was meant to remove (see COM-107 / COM-114), so ordering no longer matters.
+      selectionAnim.value = withTiming(1, { duration: 220 });
       setSelectedHabitId(id);
     }
   };
 
-  const deselectHabit = () => {
-    Animated.timing(selectionAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() =>
-      setSelectedHabitId(null),
-    );
-  };
+  const deselectHabit = hideSelection;
 
   const sections = useMemo(() => {
     if (!dueHabits || !allHabits) return [];
@@ -187,8 +185,7 @@ export default function Today() {
       displayHabit={displayHabit}
       habitTotalDrops={habitTotalDrops}
       timezone={me?.timezone ?? "UTC"}
-      cumulativeOpacity={cumulativeOpacity}
-      habitCardOpacity={habitCardOpacity}
+      selectionAnim={selectionAnim}
       isHabitSelected={selectedHabitId !== null}
     />
   );
@@ -299,7 +296,7 @@ export default function Today() {
       {displayHabit && (
         <HabitActionBar
           habit={displayHabit}
-          translateY={actionBarTranslateY}
+          selectionAnim={selectionAnim}
           isVisible={selectedHabitId !== null}
           onDrop={() => {
             startDropDraft(displayHabit._id);
@@ -431,8 +428,7 @@ function StatsArea({
   displayHabit,
   habitTotalDrops,
   timezone,
-  cumulativeOpacity,
-  habitCardOpacity,
+  selectionAnim,
   isHabitSelected,
 }: {
   stats: { streak: number; totalDrops: number } | null | undefined;
@@ -441,8 +437,7 @@ function StatsArea({
   displayHabit: HabitLike | null;
   habitTotalDrops: number;
   timezone: string;
-  cumulativeOpacity: Animated.AnimatedInterpolation<number>;
-  habitCardOpacity: Animated.AnimatedInterpolation<number>;
+  selectionAnim: SharedValue<number>;
   isHabitSelected: boolean;
 }) {
   const { width: screenWidth } = useWindowDimensions();
@@ -450,11 +445,14 @@ function StatsArea({
   const streak = stats?.streak ?? 0;
   const drops = stats?.totalDrops ?? 0;
 
+  const cumulativeStyle = useAnimatedStyle(() => ({ opacity: 1 - selectionAnim.value }));
+  const habitCardStyle = useAnimatedStyle(() => ({ opacity: selectionAnim.value }));
+
   return (
     <View style={styles.statsSection}>
       <View>
         <Animated.View
-          style={{ opacity: cumulativeOpacity }}
+          style={cumulativeStyle}
           pointerEvents={isHabitSelected ? "none" : "box-none"}
         >
           <View style={styles.card}>
@@ -486,7 +484,7 @@ function StatsArea({
 
         {displayHabit && (
           <Animated.View
-            style={{ position: "absolute", left: 0, right: 0, top: 0, opacity: habitCardOpacity }}
+            style={[{ position: "absolute", left: 0, right: 0, top: 0 }, habitCardStyle]}
             pointerEvents="none"
           >
             <View style={styles.card}>
@@ -527,26 +525,27 @@ function StatsArea({
 
 function HabitActionBar({
   habit,
-  translateY,
+  selectionAnim,
   isVisible,
   onDrop,
   onViewDrops,
   onClose,
 }: {
   habit: HabitLike;
-  translateY: Animated.AnimatedInterpolation<number>;
+  selectionAnim: SharedValue<number>;
   isVisible: boolean;
   onDrop: () => void;
   onViewDrops: () => void;
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  // Slides up from off-screen (BAR_SLIDE_DIST) to rest (0) as selection completes.
+  const slideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(selectionAnim.value, [0, 1], [BAR_SLIDE_DIST, 0]) }],
+  }));
   return (
     <Animated.View
-      style={[
-        styles.habitActionBar,
-        { paddingBottom: insets.bottom + 12, transform: [{ translateY }] },
-      ]}
+      style={[styles.habitActionBar, { paddingBottom: insets.bottom + 12 }, slideStyle]}
       pointerEvents={isVisible ? "box-none" : "none"}
     >
       <View style={styles.habitBarHeader}>
