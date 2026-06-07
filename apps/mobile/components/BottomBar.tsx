@@ -27,14 +27,18 @@ export function BottomBar({ onAdd, disabled, hint, translateY }: BottomBarProps)
   const flashHint = () => {
     if (!hint) return;
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    hintOpacity.setValue(1);
+    Animated.timing(hintOpacity, {
+      toValue: 1,
+      duration: 0,
+      useNativeDriver: true,
+    }).start();
     hideTimer.current = setTimeout(() => {
       Animated.timing(hintOpacity, {
         toValue: 0,
-        duration: 400,
+        duration: 300,
         useNativeDriver: true,
       }).start();
-    }, 1600);
+    }, 1200);
   };
 
   const onPressIn = () => {
