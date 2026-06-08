@@ -99,8 +99,11 @@ export default function Today() {
   // instead of waiting for a freshly-mounted view to lay itself out.
   const displayHabit = selectedHabitId === null ? (allHabits?.[0] ?? null) : selectedHabit;
 
+  // null while the habit's heatmap query is still loading — keep it distinct from
+  // a real total of 0 so the UI can withhold the number instead of flashing "0"
+  // before the correct count lands (COM-122).
   const habitTotalDrops = useMemo(
-    () => habitHeatmapData?.reduce((sum, e) => sum + e.total, 0) ?? 0,
+    () => (habitHeatmapData ? habitHeatmapData.reduce((sum, e) => sum + e.total, 0) : null),
     [habitHeatmapData],
   );
 
@@ -435,7 +438,7 @@ function StatsArea({
   cumulativeHeatmapData: HeatmapEntry[];
   habitHeatmapData: HeatmapEntry[] | undefined;
   displayHabit: HabitLike | null;
-  habitTotalDrops: number;
+  habitTotalDrops: number | null;
   timezone: string;
   selectionAnim: SharedValue<number>;
   isHabitSelected: boolean;
@@ -502,7 +505,7 @@ function StatsArea({
               />
               <View style={styles.statsLine}>
                 <View style={styles.statBlock}>
-                  <Text style={styles.statBigValue}>{habitTotalDrops}</Text>
+                  <Text style={styles.statBigValue}>{habitTotalDrops ?? "—"}</Text>
                   <Text style={styles.statBigLabel}>
                     {habitTotalDrops === 1 ? "TOTAL DROP" : "TOTAL DROPS"}
                   </Text>
