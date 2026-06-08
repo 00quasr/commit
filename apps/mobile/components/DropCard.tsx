@@ -24,6 +24,7 @@ export interface DropCardProps {
     habits: { habitId: string; color: string }[];
   }>;
   habitColor?: string | null;
+  habitText?: string | null;
   scrollRef?: RefObject<FlatList | null>;
 }
 
@@ -80,6 +81,7 @@ export const DropCard = memo(function DropCard({
   author,
   photoUrl,
   authorHeatmap,
+  habitText,
   scrollRef,
 }: DropCardProps) {
   const posX = useSharedValue(0);
@@ -214,6 +216,11 @@ export const DropCard = memo(function DropCard({
             </Text>
             <Text style={styles.time}>{timeAgo(drop.createdAt)}</Text>
           </View>
+          {habitText && (
+            <Text style={styles.habitName} numberOfLines={1}>
+              {habitText}
+            </Text>
+          )}
         </View>
         {!photoUrl && statsPanel}
       </View>
@@ -290,6 +297,15 @@ const styles = StyleSheet.create({
   username: { color: colors.fg, fontSize: 15, fontFamily: fonts.sans, fontWeight: "600" },
   usernameSlim: { fontSize: 13 },
   time: { color: "#666", fontSize: 12, fontFamily: fonts.mono, marginTop: 2 },
+  habitName: {
+    marginLeft: "auto",
+    maxWidth: 180,
+    color: colors.fg,
+    fontSize: 14,
+    fontFamily: fonts.sans,
+    fontWeight: "600",
+    textAlign: "right",
+  },
   statsPanel: {
     flexDirection: "row",
     backgroundColor: "#141414",

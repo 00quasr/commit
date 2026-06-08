@@ -56,6 +56,7 @@ export default function DayDetail() {
               photoUrl={item.photoUrl}
               authorHeatmap={item.authorHeatmap}
               habitColor={item.habitColor}
+              habitText={item.habitText}
             />
           )}
         />

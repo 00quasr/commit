@@ -23,6 +23,15 @@
   pnpm install
   ```
 
+# Convex
+
+- When a ticket touches `packages/convex/convex/**` (schema, queries, mutations, validators), `convex dev` must be running so the dev deployment receives the change. Without it, the client keeps reading the previous function signatures and new fields come back as `undefined`.
+- Check `ps aux | grep "convex dev"` before testing. If it's not running, start it from the worktree:
+  ```
+  cd packages/convex && /Users/keanuklestil/Documents/GitHub/commit/node_modules/.bin/convex dev
+  ```
+- `convex mcp start` is a separate process for the Claude MCP integration — it does NOT push schema/function changes.
+
 # Testing
 
 - After implementing a ticket, ask the user whether to test it in the iOS simulator before creating the PR
