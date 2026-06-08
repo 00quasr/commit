@@ -55,6 +55,9 @@ const WEEKDAYS: Array<{ label: string; day: number }> = [
 
 const BAR_SLIDE_DIST = 200;
 const SHEET_SLIDE_DIST = 600;
+// Roughly the duration of the slide transitions to /friends and /u/[username] —
+// long enough to swallow a burst of taps without delaying a deliberate next push.
+const NAV_DEBOUNCE_MS = 600;
 
 export default function Today() {
   const me = useQuery(api.profiles.me);
@@ -83,6 +86,19 @@ export default function Today() {
   // 1 = a habit is selected (habit card + action bar shown). Drives every
   // selection transition on the UI thread via Reanimated worklets.
   const selectionAnim = useSharedValue(0);
+
+  // Synchronous guard against rapid repeated taps stacking duplicate screens:
+  // router.push doesn't resolve when the screen is mounted, so a useState flag
+  // would still allow a second tap through before the first re-render commits.
+  const navLockRef = useRef(false);
+  const navigateOnce = (href: Parameters<typeof router.push>[0]) => {
+    if (navLockRef.current) return;
+    navLockRef.current = true;
+    router.push(href);
+    setTimeout(() => {
+      navLockRef.current = false;
+    }, NAV_DEBOUNCE_MS);
+  };
 
   const habitHeatmapData = useQuery(
     api.drops.heatmapForHabit,
@@ -245,7 +261,7 @@ export default function Today() {
           <Text style={styles.title}>Today</Text>
           <View style={styles.headerActions}>
             <Pressable
-              onPress={() => router.push("/friends")}
+              onPress={() => navigateOnce("/friends")}
               style={({ pressed }) => [styles.friendsButton, pressed && { opacity: 0.7 }]}
               hitSlop={8}
             >
@@ -253,7 +269,7 @@ export default function Today() {
               {incomingCount > 0 ? <View style={styles.badge} /> : null}
             </Pressable>
             <Pressable
-              onPress={() => router.push(me?.username ? `/u/${me.username}` : "/profile")}
+              onPress={() => navigateOnce(me?.username ? `/u/${me.username}` : "/profile")}
               style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
               hitSlop={8}
             >
