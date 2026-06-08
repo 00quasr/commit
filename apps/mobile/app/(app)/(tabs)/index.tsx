@@ -5,11 +5,10 @@ import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -56,6 +55,7 @@ const WEEKDAYS: Array<{ label: string; day: number }> = [
 ];
 
 const BAR_SLIDE_DIST = 200;
+const SHEET_SLIDE_DIST = 600;
 
 export default function Today() {
   const me = useQuery(api.profiles.me);
@@ -75,6 +75,9 @@ export default function Today() {
   const [draftCustomDays, setDraftCustomDays] = useState<number[]>([1]);
   const [draftColor, setDraftColor] = useState<string>(habitColors[0]);
   const [busy, setBusy] = useState(false);
+
+  const textInputRef = useRef<TextInput>(null);
+  const sheetAnim = useSharedValue(0);
 
   const [selectedHabitId, setSelectedHabitId] = useState<Id<"habits"> | null>(null);
   // 0 = no habit selected (cumulative card + bottom bar shown),
@@ -108,6 +111,27 @@ export default function Today() {
   // slides up into its place. Derived on the UI thread and handed to BottomBar
   // as a shared value so it stays decoupled from BAR_SLIDE_DIST.
   const bottomBarTranslateY = useDerivedValue(() => selectionAnim.value * BAR_SLIDE_DIST);
+
+  const sheetBackdropStyle = useAnimatedStyle(() => ({
+    opacity: sheetAnim.value,
+  }));
+
+  const sheetSlideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(sheetAnim.value, [0, 1], [SHEET_SLIDE_DIST, 0]) }],
+  }));
+
+  const openAddSheet = () => {
+    setShowAdd(true);
+    sheetAnim.value = withTiming(1, { duration: 280 });
+    setTimeout(() => textInputRef.current?.focus(), 80);
+  };
+
+  const closeAddSheet = () => {
+    textInputRef.current?.blur();
+    sheetAnim.value = withTiming(0, { duration: 220 }, (finished) => {
+      if (finished) runOnJS(setShowAdd)(false);
+    });
+  };
 
   const hideSelection = () => {
     selectionAnim.value = withTiming(0, { duration: 220 }, (finished) => {
@@ -160,7 +184,7 @@ export default function Today() {
       setDraftCycle(1);
       setDraftCustomDays([1]);
       setDraftColor(habitColors[0]);
-      setShowAdd(false);
+      closeAddSheet();
     } finally {
       setBusy(false);
     }
@@ -287,7 +311,7 @@ export default function Today() {
       )}
 
       <BottomBar
-        onAdd={() => setShowAdd(true)}
+        onAdd={openAddSheet}
         disabled={atMax}
         hint={atMax ? "Max. 3 habits. Archive one to add a new one." : undefined}
         translateY={bottomBarTranslateY}
@@ -307,22 +331,27 @@ export default function Today() {
         />
       )}
 
-      <Modal visible={showAdd} animationType="slide" transparent>
+      {/* Sheet overlay — always mounted so the Reanimated animation starts on the UI
+          thread before any JS-side mounting work, eliminating the Android lag */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents={showAdd ? "auto" : "none"}>
+        <Animated.View style={[styles.overlayBackdrop, sheetBackdropStyle]}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeAddSheet} />
+        </Animated.View>
         <KeyboardAvoidingView
-          style={styles.modalRoot}
+          style={styles.overlayKAV}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
+          pointerEvents="box-none"
         >
-          <Pressable style={styles.backdrop} onPress={() => setShowAdd(false)} />
-          <View style={styles.sheet}>
+          <Animated.View style={[styles.sheet, sheetSlideStyle]}>
             <Text style={styles.sheetTitle}>New commitment</Text>
 
             <TextInput
+              ref={textInputRef}
               style={styles.input}
               value={draftText}
               onChangeText={setDraftText}
               placeholder="What do you want to keep doing?"
               placeholderTextColor={theme.text.muted}
-              autoFocus
               maxLength={280}
               multiline
             />
@@ -380,7 +409,7 @@ export default function Today() {
             </View>
 
             <View style={styles.sheetButtons}>
-              <Pressable style={styles.cancel} onPress={() => setShowAdd(false)}>
+              <Pressable style={styles.cancel} onPress={closeAddSheet}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
               <Pressable
@@ -401,9 +430,9 @@ export default function Today() {
                 <Text style={styles.addText}>Add</Text>
               </Pressable>
             </View>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
-      </Modal>
+      </View>
     </SafeAreaView>
   );
 }
@@ -778,8 +807,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
-  modalRoot: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
+  overlayBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
+  overlayKAV: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
   sheet: {
     backgroundColor: "#0e0e0e",
     borderTopLeftRadius: 24,
