@@ -52,6 +52,7 @@ export default function HabitDrops() {
               photoUrl={item.photoUrl}
               authorHeatmap={item.authorHeatmap}
               habitColor={item.habitColor}
+              habitText={item.habitText}
             />
           )}
         />

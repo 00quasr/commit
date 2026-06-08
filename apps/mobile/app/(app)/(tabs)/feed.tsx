@@ -129,6 +129,7 @@ export default function Feed() {
               photoUrl={item.item.photoUrl}
               authorHeatmap={item.item.authorHeatmap}
               habitColor={item.item.habitColor}
+              habitText={item.item.habitText}
               scrollRef={listRef}
               imagePriority={imagePriorityForIndex(index)}
             />

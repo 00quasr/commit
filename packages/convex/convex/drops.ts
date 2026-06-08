@@ -74,6 +74,7 @@ const enrichedDropShape = v.object({
   // Year-long drop heatmap for the author — powers the MiniHeatmap in DropCard.
   authorHeatmap: v.array(heatmapEntryShape),
   habitColor: v.union(v.string(), v.null()),
+  habitText: v.union(v.string(), v.null()),
 });
 
 async function fetchHabitColorMap(
@@ -306,7 +307,14 @@ export const feedForUser = query({
         const authorHeatmap = buildMultiColorHeatmap(authorDrops, colorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
-        return { drop, author, photoUrl, authorHeatmap, habitColor };
+        return {
+          drop,
+          author,
+          photoUrl,
+          authorHeatmap,
+          habitColor,
+          habitText: habit?.text ?? null,
+        };
       }),
     );
     const filtered = enriched.filter((e): e is NonNullable<typeof e> => e !== null);
@@ -496,7 +504,14 @@ export const forDay = query({
         const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
-        return { drop, author, photoUrl, authorHeatmap, habitColor };
+        return {
+          drop,
+          author,
+          photoUrl,
+          authorHeatmap,
+          habitColor,
+          habitText: habit?.text ?? null,
+        };
       }),
     );
     return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
@@ -529,7 +544,14 @@ export const forHabit = query({
         const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
-        return { drop, author, photoUrl, authorHeatmap, habitColor };
+        return {
+          drop,
+          author,
+          photoUrl,
+          authorHeatmap,
+          habitColor,
+          habitText: habit?.text ?? null,
+        };
       }),
     );
     return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
@@ -584,7 +606,14 @@ export const recentForProfile = query({
         const authorHeatmap = buildMultiColorHeatmap(profileDrops, profileColorMap);
         const habit = drop.habitId ? await ctx.db.get(drop.habitId) : null;
         const habitColor = drop.habitId ? resolveHabitColor(drop.habitId, habit?.color) : null;
-        return { drop, author, photoUrl, authorHeatmap, habitColor };
+        return {
+          drop,
+          author,
+          photoUrl,
+          authorHeatmap,
+          habitColor,
+          habitText: habit?.text ?? null,
+        };
       }),
     );
     return enriched.filter((e): e is NonNullable<typeof e> => e !== null);
