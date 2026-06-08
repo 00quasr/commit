@@ -9,9 +9,7 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +18,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { KeyboardAvoidingView, KeyboardProvider } from "react-native-keyboard-controller";
 import Animated, {
   type SharedValue,
   interpolate,
@@ -335,101 +334,102 @@ export default function Today() {
       )}
 
       <Modal visible={showAdd} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          style={styles.modalRoot}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <Pressable style={styles.backdrop} onPress={() => setShowAdd(false)} />
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>New commitment</Text>
+        {/* RN Modal renders in a separate hierarchy on iOS; the root KeyboardProvider
+            doesn't reach it, so re-provide one here for KeyboardAvoidingView to work. */}
+        <KeyboardProvider>
+          <KeyboardAvoidingView style={styles.modalRoot} behavior="padding">
+            <Pressable style={styles.backdrop} onPress={() => setShowAdd(false)} />
+            <View style={styles.sheet}>
+              <Text style={styles.sheetTitle}>New commitment</Text>
 
-            <TextInput
-              style={styles.input}
-              value={draftText}
-              onChangeText={setDraftText}
-              placeholder="What do you want to keep doing?"
-              placeholderTextColor={theme.text.muted}
-              autoFocus
-              maxLength={280}
-              multiline
-            />
+              <TextInput
+                style={styles.input}
+                value={draftText}
+                onChangeText={setDraftText}
+                placeholder="What do you want to keep doing?"
+                placeholderTextColor={theme.text.muted}
+                autoFocus
+                maxLength={280}
+                multiline
+              />
 
-            <Text style={styles.fieldLabel}>Cycle</Text>
-            <View style={styles.chipRow}>
-              {CYCLE_PRESETS.map((c) => (
-                <Pressable
-                  key={c.days}
-                  style={[styles.chip, draftCycle === c.days && styles.chipActive]}
-                  onPress={() => setDraftCycle(c.days)}
-                >
-                  <Text style={[styles.chipText, draftCycle === c.days && styles.chipTextActive]}>
-                    {c.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            {draftCycle === CUSTOM_CYCLE_SENTINEL && (
-              <View style={styles.dayRow}>
-                {WEEKDAYS.map(({ label, day }) => {
-                  const active = draftCustomDays.includes(day);
-                  return (
-                    <Pressable
-                      key={day}
-                      style={[styles.dayChip, active && styles.dayChipActive]}
-                      onPress={() =>
-                        setDraftCustomDays((prev) =>
-                          active ? prev.filter((d) => d !== day) : [...prev, day],
-                        )
-                      }
-                    >
-                      <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
-                        {label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+              <Text style={styles.fieldLabel}>Cycle</Text>
+              <View style={styles.chipRow}>
+                {CYCLE_PRESETS.map((c) => (
+                  <Pressable
+                    key={c.days}
+                    style={[styles.chip, draftCycle === c.days && styles.chipActive]}
+                    onPress={() => setDraftCycle(c.days)}
+                  >
+                    <Text style={[styles.chipText, draftCycle === c.days && styles.chipTextActive]}>
+                      {c.label}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
-            )}
+              {draftCycle === CUSTOM_CYCLE_SENTINEL && (
+                <View style={styles.dayRow}>
+                  {WEEKDAYS.map(({ label, day }) => {
+                    const active = draftCustomDays.includes(day);
+                    return (
+                      <Pressable
+                        key={day}
+                        style={[styles.dayChip, active && styles.dayChipActive]}
+                        onPress={() =>
+                          setDraftCustomDays((prev) =>
+                            active ? prev.filter((d) => d !== day) : [...prev, day],
+                          )
+                        }
+                      >
+                        <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
 
-            <Text style={styles.fieldLabel}>Color</Text>
-            <View style={styles.colorRow}>
-              {habitColors.map((color) => (
+              <Text style={styles.fieldLabel}>Color</Text>
+              <View style={styles.colorRow}>
+                {habitColors.map((color) => (
+                  <Pressable
+                    key={color}
+                    onPress={() => setDraftColor(color)}
+                    style={[
+                      styles.colorSwatch,
+                      { backgroundColor: color },
+                      draftColor === color && styles.colorSwatchActive,
+                    ]}
+                  />
+                ))}
+              </View>
+
+              <View style={styles.sheetButtons}>
+                <Pressable style={styles.cancel} onPress={() => setShowAdd(false)}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </Pressable>
                 <Pressable
-                  key={color}
-                  onPress={() => setDraftColor(color)}
                   style={[
-                    styles.colorSwatch,
-                    { backgroundColor: color },
-                    draftColor === color && styles.colorSwatchActive,
+                    styles.add,
+                    (!draftText.trim() ||
+                      busy ||
+                      (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)) &&
+                      styles.addDisabled,
                   ]}
-                />
-              ))}
-            </View>
-
-            <View style={styles.sheetButtons}>
-              <Pressable style={styles.cancel} onPress={() => setShowAdd(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.add,
-                  (!draftText.trim() ||
+                  onPress={() => void onAdd()}
+                  disabled={
+                    !draftText.trim() ||
                     busy ||
-                    (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)) &&
-                    styles.addDisabled,
-                ]}
-                onPress={() => void onAdd()}
-                disabled={
-                  !draftText.trim() ||
-                  busy ||
-                  (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)
-                }
-              >
-                <Text style={styles.addText}>Add</Text>
-              </Pressable>
+                    (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)
+                  }
+                >
+                  <Text style={styles.addText}>Add</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </KeyboardProvider>
       </Modal>
     </SafeAreaView>
   );
