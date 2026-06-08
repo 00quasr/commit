@@ -1,7 +1,8 @@
+import { dayKeyInTimezone } from "@commit/domain";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
-import { requireCallerProfile, resolveProfile } from "./_helpers";
+import { dayKeyForCaller, requireCallerProfile, resolveProfile } from "./_helpers";
 
 const profileShape = v.object({
   _id: v.id("profiles"),
@@ -48,6 +49,7 @@ export const feedForUser = query({
   returns: v.array(eventShape),
   handler: async (ctx) => {
     const me = await requireCallerProfile(ctx);
+    const todayDayKey = dayKeyForCaller(me);
 
     // Resolve accepted-friend profile IDs (mirroring friendships.listForUser).
     const [lowMatches, highMatches] = await Promise.all([
@@ -117,6 +119,15 @@ export const feedForUser = query({
         // Suppress habit_created events whose habit row has been deleted —
         // the event would otherwise render with no habit metadata.
         if (event.kind === "habit_created" && !habit) return null;
+
+        // habit_created events expire after the day they were created (viewer's tz)
+        // so the feed doesn't accumulate stale "started X" entries.
+        if (
+          event.kind === "habit_created" &&
+          dayKeyInTimezone(event.createdAt, me.timezone) !== todayDayKey
+        ) {
+          return null;
+        }
 
         const streak =
           event.kind === "streak_milestone" &&
