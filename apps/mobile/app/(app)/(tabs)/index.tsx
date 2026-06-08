@@ -88,15 +88,28 @@ export default function Today() {
   // Lock is cleared when Today regains focus (user navigated back) — more robust
   // than a fixed timeout, which would allow a second push if taps span > 600ms.
   const navLockRef = useRef(false);
+  const navLockAtRef = useRef(0);
   useFocusEffect(
     useCallback(() => {
-      navLockRef.current = false;
+      // Clear the lock when Today genuinely regains focus (user navigated back),
+      // but ignore the transient focus event Android's native-stack fires on the
+      // previous screen *during* a card slide-in — that arrives within a few
+      // hundred ms of the push and would otherwise reset the lock mid tap-burst,
+      // letting a second tap stack a duplicate screen (Android-only; iOS doesn't
+      // emit it). A real return is always well after this window.
+      if (Date.now() - navLockAtRef.current > 500) navLockRef.current = false;
     }, []),
   );
   const navigateOnce = (href: Parameters<typeof router.push>[0]) => {
     if (navLockRef.current) return;
     navLockRef.current = true;
+    navLockAtRef.current = Date.now();
     router.push(href);
+    // Safety fallback so the button can never get permanently stuck if the
+    // focus-based reset is somehow missed.
+    setTimeout(() => {
+      navLockRef.current = false;
+    }, 800);
   };
 
   const habitHeatmapData = useQuery(
