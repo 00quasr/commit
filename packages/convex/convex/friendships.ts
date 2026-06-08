@@ -10,6 +10,7 @@ const profileShape = v.object({
   username: v.string(),
   usernameLower: v.optional(v.string()),
   avatarUrl: v.optional(v.string()),
+  avatarFileId: v.optional(v.id("_storage")),
   timezone: v.string(),
   createdAt: v.number(),
 });
