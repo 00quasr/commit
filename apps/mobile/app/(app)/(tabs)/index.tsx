@@ -40,7 +40,7 @@ import { useDropDraft } from "@/lib/dropDraft";
 const CYCLE_PRESETS: Array<{ label: string; days: number }> = [
   { label: "Daily", days: 1 },
   { label: "Every 2 days", days: 2 },
-  { label: "Custom days", days: 0 },
+  { label: "Custom", days: 0 },
 ];
 
 const CUSTOM_CYCLE_SENTINEL = 0;
@@ -814,8 +814,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
-  chipRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  dayRow: { flexDirection: "row", gap: 6, marginTop: 10 },
+  chipRow: { flexDirection: "row", justifyContent: "space-between" },
+  dayRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 10,
+  },
   dayChip: {
     flex: 1,
     aspectRatio: 1,
@@ -833,7 +837,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   dayChipTextActive: { color: theme.bg },
-  colorRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  colorRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   colorSwatch: { width: 28, height: 28, borderRadius: 14 },
   colorSwatchActive: { borderWidth: 2.5, borderColor: "#ffffff" },
   chip: {
