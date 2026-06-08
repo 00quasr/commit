@@ -269,7 +269,7 @@ export default function Today() {
               {incomingCount > 0 ? <View style={styles.badge} /> : null}
             </Pressable>
             <Pressable
-              onPress={() => navigateOnce(me?.username ? `/u/${me.username}` : "/profile")}
+              onPress={() => me?.username && navigateOnce(`/u/${me.username}`)}
               style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
               hitSlop={8}
             >
