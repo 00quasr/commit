@@ -5,8 +5,8 @@ import { fonts, habitColors } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useMemo, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -55,9 +55,6 @@ const WEEKDAYS: Array<{ label: string; day: number }> = [
 
 const BAR_SLIDE_DIST = 200;
 const SHEET_SLIDE_DIST = 600;
-// Roughly the duration of the slide transitions to /friends and /u/[username] —
-// long enough to swallow a burst of taps without delaying a deliberate next push.
-const NAV_DEBOUNCE_MS = 600;
 
 export default function Today() {
   const me = useQuery(api.profiles.me);
@@ -87,17 +84,19 @@ export default function Today() {
   // selection transition on the UI thread via Reanimated worklets.
   const selectionAnim = useSharedValue(0);
 
-  // Synchronous guard against rapid repeated taps stacking duplicate screens:
-  // router.push doesn't resolve when the screen is mounted, so a useState flag
-  // would still allow a second tap through before the first re-render commits.
+  // Synchronous guard against rapid repeated taps stacking duplicate screens.
+  // Lock is cleared when Today regains focus (user navigated back) — more robust
+  // than a fixed timeout, which would allow a second push if taps span > 600ms.
   const navLockRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      navLockRef.current = false;
+    }, []),
+  );
   const navigateOnce = (href: Parameters<typeof router.push>[0]) => {
     if (navLockRef.current) return;
     navLockRef.current = true;
     router.push(href);
-    setTimeout(() => {
-      navLockRef.current = false;
-    }, NAV_DEBOUNCE_MS);
   };
 
   const habitHeatmapData = useQuery(
