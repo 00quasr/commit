@@ -17,6 +17,7 @@
     "@commit/convex": "workspace:*",
     "@commit/domain": "workspace:*",
     "@commit/ui-tokens": "workspace:*",
+    "@shopify/flash-list": "2.0.2",
     "convex": "^1.17.4",
     "expo": "~54.0.34",
     "expo-audio": "~1.1.1",

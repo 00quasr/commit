@@ -1,5 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { api } from "@commit/convex/api";
+import { FlashList } from "@shopify/flash-list";
 import { fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
@@ -8,7 +9,6 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -439,11 +439,10 @@ function TimezonePicker({
           style={styles.tzSearch}
         />
 
-        <FlatList
+        <FlashList
           data={visibleZones}
           keyExtractor={(item) => item}
           keyboardShouldPersistTaps="handled"
-          initialNumToRender={30}
           renderItem={({ item }) => {
             const isCurrent = item === current;
             const { city, region } = parseTimezone(item);

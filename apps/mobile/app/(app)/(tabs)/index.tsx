@@ -1,5 +1,6 @@
 import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
+import { FlashList } from "@shopify/flash-list";
 import { fonts, habitColors } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
@@ -13,7 +14,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  SectionList,
   StyleSheet,
   Text,
   TextInput,
@@ -143,6 +143,25 @@ export default function Today() {
     ].filter((s) => s.data.length > 0);
   }, [dueHabits, allHabits]);
 
+  // FlashList recycles a single flat array, so the SectionList's sections are
+  // flattened into typed `header`/`row` entries. `firstInSection` lets each row
+  // draw its own top separator (replacing ItemSeparatorComponent) without one
+  // appearing directly under a section header.
+  const listData = useMemo(
+    () =>
+      sections.flatMap((section) => [
+        { kind: "header" as const, key: `header:${section.title}`, title: section.title },
+        ...section.data.map((habit, i) => ({
+          kind: "row" as const,
+          key: habit._id,
+          habit,
+          sectionTitle: section.title,
+          firstInSection: i === 0,
+        })),
+      ]),
+    [sections],
+  );
+
   const onAdd = async () => {
     const text = draftText.trim();
     if (!text || busy) return;
@@ -239,50 +258,55 @@ export default function Today() {
           </View>
         </ScrollView>
       ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item._id}
+        <FlashList
+          data={listData}
+          keyExtractor={(item) => item.key}
+          getItemType={(item) => item.kind}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={statsArea}
-          renderSectionHeader={({ section }) => (
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
-            </View>
-          )}
-          renderItem={({ item, section }) => {
+          renderItem={({ item }) => {
+            if (item.kind === "header") {
+              return (
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>{item.title.toUpperCase()}</Text>
+                </View>
+              );
+            }
+            const habit = item.habit;
             const doneToday =
-              section.title === "Not due today" && item.lastDropDayKey !== undefined;
+              item.sectionTitle === "Not due today" && habit.lastDropDayKey !== undefined;
             return (
-              <Swipeable
-                renderRightActions={() => (
-                  <View style={styles.archiveAction}>
-                    <Text style={styles.archiveText}>Archive</Text>
-                  </View>
-                )}
-                onSwipeableRightOpen={() => {
-                  void archiveHabit({ habitId: item._id });
-                }}
-                rightThreshold={48}
-                friction={1.6}
-              >
-                <HabitRow
-                  text={item.text}
-                  cycleDays={item.cycleDays}
-                  customDays={item.customDays}
-                  color={item.color}
-                  doneToday={doneToday}
-                  onPress={() => selectHabit(item._id)}
-                  onLongPress={() => {
-                    startDropDraft(item._id);
-                    router.push("/drop/camera");
+              <>
+                {item.firstInSection ? null : <View style={styles.sep} />}
+                <Swipeable
+                  renderRightActions={() => (
+                    <View style={styles.archiveAction}>
+                      <Text style={styles.archiveText}>Archive</Text>
+                    </View>
+                  )}
+                  onSwipeableRightOpen={() => {
+                    void archiveHabit({ habitId: habit._id });
                   }}
-                />
-              </Swipeable>
+                  rightThreshold={48}
+                  friction={1.6}
+                >
+                  <HabitRow
+                    text={habit.text}
+                    cycleDays={habit.cycleDays}
+                    customDays={habit.customDays}
+                    color={habit.color}
+                    doneToday={doneToday}
+                    onPress={() => selectHabit(habit._id)}
+                    onLongPress={() => {
+                      startDropDraft(habit._id);
+                      router.push("/drop/camera");
+                    }}
+                  />
+                </Swipeable>
+              </>
             );
           }}
-          ItemSeparatorComponent={() => <View style={styles.sep} />}
           contentContainerStyle={styles.list}
-          stickySectionHeadersEnabled={false}
         />
       )}
 

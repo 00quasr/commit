@@ -1,9 +1,10 @@
 import { api } from "@commit/convex/api";
+import { FlashList } from "@shopify/flash-list";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useQuery } from "convex/react";
 import { router, useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DropCard } from "@/components/DropCard";
 
@@ -45,7 +46,7 @@ export default function DayDetail() {
           <Text style={styles.empty}>No drops on this day.</Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={drops}
           keyExtractor={(item) => item.drop._id}
           contentContainerStyle={styles.list}

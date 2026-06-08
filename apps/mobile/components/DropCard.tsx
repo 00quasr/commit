@@ -1,8 +1,9 @@
 import type { Doc } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
+import { type FlashListRef } from "@shopify/flash-list";
 import { Image } from "expo-image";
 import { memo, useRef, type RefObject } from "react";
-import { StyleSheet, Text, View, type FlatList } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   cancelAnimation,
@@ -25,7 +26,11 @@ export interface DropCardProps {
   }>;
   habitColor?: string | null;
   habitText?: string | null;
-  scrollRef?: RefObject<FlatList | null>;
+  // Typed loosely (any element type) so any screen's FlashList ref can be handed
+  // in for gesture coordination; the value is only forwarded to RNGH's
+  // blocksExternalGesture, never read as a typed list here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  scrollRef?: RefObject<FlashListRef<any> | null>;
   // Drives expo-image's load priority so cards near the top of the feed win
   // the network/decode queue over ones further down — keeps top-down lazy
   // loading invisible instead of photos popping in out of scroll order.
