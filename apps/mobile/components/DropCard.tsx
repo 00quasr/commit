@@ -16,7 +16,9 @@ import { FeedMiniHeatmap } from "./FeedMiniHeatmap";
 
 export interface DropCardProps {
   drop: Doc<"drops">;
-  author: Doc<"profiles">;
+  // Resolved, client-safe profile (no clerkUserId/avatarFileId) — what the
+  // feed/day/habit queries return via resolveProfile (COM-136).
+  author: Omit<Doc<"profiles">, "clerkUserId" | "avatarFileId">;
   photoUrl: string | null;
   authorHeatmap: Array<{
     dayKey: string;

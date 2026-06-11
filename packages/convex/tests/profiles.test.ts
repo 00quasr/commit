@@ -69,4 +69,39 @@ describe("profiles.getByUsername", () => {
     const result = await t.query(api.profiles.getByUsername, { username: "@" });
     expect(result).toBeNull();
   });
+
+  test("does not leak clerkUserId in the returned shape (COM-136)", async () => {
+    const t = makeTest();
+    await seedProfile(t, "alice");
+
+    const result = await t.query(api.profiles.getByUsername, { username: "alice" });
+    expect(result).not.toBeNull();
+    expect(result).not.toHaveProperty("clerkUserId");
+  });
+});
+
+describe("profiles.searchByUsernamePrefix (COM-136)", () => {
+  test("requires authentication", async () => {
+    const t = makeTest();
+    await seedProfile(t, "alice");
+
+    await expect(t.query(api.profiles.searchByUsernamePrefix, { prefix: "al" })).rejects.toThrow(
+      /unauthenticated/i,
+    );
+  });
+
+  test("returns prefix matches for a signed-in caller, excluding self, without clerkUserId", async () => {
+    const t = makeTest();
+    await seedProfile(t, "alice");
+    await seedProfile(t, "alan");
+    await seedProfile(t, "bob");
+
+    const results = await t
+      .withIdentity({ subject: "user_alice" })
+      .query(api.profiles.searchByUsernamePrefix, { prefix: "al" });
+
+    // "al" matches alice + alan; self (alice) is excluded.
+    expect(results.map((p) => p.username)).toEqual(["alan"]);
+    expect(results[0]).not.toHaveProperty("clerkUserId");
+  });
 });
