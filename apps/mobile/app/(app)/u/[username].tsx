@@ -2,6 +2,7 @@ import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
+import { deleteLocalFile } from "@/lib/media";
 import { AvatarCropModal } from "@/components/AvatarCropModal";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
@@ -136,10 +137,14 @@ export default function UserProfile() {
 
   const onCropCancel = () => {
     uploadUrlRef.current = null;
+    // Drop the downsampled source temp we created for the crop modal (COM-139).
+    deleteLocalFile(cropData?.uri);
     setCropData(null);
   };
 
   const onCropConfirm = async (croppedUri: string) => {
+    // Captured before clearing — the downsampled source temp to clean up after.
+    const sourceUri = cropData?.uri;
     setCropData(null);
     setUploadingAvatar(true);
     try {
@@ -159,6 +164,9 @@ export default function UserProfile() {
       Alert.alert("Error", "Could not update profile picture. Please try again.");
     } finally {
       setUploadingAvatar(false);
+      // Remove the cropped temp + downsampled source temp from cache (COM-139).
+      deleteLocalFile(croppedUri);
+      if (sourceUri && sourceUri !== croppedUri) deleteLocalFile(sourceUri);
     }
   };
 

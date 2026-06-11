@@ -32,6 +32,24 @@ export const generateUploadUrl = mutation({
   },
 });
 
+/**
+ * Deletes an uploaded storage object that never got linked to a drop — e.g.
+ * the photo uploaded successfully but the subsequent `drops.create` failed.
+ * Without this the blob lingers in storage forever and escapes GDPR purge
+ * (`accounts.purgeMyData` only walks existing drop rows). Auth-gated; storage
+ * ids are opaque and single-use, so a caller can only target ids it just
+ * received from `generateUploadUrl`. (COM-139)
+ */
+export const discardUpload = mutation({
+  args: { storageId: v.id("_storage") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireCallerProfile(ctx);
+    await ctx.storage.delete(args.storageId);
+    return null;
+  },
+});
+
 const dropShape = v.object({
   _id: v.id("drops"),
   _creationTime: v.number(),

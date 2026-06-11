@@ -18,18 +18,20 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropDraft } from "@/lib/dropDraft";
+import { deleteLocalFile } from "@/lib/media";
 
 const MAX_CAPTION = 100;
 
 export default function Compose() {
   const habitId = useDropDraft((s) => s.habitId);
   const photoUri = useDropDraft((s) => s.photoUri);
+  const caption = useDropDraft((s) => s.caption);
+  const setCaption = useDropDraft((s) => s.setCaption);
   const cancel = useDropDraft((s) => s.cancel);
 
   const generateUploadUrl = useMutation(api.drops.generateUploadUrl);
   const createDrop = useMutation(api.drops.create);
-
-  const [caption, setCaption] = useState("");
+  const discardUpload = useMutation(api.drops.discardUpload);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<"idle" | "uploading" | "creating">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -59,12 +61,12 @@ export default function Compose() {
     submittingRef.current = true;
     setBusy(true);
     setError(null);
+    // Tracked outside the try so the catch can clean up an orphaned upload.
+    let uploadedFileId: Id<"_storage"> | undefined;
     try {
-      let photoFileId: Id<"_storage"> | undefined;
-
       if (photoUri) {
         setStage("uploading");
-        photoFileId = await uploadFile(photoUri, "image/jpeg");
+        uploadedFileId = await uploadFile(photoUri, "image/jpeg");
       }
 
       setStage("creating");
@@ -72,14 +74,22 @@ export default function Compose() {
         habitId,
         caption,
         visibility: "public",
-        ...(photoFileId !== undefined ? { photoFileId } : {}),
+        ...(uploadedFileId !== undefined ? { photoFileId: uploadedFileId } : {}),
       });
+      // Drop persisted — the local capture is uploaded and safe to evict.
+      deleteLocalFile(photoUri);
       cancel();
       router.replace("/(tabs)");
       // Stay busy/disabled on success — the screen is still mounted and
       // tappable during the replace transition, and resetting here re-enables
       // "Drop" long enough for a second tap to create a duplicate drop.
     } catch (err) {
+      // The photo uploaded but createDrop failed → delete the orphaned blob so
+      // it doesn't linger in storage (and escape GDPR purge). Best-effort; keep
+      // the local photo so the user can retry the drop.
+      if (uploadedFileId !== undefined) {
+        await discardUpload({ storageId: uploadedFileId }).catch(() => {});
+      }
       setError(err instanceof Error ? err.message : "Drop failed");
       submittingRef.current = false;
       setBusy(false);
