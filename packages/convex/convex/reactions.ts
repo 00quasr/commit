@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { requireCallerProfile } from "./_helpers";
+import { assertCanViewDrop, requireCallerProfile } from "./_helpers";
 
 const emojiValidator = v.union(v.literal("🔥"), v.literal("💪"), v.literal("👀"), v.literal("💯"));
 
@@ -24,6 +24,8 @@ export const toggle = mutation({
     if (!drop) {
       throw new Error("Drop not found");
     }
+    // Can't react to a drop you aren't allowed to see (COM-135).
+    await assertCanViewDrop(ctx, me, drop);
 
     const existing = await ctx.db
       .query("reactions")
