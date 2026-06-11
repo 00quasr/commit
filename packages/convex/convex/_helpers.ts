@@ -1,4 +1,5 @@
 import { dayKeyInTimezone } from "@commit/domain";
+import { ConvexError } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -65,6 +66,36 @@ export async function requireCallerProfile(ctx: QueryCtx | MutationCtx): Promise
  */
 export function dayKeyForCaller(profile: Doc<"profiles">): string {
   return dayKeyInTimezone(Date.now(), profile.timezone);
+}
+
+/**
+ * Throws a ConvexError if `tz` is not a valid IANA timezone. Constructing an
+ * `Intl.DateTimeFormat` with an unknown/malformed zone throws a RangeError, so
+ * this accepts exactly the set of zones that won't later throw in the day-key /
+ * heatmap / streak paths that read a stored timezone. Call it on every write of
+ * a client-supplied timezone (e.g. `profiles.upsert`).
+ */
+export function assertValidTimezone(tz: string): void {
+  try {
+    new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format();
+  } catch {
+    throw new ConvexError({ code: "invalid_timezone", message: `invalid timezone "${tz}"` });
+  }
+}
+
+/**
+ * Like `dayKeyInTimezone` but never throws on a malformed stored timezone —
+ * falls back to UTC instead. Used at cross-user fan-out points (e.g. building a
+ * friend's heatmap from *their* stored timezone) so one user's bad timezone can
+ * never throw another user's feed/profile query. New writes are validated by
+ * `assertValidTimezone`; this guards any legacy/edge-case bad data.
+ */
+export function safeDayKeyInTimezone(unixMs: number, tz: string): string {
+  try {
+    return dayKeyInTimezone(unixMs, tz);
+  } catch {
+    return dayKeyInTimezone(unixMs, "UTC");
+  }
 }
 
 /**
@@ -142,7 +173,7 @@ export async function fetchDropsForHeatmap(
   timezone: string,
 ): Promise<Doc<"drops">[]> {
   const sinceMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
-  const sinceDayKey = dayKeyInTimezone(sinceMs, timezone);
+  const sinceDayKey = safeDayKeyInTimezone(sinceMs, timezone);
   return ctx.db
     .query("drops")
     .withIndex("by_owner_day", (q) => q.eq("ownerId", profileId).gte("dayKey", sinceDayKey))

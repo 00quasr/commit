@@ -70,3 +70,32 @@ describe("profiles.getByUsername", () => {
     expect(result).toBeNull();
   });
 });
+
+describe("profiles.upsert timezone validation", () => {
+  test("rejects a malformed timezone instead of storing it", async () => {
+    const t = makeTest();
+    await expect(
+      t
+        .withIdentity({ subject: "user_mallory" })
+        .mutation(api.profiles.upsert, { username: "mallory", timezone: "Not/AZone" }),
+    ).rejects.toThrow(/invalid timezone/);
+  });
+
+  test("accepts a valid IANA timezone and stores it", async () => {
+    const t = makeTest();
+    const id = await t
+      .withIdentity({ subject: "user_dana" })
+      .mutation(api.profiles.upsert, { username: "dana", timezone: "Europe/Berlin" });
+    const profile = await t.run((ctx) => ctx.db.get(id));
+    expect(profile?.timezone).toBe("Europe/Berlin");
+  });
+
+  test("accepts UTC", async () => {
+    const t = makeTest();
+    const id = await t
+      .withIdentity({ subject: "user_uli" })
+      .mutation(api.profiles.upsert, { username: "uli", timezone: "UTC" });
+    const profile = await t.run((ctx) => ctx.db.get(id));
+    expect(profile?.timezone).toBe("UTC");
+  });
+});

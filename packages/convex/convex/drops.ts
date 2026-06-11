@@ -13,6 +13,7 @@ import {
   hasDroppedToday,
   requireCallerProfile,
   resolveProfile,
+  safeDayKeyInTimezone,
 } from "./_helpers";
 
 /**
@@ -346,7 +347,9 @@ export const heatmapForProfile = query({
     const profile = await ctx.db.get(args.profileId);
     if (!profile) return [];
     const sinceMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
-    const sinceDayKey = dayKeyInTimezone(sinceMs, profile.timezone);
+    // safe* so a malformed stored timezone on the viewed profile can't throw
+    // this query for whoever is looking at it (COM-133).
+    const sinceDayKey = safeDayKeyInTimezone(sinceMs, profile.timezone);
     const drops = await ctx.db
       .query("drops")
       .withIndex("by_owner_day", (q) => q.eq("ownerId", args.profileId).gte("dayKey", sinceDayKey))

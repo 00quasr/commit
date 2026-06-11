@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireCallerProfile, resolveProfile } from "./_helpers";
+import { assertValidTimezone, requireCallerProfile, resolveProfile } from "./_helpers";
 
 const profileShape = v.object({
   _id: v.id("profiles"),
@@ -67,6 +67,12 @@ export const upsert = mutation({
     if (!identity) {
       throw new Error("Unauthenticated");
     }
+
+    // Reject malformed timezones at the write boundary. Without this a tampered
+    // client can store a non-IANA string that later throws RangeError in every
+    // day-key/heatmap/streak query that reads it — including, via the feed's
+    // per-author heatmap fan-out, other users' queries (COM-133).
+    assertValidTimezone(args.timezone);
 
     const usernameLower = args.username.toLowerCase();
 
