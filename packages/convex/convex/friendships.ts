@@ -1,16 +1,14 @@
 import { canonicalPair } from "@commit/domain";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireCallerProfile } from "./_helpers";
+import { requireCallerProfile, resolveProfile } from "./_helpers";
 
 const profileShape = v.object({
   _id: v.id("profiles"),
   _creationTime: v.number(),
-  clerkUserId: v.string(),
   username: v.string(),
   usernameLower: v.optional(v.string()),
   avatarUrl: v.optional(v.string()),
-  avatarFileId: v.optional(v.id("_storage")),
   timezone: v.string(),
   createdAt: v.number(),
 });
@@ -201,7 +199,9 @@ export const listForUser = query({
         if (!profile) return null; // shouldn't happen; defensive
         return {
           friendship: f,
-          profile,
+          // Client-safe shape (no clerkUserId/avatarFileId; avatarUrl resolved
+          // from storage) — COM-136.
+          profile: await resolveProfile(ctx, profile),
           iAmRequester: f.requesterId === me._id,
         };
       }),

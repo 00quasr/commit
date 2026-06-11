@@ -7,7 +7,6 @@ import { dayKeyForCaller, requireCallerProfile, resolveProfile } from "./_helper
 const profileShape = v.object({
   _id: v.id("profiles"),
   _creationTime: v.number(),
-  clerkUserId: v.string(),
   username: v.string(),
   usernameLower: v.optional(v.string()),
   avatarUrl: v.optional(v.string()),
