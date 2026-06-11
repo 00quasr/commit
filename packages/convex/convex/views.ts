@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { requireCallerProfile } from "./_helpers";
+import { assertCanViewDrop, requireCallerProfile } from "./_helpers";
 
 /**
  * Mark a drop as viewed by the caller. Idempotent — the by_drop_viewer index
@@ -17,6 +17,8 @@ export const markSeen = mutation({
     if (!drop) {
       throw new Error("Drop not found");
     }
+    // Can't mark-seen a drop you aren't allowed to see (COM-135).
+    await assertCanViewDrop(ctx, me, drop);
 
     const existing = await ctx.db
       .query("views")

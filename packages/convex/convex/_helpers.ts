@@ -1,4 +1,4 @@
-import { dayKeyInTimezone } from "@commit/domain";
+import { canonicalPair, dayKeyInTimezone } from "@commit/domain";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -58,6 +58,33 @@ export async function requireCallerProfile(ctx: QueryCtx | MutationCtx): Promise
     throw new Error("Profile not found — call profiles.upsert first");
   }
   return profile;
+}
+
+/**
+ * Throws unless `me` is allowed to see `drop`:
+ *   - own drop, or
+ *   - public drop, or
+ *   - friends-tier drop with an accepted friendship between caller and owner.
+ * Private drops are visible only to their owner. Mirrors the read-path gate in
+ * `drops.recentForProfile` so write paths (reactions, views) can't act on a
+ * drop the caller isn't allowed to see (COM-135).
+ */
+export async function assertCanViewDrop(
+  ctx: QueryCtx | MutationCtx,
+  me: Doc<"profiles">,
+  drop: Doc<"drops">,
+): Promise<void> {
+  if (drop.ownerId === me._id) return;
+  if (drop.visibility === "public") return;
+  if (drop.visibility === "friends") {
+    const { low, high } = canonicalPair(me._id, drop.ownerId);
+    const friendship = await ctx.db
+      .query("friendships")
+      .withIndex("by_pair", (q) => q.eq("pairLow", low).eq("pairHigh", high))
+      .unique();
+    if (friendship?.status === "accepted") return;
+  }
+  throw new Error("Forbidden");
 }
 
 /**
