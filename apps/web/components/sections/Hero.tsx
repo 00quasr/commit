@@ -27,14 +27,13 @@ export function Hero() {
           </div>
           <div className="flex flex-col items-center gap-3" id="waitlist">
             <WaitlistForm source="hero" className="items-center" />
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-6">
-              <LiveCount />
-              <span className="font-mono text-[11px] text-text-muted">·</span>
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 px-6">
+              <LiveCount className="whitespace-nowrap" />
               <a
                 href={X_URL}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="font-mono text-[11px] text-text-secondary transition hover:text-text-primary"
+                className="whitespace-nowrap font-mono text-[11px] text-text-secondary transition hover:text-text-primary"
               >
                 Follow on X →
               </a>

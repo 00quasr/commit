@@ -15,7 +15,7 @@ function Card({ username, caption, photo, avatar, className = "", elevated = fal
     : "border border-hairline shadow-[0_12px_28px_-16px_rgba(22,21,15,0.2)]";
   return (
     <div
-      className={`relative flex w-[140px] flex-col gap-2 rounded-2xl ${edge} bg-white p-2.5 sm:w-[160px] sm:p-3 ${className}`}
+      className={`flex w-[140px] flex-col gap-2 rounded-2xl ${edge} bg-white p-2.5 sm:w-[160px] sm:p-3 ${className}`}
     >
       <div className="flex items-center gap-1.5">
         {avatar ? (
@@ -32,21 +32,22 @@ function Card({ username, caption, photo, avatar, className = "", elevated = fal
         <span className="text-[10px] font-medium text-text-primary">@{username}</span>
       </div>
       <div className="relative aspect-square overflow-hidden rounded-lg">
-        <Image src={photo} alt={caption} fill sizes="160px" className="object-cover" />
+        {/* Decorative — the caption below carries the content. */}
+        <Image src={photo} alt="" fill sizes="160px" className="object-cover" />
       </div>
-      <p className="text-[10px] leading-[1.35] text-text-secondary">{caption}</p>
+      <p className="text-left text-[10px] leading-[1.35] text-text-secondary">{caption}</p>
     </div>
   );
 }
 
 export function MiniDropStack() {
   return (
-    <div className="relative flex items-end justify-center">
+    <div className="flex items-start justify-center gap-3 sm:gap-4">
       <Card
         username="you"
         caption="wrote 800 words."
         photo="/photos/writing.jpg"
-        className="-mr-3 translate-y-1 -rotate-6 sm:-mr-4"
+        className="translate-y-3"
       />
       <Card
         username="alex"
@@ -54,14 +55,13 @@ export function MiniDropStack() {
         photo="/photos/code.jpg"
         avatar="/photos/avatar-alex.jpg"
         elevated
-        className="z-10 -translate-y-3"
       />
       <Card
         username="riley"
         caption="5k under 25:00."
         photo="/photos/run.jpg"
         avatar="/photos/avatar-riley.jpg"
-        className="-ml-3 translate-y-1 rotate-[5deg] sm:-ml-4"
+        className="translate-y-3"
       />
     </div>
   );
