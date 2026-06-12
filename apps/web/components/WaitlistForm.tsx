@@ -8,10 +8,12 @@ type Status = "idle" | "submitting" | "ok" | "duplicate" | "invalid" | "error";
 
 type WaitlistFormProps = {
   source?: "hero" | "closing";
+  /** "dark" renders the Novu-style white CTA for use over photos/dark surfaces. */
+  tone?: "light" | "dark";
   className?: string;
 };
 
-export function WaitlistForm({ source, className = "" }: WaitlistFormProps) {
+export function WaitlistForm({ source, tone = "light", className = "" }: WaitlistFormProps) {
   const add = useMutation(api.waitlist.add);
   const [email, setEmail] = useState("");
   const [honeypot, setHoneypot] = useState("");
@@ -51,7 +53,21 @@ export function WaitlistForm({ source, className = "" }: WaitlistFormProps) {
   })();
 
   const messageTone =
-    status === "ok" || status === "duplicate" ? "text-text-secondary" : "text-text-tertiary";
+    tone === "dark"
+      ? "text-white/75"
+      : status === "ok" || status === "duplicate"
+        ? "text-text-secondary"
+        : "text-text-tertiary";
+
+  const inputClass =
+    tone === "dark"
+      ? "h-12 flex-1 rounded-full border border-transparent bg-white/95 px-5 text-sm text-ink placeholder:text-ink/40 outline-none transition focus:bg-white"
+      : "h-12 flex-1 rounded-full border border-hairline bg-white px-5 text-sm text-text-primary placeholder:text-text-muted outline-none transition focus:border-ink/30";
+
+  const buttonClass =
+    tone === "dark"
+      ? "h-12 rounded-full bg-white px-6 text-sm font-medium text-ink transition hover:bg-white/90 disabled:opacity-60"
+      : "h-12 rounded-full bg-ink px-6 text-sm font-medium text-cream transition hover:bg-ink/85 disabled:opacity-60";
 
   return (
     <form
@@ -72,7 +88,7 @@ export function WaitlistForm({ source, className = "" }: WaitlistFormProps) {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="h-12 flex-1 rounded-full border border-hairline bg-white px-5 text-sm text-text-primary placeholder:text-text-muted outline-none transition focus:border-ink/30"
+          className={inputClass}
         />
         {/* Honeypot — visually hidden, keep tabbable=false. */}
         <input
@@ -85,11 +101,7 @@ export function WaitlistForm({ source, className = "" }: WaitlistFormProps) {
           onChange={(e) => setHoneypot(e.target.value)}
           className="hidden"
         />
-        <button
-          type="submit"
-          disabled={status === "submitting"}
-          className="h-12 rounded-full bg-ink px-6 text-sm font-medium text-cream transition hover:bg-ink/85 disabled:opacity-60"
-        >
+        <button type="submit" disabled={status === "submitting"} className={buttonClass}>
           {status === "submitting" ? "Sending…" : "Get the beta"}
         </button>
       </div>
