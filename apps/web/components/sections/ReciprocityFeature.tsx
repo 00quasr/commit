@@ -1,6 +1,6 @@
 import { Section } from "../Section";
 import { Body, H2, Serif } from "../Type";
-import { FeedCardMock } from "../mocks/FeedCardMock";
+import { DeviceFrame } from "../DeviceFrame";
 
 export function ReciprocityFeature() {
   return (
@@ -24,12 +24,21 @@ export function ReciprocityFeature() {
               The rule cuts both ways — and it&apos;s why the feed actually means something.
             </Body>
             <Body className="text-sm text-white/45">
-              Your public profile stays visible. The private feed doesn&apos;t.
+              Real screens from the beta. Your public profile stays visible. The private feed
+              doesn&apos;t.
             </Body>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:gap-6">
-            <FeedCardMock locked username="you" caption="" className="opacity-90" />
-            <FeedCardMock username="riley" caption="finally fixed the migration." />
+          <div className="flex items-center justify-center gap-5 sm:gap-8">
+            <DeviceFrame
+              src="/screens/feed-locked.png"
+              alt="commit feed in its locked state — 3 friends dropped today, drop something to see their proof"
+              className="-rotate-2 opacity-95"
+            />
+            <DeviceFrame
+              src="/screens/feed-unlocked.png"
+              alt="commit feed unlocked — alex's drop with a photo of code on a MacBook, 23-day streak"
+              className="rotate-1"
+            />
           </div>
         </div>
       </div>

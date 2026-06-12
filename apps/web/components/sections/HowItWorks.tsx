@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import { Section } from "../Section";
 import { Glass } from "../Glass";
 import { Body, Eyebrow, H2, Serif } from "../Type";
@@ -23,7 +24,15 @@ function DropVisual() {
   return (
     <div className="flex h-full items-center justify-center">
       <div className="relative w-[120px] rounded-xl border border-ink/[0.08] bg-white p-2 shadow-[0_12px_24px_-12px_rgba(22,21,15,0.25)]">
-        <div className="aspect-square rounded-lg bg-gradient-to-br from-lime-soft to-[#f9fde9]" />
+        <div className="relative aspect-square overflow-hidden rounded-lg">
+          <Image
+            src="/photos/gym.jpg"
+            alt="Proof photo: barbell deadlift at the gym"
+            fill
+            sizes="120px"
+            className="object-cover"
+          />
+        </div>
         <span className="absolute right-3 top-3 rounded-full bg-ink/80 px-2 py-0.5 font-mono text-[9px] text-cream">
           0:42
         </span>
@@ -35,16 +44,8 @@ function DropVisual() {
 
 function FeedVisual() {
   const rows = [
-    {
-      name: "alex",
-      note: "shipped the auth flow.",
-      img: "bg-gradient-to-br from-lime-soft to-[#f9fde9]",
-    },
-    {
-      name: "riley",
-      note: "5k under 25:00.",
-      img: "bg-gradient-to-br from-[#d7e8ff] to-[#f3f8ff]",
-    },
+    { name: "alex", note: "shipped the auth flow.", img: "/photos/macbook.jpg" },
+    { name: "riley", note: "5k under 25:00.", img: "/photos/run.jpg" },
   ];
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2">
@@ -53,7 +54,9 @@ function FeedVisual() {
           key={r.name}
           className="flex w-[200px] items-center gap-2.5 rounded-xl border border-ink/[0.08] bg-white p-2 shadow-[0_8px_20px_-12px_rgba(22,21,15,0.2)]"
         >
-          <span className={`h-8 w-8 shrink-0 rounded-lg ${r.img}`} />
+          <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg">
+            <Image src={r.img} alt="" fill sizes="32px" className="object-cover" />
+          </span>
           <div className="flex min-w-0 flex-col">
             <span className="text-[10px] font-medium text-text-primary">@{r.name}</span>
             <span className="truncate text-[9px] text-text-secondary">{r.note}</span>

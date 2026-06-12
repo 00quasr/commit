@@ -1,18 +1,15 @@
+import Image from "next/image";
+
 type CardProps = {
   username: string;
   caption: string;
+  photo: string;
+  avatar?: string;
   className?: string;
-  imgClassName?: string;
   elevated?: boolean;
 };
 
-function Card({
-  username,
-  caption,
-  className = "",
-  imgClassName = "",
-  elevated = false,
-}: CardProps) {
+function Card({ username, caption, photo, avatar, className = "", elevated = false }: CardProps) {
   const edge = elevated
     ? "border border-ink/[0.08] [box-shadow:0_24px_48px_-16px_rgba(22,21,15,0.3)]"
     : "border border-hairline shadow-[0_12px_28px_-16px_rgba(22,21,15,0.2)]";
@@ -21,10 +18,22 @@ function Card({
       className={`relative flex w-[140px] flex-col gap-2 rounded-2xl ${edge} bg-white p-2.5 sm:w-[160px] sm:p-3 ${className}`}
     >
       <div className="flex items-center gap-1.5">
-        <span className="inline-block h-3.5 w-3.5 rounded-full bg-ink/15" />
+        {avatar ? (
+          <Image
+            src={avatar}
+            alt=""
+            width={14}
+            height={14}
+            className="h-3.5 w-3.5 rounded-full object-cover"
+          />
+        ) : (
+          <span className="inline-block h-3.5 w-3.5 rounded-full bg-ink/15" />
+        )}
         <span className="text-[10px] font-medium text-text-primary">@{username}</span>
       </div>
-      <div className={`aspect-square rounded-lg border border-hairline ${imgClassName}`} />
+      <div className="relative aspect-square overflow-hidden rounded-lg">
+        <Image src={photo} alt={caption} fill sizes="160px" className="object-cover" />
+      </div>
       <p className="text-[10px] leading-[1.35] text-text-secondary">{caption}</p>
     </div>
   );
@@ -36,21 +45,23 @@ export function MiniDropStack() {
       <Card
         username="you"
         caption="wrote 800 words."
+        photo="/photos/writing.jpg"
         className="-mr-3 translate-y-1 -rotate-6 sm:-mr-4"
-        imgClassName="bg-gradient-to-br from-[#ffe3c4] to-[#fff7ee]"
       />
       <Card
         username="alex"
         caption="shipped the auth flow."
+        photo="/photos/code.jpg"
+        avatar="/photos/avatar-alex.jpg"
         elevated
         className="z-10 -translate-y-3"
-        imgClassName="bg-gradient-to-tr from-lime-soft to-[#f9fde9]"
       />
       <Card
         username="riley"
         caption="5k under 25:00."
+        photo="/photos/run.jpg"
+        avatar="/photos/avatar-riley.jpg"
         className="-ml-3 translate-y-1 rotate-[5deg] sm:-ml-4"
-        imgClassName="bg-gradient-to-bl from-[#d7e8ff] to-[#f3f8ff]"
       />
     </div>
   );
