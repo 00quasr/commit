@@ -44,3 +44,28 @@ describe("drops.generateUploadUrl", () => {
     ).rejects.toThrow(/Profile not found/);
   });
 });
+
+describe("drops.discardUpload (COM-139)", () => {
+  test("deletes the given storage object for an authenticated caller", async () => {
+    const t = makeTest();
+    await seedAlice(t);
+    const storageId = await t.run((ctx) =>
+      ctx.storage.store(new Blob(["jpeg-bytes"], { type: "image/jpeg" })),
+    );
+    expect(await t.run((ctx) => ctx.storage.getUrl(storageId))).not.toBeNull();
+
+    await t.withIdentity(asAlice).mutation(api.drops.discardUpload, { storageId });
+
+    expect(await t.run((ctx) => ctx.storage.getUrl(storageId))).toBeNull();
+  });
+
+  test("rejects unauthenticated caller", async () => {
+    const t = makeTest();
+    const storageId = await t.run((ctx) =>
+      ctx.storage.store(new Blob(["jpeg-bytes"], { type: "image/jpeg" })),
+    );
+    await expect(t.mutation(api.drops.discardUpload, { storageId })).rejects.toThrow(
+      /Unauthenticated/,
+    );
+  });
+});

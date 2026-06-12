@@ -21,6 +21,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropDraft } from "@/lib/dropDraft";
+import { deleteLocalFile } from "@/lib/media";
 
 type Facing = "back" | "front";
 type FlashMode = "auto" | "on" | "off";
@@ -85,6 +86,9 @@ export default function CameraScreen() {
           compress: 0.8,
           format: SaveFormat.JPEG,
         });
+        // The full-res original capture is no longer needed once we have the
+        // cropped copy the compose screen will upload (COM-139).
+        deleteLocalFile(photo.uri);
         setPhoto(cropped.uri);
         router.push("/drop/compose");
       }
