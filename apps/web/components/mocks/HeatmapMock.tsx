@@ -9,14 +9,14 @@ function intensity(index: number): number {
   return x - Math.floor(x);
 }
 
-function cellOpacityClass(index: number): string {
+function cellClass(index: number): string {
   const v = intensity(index);
   // Bias most cells toward low fill — looks like a real activity grid.
-  if (v < 0.45) return "bg-white/[0.05]";
-  if (v < 0.7) return "bg-white/[0.12]";
-  if (v < 0.86) return "bg-white/[0.22]";
-  if (v < 0.96) return "bg-white/[0.32]";
-  return "bg-white/[0.45]";
+  if (v < 0.45) return "bg-ink/[0.06]";
+  if (v < 0.7) return "bg-[#e3f3a4]";
+  if (v < 0.86) return "bg-[#c8e668]";
+  if (v < 0.96) return "bg-[#a3d23a]";
+  return "bg-[#7fb31c]";
 }
 
 export function HeatmapMock({ className = "" }: { className?: string }) {
@@ -31,7 +31,7 @@ export function HeatmapMock({ className = "" }: { className?: string }) {
       }}
     >
       {cells.map((_, i) => (
-        <div key={i} className={`aspect-square rounded-[2px] ${cellOpacityClass(i)}`} />
+        <div key={i} className={`aspect-square rounded-[2px] ${cellClass(i)}`} />
       ))}
     </div>
   );

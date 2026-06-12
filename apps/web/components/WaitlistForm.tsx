@@ -72,7 +72,7 @@ export function WaitlistForm({ source, className = "" }: WaitlistFormProps) {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="h-11 flex-1 rounded-full border border-hairline bg-block-elevated px-5 text-sm text-text-primary placeholder:text-text-muted outline-none transition focus:border-white/30"
+          className="h-12 flex-1 rounded-full border border-hairline bg-white px-5 text-sm text-text-primary placeholder:text-text-muted outline-none transition focus:border-ink/30"
         />
         {/* Honeypot — visually hidden, keep tabbable=false. */}
         <input
@@ -88,7 +88,7 @@ export function WaitlistForm({ source, className = "" }: WaitlistFormProps) {
         <button
           type="submit"
           disabled={status === "submitting"}
-          className="h-11 rounded-full bg-text-primary px-6 text-sm font-medium text-bg transition hover:bg-white/90 disabled:opacity-60"
+          className="h-12 rounded-full bg-ink px-6 text-sm font-medium text-cream transition hover:bg-ink/85 disabled:opacity-60"
         >
           {status === "submitting" ? "Sending…" : "Get the beta"}
         </button>

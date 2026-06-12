@@ -1,3 +1,4 @@
+import { FAQ } from "../components/sections/FAQ";
 import { Footer } from "../components/sections/Footer";
 import { Hero } from "../components/sections/Hero";
 import { HowItWorks } from "../components/sections/HowItWorks";
@@ -18,6 +19,7 @@ export default function Page() {
         <HowItWorks />
         <ReciprocityFeature />
         <ProfileFeature />
+        <FAQ />
         <WaitlistCTA />
       </main>
       <Footer />

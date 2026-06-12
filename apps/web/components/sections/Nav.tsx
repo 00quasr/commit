@@ -1,25 +1,28 @@
 import Link from "next/link";
-import { X_URL } from "../../lib/constants";
 
 export function Nav() {
   return (
-    <header className="sticky top-0 z-50 border-b border-hairline bg-bg/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="text-sm font-medium tracking-tight text-text-primary">
+    <header className="fixed inset-x-0 top-3 z-50 px-3 sm:top-4 sm:px-4">
+      <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between rounded-full border border-hairline bg-block-glass pl-5 pr-2 backdrop-blur-xl shadow-[0_12px_32px_-16px_rgba(22,21,15,0.25)]">
+        <Link href="/" className="text-[15px] font-semibold tracking-tight text-text-primary">
           commit
         </Link>
-        <nav className="flex items-center gap-2 sm:gap-3">
+        <nav className="flex items-center gap-1 sm:gap-2">
           <a
-            href={X_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="hidden h-8 items-center rounded-full border border-hairline px-3 text-xs text-text-secondary transition hover:border-white/30 hover:text-text-primary sm:inline-flex"
+            href="#how"
+            className="hidden h-9 items-center rounded-full px-3.5 text-sm text-text-secondary transition hover:text-text-primary sm:inline-flex"
           >
-            Follow on X
+            How it works
+          </a>
+          <a
+            href="#faq"
+            className="hidden h-9 items-center rounded-full px-3.5 text-sm text-text-secondary transition hover:text-text-primary sm:inline-flex"
+          >
+            FAQ
           </a>
           <a
             href="#waitlist"
-            className="inline-flex h-8 items-center rounded-full bg-text-primary px-3 text-xs font-medium text-bg transition hover:bg-white/90"
+            className="inline-flex h-10 items-center rounded-full bg-ink px-5 text-sm font-medium text-cream transition hover:bg-ink/85"
           >
             Get the beta
           </a>

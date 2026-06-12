@@ -15,8 +15,10 @@ export default async function Image() {
         flexDirection: "column",
         justifyContent: "space-between",
         padding: "80px",
-        background: "#050505",
-        color: "#ffffff",
+        background: "#faf8f4",
+        backgroundImage:
+          "radial-gradient(90% 70% at 50% -10%, rgba(216,240,94,0.5), transparent 70%)",
+        color: "#16150f",
       }}
     >
       <div
@@ -25,7 +27,7 @@ export default async function Image() {
           fontSize: 20,
           letterSpacing: "0.22em",
           textTransform: "uppercase",
-          color: "rgba(255,255,255,0.48)",
+          color: "rgba(22,21,15,0.46)",
         }}
       >
         Beta · Invite-only
@@ -38,7 +40,7 @@ export default async function Image() {
           gap: "12px",
           fontSize: 112,
           fontWeight: 500,
-          letterSpacing: "-0.035em",
+          letterSpacing: "-0.04em",
           lineHeight: 1.04,
         }}
       >
@@ -59,7 +61,7 @@ export default async function Image() {
             fontSize: 26,
             maxWidth: 720,
             lineHeight: 1.4,
-            color: "rgba(255,255,255,0.72)",
+            color: "rgba(22,21,15,0.7)",
           }}
         >
           Strava + BeReal for any goal worth committing to.
@@ -67,9 +69,13 @@ export default async function Image() {
         <div
           style={{
             display: "flex",
+            alignItems: "center",
             fontSize: 22,
-            letterSpacing: "0.04em",
-            color: "rgba(255,255,255,0.48)",
+            fontWeight: 500,
+            padding: "10px 24px",
+            borderRadius: 9999,
+            background: "#16150f",
+            color: "#faf8f4",
           }}
         >
           commit.app
