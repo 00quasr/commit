@@ -6,17 +6,31 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "scheme": "commit",
+    "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.commit.mobile"
     },
     "android": {
-      "package": "app.commit.mobile"
+      "package": "app.commit.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#050505"
+      }
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
       "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#050505"
+        }
+      ],
       [
         "expo-camera",
         {
