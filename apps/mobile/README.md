@@ -1,6 +1,6 @@
 # commit — mobile
 
-The Expo + React Native client for **commit**, a habit tracker with BeReal-style proof. Every entry is a _drop_ — a photo + voice proof that you did the habit you committed to — surfaced in a reciprocity-locked feed.
+The Expo + React Native client for **commit**, a habit tracker with BeReal-style proof. Every entry is a _drop_ — a photo proof that you did the habit you committed to — surfaced in a reciprocity-locked feed.
 
 See the [root README](../../README.md) for the product pitch and the full monorepo. This README covers the mobile app specifically: how it's wired, its env vars, and the iOS dev loop.
 
@@ -96,7 +96,7 @@ app/
     drop/                     Drop creation flow
       _layout.tsx
       camera.tsx              Photo capture
-      compose.tsx             Caption + voice memo + visibility
+      compose.tsx             Caption + visibility
     day/[dayKey].tsx          Day detail (all drops for a date)
     habit/drops/[id].tsx      A habit's drop history
     u/[username].tsx          Public user profile
