@@ -1,4 +1,4 @@
-import { Display, Eyebrow, Serif } from "../Type";
+import { Display, Eyebrow } from "../Type";
 import { LiveCount } from "../LiveCount";
 import { WaitlistForm } from "../WaitlistForm";
 import { X_URL } from "../../lib/constants";
@@ -13,9 +13,7 @@ export function WaitlistCTA() {
         />
         <div className="relative flex flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 sm:py-28">
           <Eyebrow className="text-ink/55">Join the beta cluster</Eyebrow>
-          <Display className="max-w-3xl">
-            The drop is <Serif>the proof.</Serif>
-          </Display>
+          <Display className="max-w-3xl">The drop is the proof.</Display>
           <p className="max-w-xl font-sans text-base text-ink/70 sm:text-lg">
             Solo founders, OSS maintainers, course creators. If you&apos;re shipping in public, this
             is for you.

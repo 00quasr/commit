@@ -24,7 +24,6 @@
 
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
-  --font-serif: var(--font-instrument-serif), "Instrument Serif", Georgia, serif;
 
   --tracking-display: -0.04em;
   --leading-display: 1.04;

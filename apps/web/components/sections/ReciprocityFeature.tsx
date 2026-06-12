@@ -1,5 +1,5 @@
 import { Section } from "../Section";
-import { Body, H2, Serif } from "../Type";
+import { Body, H2 } from "../Type";
 import { DeviceFrame } from "../DeviceFrame";
 
 export function ReciprocityFeature() {
@@ -16,9 +16,7 @@ export function ReciprocityFeature() {
             <span className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-white/40">
               The reciprocity lock
             </span>
-            <H2 className="text-white">
-              Drop today, or the feed stays <Serif>dark.</Serif>
-            </H2>
+            <H2 className="text-white">Drop today, or the feed stays dark.</H2>
             <Body className="text-white/70">
               No lurking. If you didn&apos;t commit today, you don&apos;t see what your friends did.
               The rule cuts both ways — and it&apos;s why the feed actually means something.

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import { Section } from "../Section";
 import { Glass } from "../Glass";
-import { Body, Eyebrow, H2, Serif } from "../Type";
+import { Body, Eyebrow, H2 } from "../Type";
 
 function CycleVisual() {
   return (
@@ -98,13 +98,11 @@ export function HowItWorks() {
   return (
     <Section id="how">
       <div className="flex flex-col gap-12 sm:gap-14">
-        <div className="flex flex-col items-center gap-4 text-center">
+        <div className="flex flex-col items-start gap-4">
           <Glass className="px-4 py-1.5">
             <Eyebrow>How it works</Eyebrow>
           </Glass>
-          <H2>
-            Three steps. No <Serif>streak-saving</Serif> hacks.
-          </H2>
+          <H2>Three steps. No streak-saving hacks.</H2>
         </div>
         <div className="grid gap-5 md:grid-cols-3">
           {STEPS.map((s) => (

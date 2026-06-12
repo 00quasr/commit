@@ -1,5 +1,5 @@
 import { Section } from "../Section";
-import { H2, Serif } from "../Type";
+import { H2 } from "../Type";
 
 const FAQS = [
   {
@@ -32,9 +32,7 @@ export function FAQ() {
   return (
     <Section id="faq">
       <div className="flex flex-col gap-10 sm:gap-12">
-        <H2 className="text-center">
-          Got <Serif>questions?</Serif>
-        </H2>
+        <H2 className="text-center">Got questions?</H2>
         <div className="mx-auto w-full max-w-3xl">
           {FAQS.map((f) => (
             <details key={f.q} className="group border-b border-divide">

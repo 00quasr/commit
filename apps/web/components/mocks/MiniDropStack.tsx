@@ -15,7 +15,7 @@ function Card({ username, caption, photo, avatar, className = "", elevated = fal
     : "border border-hairline shadow-[0_12px_28px_-16px_rgba(22,21,15,0.2)]";
   return (
     <div
-      className={`flex w-[140px] flex-col gap-2 rounded-2xl ${edge} bg-white p-2.5 sm:w-[160px] sm:p-3 ${className}`}
+      className={`flex w-[31%] min-w-0 flex-col gap-2 rounded-2xl ${edge} bg-white p-2 sm:w-[160px] sm:p-3 ${className}`}
     >
       <div className="flex items-center gap-1.5">
         {avatar ? (
@@ -42,7 +42,7 @@ function Card({ username, caption, photo, avatar, className = "", elevated = fal
 
 export function MiniDropStack() {
   return (
-    <div className="flex items-start justify-center gap-3 sm:gap-4">
+    <div className="flex w-full max-w-md items-start justify-center gap-2 sm:max-w-none sm:gap-4">
       <Card
         username="you"
         caption="wrote 800 words."

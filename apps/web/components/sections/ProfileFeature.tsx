@@ -1,5 +1,5 @@
 import { Section } from "../Section";
-import { Body, Eyebrow, H2, Serif } from "../Type";
+import { Body, Eyebrow, H2 } from "../Type";
 import { Glass } from "../Glass";
 import { DeviceFrame } from "../DeviceFrame";
 
@@ -18,9 +18,7 @@ export function ProfileFeature() {
           <Glass className="self-start px-4 py-1.5">
             <Eyebrow>Public proof</Eyebrow>
           </Glass>
-          <H2>
-            Your shipping log, <Serif>on display.</Serif>
-          </H2>
+          <H2>Your shipping log, on display.</H2>
           <Body>
             Every profile renders the receipts: heatmap of every drop, current streak, recent work.
             Linkable. Shareable. Hard to fake.
