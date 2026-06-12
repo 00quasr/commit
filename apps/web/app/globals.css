@@ -1,30 +1,36 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #050505;
-  --color-fg: #ffffff;
+  --color-bg: #faf8f4;
+  --color-fg: #16150f;
 
   /* Semantic text */
-  --color-text-primary: #ffffff;
-  --color-text-secondary: rgba(255, 255, 255, 0.72);
-  --color-text-tertiary: rgba(255, 255, 255, 0.48);
-  --color-text-muted: rgba(255, 255, 255, 0.32);
+  --color-text-primary: #16150f;
+  --color-text-secondary: rgba(22, 21, 15, 0.7);
+  --color-text-tertiary: rgba(22, 21, 15, 0.46);
+  --color-text-muted: rgba(22, 21, 15, 0.32);
 
   /* Surfaces */
-  --color-divide: rgba(255, 255, 255, 0.08);
-  --color-hairline: rgba(255, 255, 255, 0.06);
-  --color-block-elevated: rgba(255, 255, 255, 0.04);
-  --color-block-glass: rgba(255, 255, 255, 0.06);
+  --color-divide: rgba(22, 21, 15, 0.1);
+  --color-hairline: rgba(22, 21, 15, 0.08);
+  --color-block-elevated: #ffffff;
+  --color-block-glass: rgba(255, 255, 255, 0.65);
+
+  /* Brand */
+  --color-ink: #16150f;
+  --color-cream: #faf8f4;
+  --color-lime: #d8f05e;
+  --color-lime-soft: #eef7c8;
 
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 
-  --tracking-display: -0.035em;
-  --leading-display: 1.08;
+  --tracking-display: -0.04em;
+  --leading-display: 1.04;
 }
 
 html {
-  scroll-padding-top: 4rem;
+  scroll-padding-top: 6rem;
   scroll-behavior: smooth;
 }
 
@@ -44,5 +50,5 @@ body {
 }
 
 ::selection {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(216, 240, 94, 0.55);
 }

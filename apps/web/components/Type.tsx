@@ -5,7 +5,7 @@ type Props = { children: ReactNode; className?: string };
 export function Display({ children, className = "" }: Props) {
   return (
     <h1
-      className={`font-sans font-medium text-text-primary text-[2.5rem] sm:text-[3.5rem] md:text-[4.25rem] leading-display tracking-display ${className}`}
+      className={`font-sans font-medium text-text-primary text-[2.5rem] sm:text-[3.25rem] md:text-[3.75rem] leading-display tracking-display ${className}`}
     >
       {children}
     </h1>
@@ -15,7 +15,7 @@ export function Display({ children, className = "" }: Props) {
 export function H2({ children, className = "" }: Props) {
   return (
     <h2
-      className={`font-sans font-medium text-text-primary text-[1.75rem] sm:text-[2.25rem] leading-[1.12] tracking-display ${className}`}
+      className={`font-sans font-medium text-text-primary text-[2rem] sm:text-[2.75rem] leading-[1.08] tracking-display ${className}`}
     >
       {children}
     </h2>
