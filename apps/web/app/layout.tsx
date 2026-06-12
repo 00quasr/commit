@@ -13,18 +13,23 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "commit — the drop is the proof",
+  title: "commit — show your work. see theirs.",
   description:
-    "Strava + BeReal for any goal worth committing to. Set the cycle. Drop the proof. The feed unlocks when you do.",
+    "A photo of the work, on the rhythm you set. What your friends got done today stays locked until you post yours.",
   metadataBase: new URL("https://commit.app"),
   openGraph: {
-    title: "commit — the drop is the proof",
-    description: "Strava + BeReal for any goal worth committing to. Set the cycle. Drop the proof.",
+    title: "commit — show your work. see theirs.",
+    description:
+      "A photo of the work, on the rhythm you set. What your friends got done today stays locked until you post yours.",
     url: "https://commit.app",
     siteName: "commit",
     type: "website",
   },
-  twitter: { card: "summary_large_image", title: "commit", description: "The drop is the proof." },
+  twitter: {
+    card: "summary_large_image",
+    title: "commit",
+    description: "Show your work. See theirs.",
+  },
 };
 
 export const viewport: Viewport = {

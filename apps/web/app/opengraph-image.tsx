@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "commit — the drop is the proof";
+export const alt = "commit — show your work. see theirs.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -44,8 +44,8 @@ export default async function Image() {
           lineHeight: 1.04,
         }}
       >
-        <div style={{ display: "flex" }}>Stop drifting.</div>
-        <div style={{ display: "flex" }}>Start finishing.</div>
+        <div style={{ display: "flex" }}>Show your work.</div>
+        <div style={{ display: "flex" }}>See theirs.</div>
       </div>
 
       <div
@@ -64,7 +64,7 @@ export default async function Image() {
             color: "rgba(22,21,15,0.7)",
           }}
         >
-          Strava + BeReal for any goal worth committing to.
+          A photo of the work, on the rhythm you set.
         </div>
         <div
           style={{

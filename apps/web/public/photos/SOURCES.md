@@ -6,7 +6,6 @@ Swap for real drop photos as the beta produces them.
 
 | File              | Unsplash photo                   |
 | ----------------- | -------------------------------- |
-| hero.jpg          | photo-1522202176988-66273c2fd55f |
 | code.jpg          | photo-1461749280684-dccba630e2f6 |
 | macbook.jpg       | photo-1498050108023-c5249f4df085 |
 | run.jpg           | photo-1476480862126-209bfaa8edc8 |
