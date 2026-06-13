@@ -8,8 +8,8 @@ import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { SaveFormat, manipulateAsync } from "expo-image-manipulator";
-import { router, useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -375,13 +375,32 @@ export default function UserProfile() {
 }
 
 function TopBar({ showSettings = false }: { showSettings?: boolean }) {
+  // Synchronous guard against rapid repeated taps stacking duplicate Settings
+  // screens — mirrors the avatar/friends nav lock on the Today screen (COM-109).
+  const navLockRef = useRef(false);
+  const navLockAtRef = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (Date.now() - navLockAtRef.current > 500) navLockRef.current = false;
+    }, []),
+  );
+  const navigateToSettings = () => {
+    if (navLockRef.current) return;
+    navLockRef.current = true;
+    navLockAtRef.current = Date.now();
+    router.push("/(app)/settings");
+    setTimeout(() => {
+      navLockRef.current = false;
+    }, 800);
+  };
+
   return (
     <View style={styles.topBar}>
       <View />
       <View style={styles.topBarRight}>
         {showSettings ? (
           <Pressable
-            onPress={() => router.push("/(app)/settings")}
+            onPress={navigateToSettings}
             style={({ pressed }) => [styles.settingsButton, pressed && { opacity: 0.6 }]}
             hitSlop={12}
             accessibilityRole="button"
