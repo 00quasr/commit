@@ -223,20 +223,26 @@ export default function Today() {
   // user lifts their finger while no habit is selected, the list is pulled back to
   // the top — a magnetic resting position. When a habit is selected the detail view
   // is shown and scrolling behaves normally, so we leave the list alone there.
-  //
-  // The snap is paired with decelerationRate={0} below (default view only): killing
-  // the post-release fling makes the list stop the instant the finger lifts, so our
-  // animated scrollToOffset(0) runs unopposed. Without it, the native fling races
-  // the programmatic scroll and intermittently wins, leaving the list stuck partway
-  // (the Android smoothScrollTo-during-fling quirk). With no fling there are no
-  // momentum events, but onMomentumScrollEnd stays wired as a harmless safety net.
   const isDefaultView = selectedHabitId === null;
   const listRef = useRef<FlashListRef<(typeof listData)[number]>>(null);
-  const snapToTop = useCallback(() => {
-    if (isDefaultView) {
-      listRef.current?.scrollToOffset({ offset: 0, animated: true });
-    }
-  }, [isDefaultView]);
+  // Two Android quirks made an earlier version stick near the top:
+  //   1. A programmatic animated scrollToOffset({offset:0}) lands ~1px short of 0
+  //      on FlashList v2, never exactly 0. We overshoot to a negative offset so the
+  //      ScrollView clamps to the true top.
+  //   2. That programmatic scroll emits its own momentum-end event, so re-snapping
+  //      unconditionally from onMomentumScrollEnd fed back into itself, looping near
+  //      the top forever. We guard on the event's current offset and only snap while
+  //      the list is still meaningfully scrolled, which also still catches a fling.
+  // maintainVisibleContentPosition (on by default in FlashList v2) is disabled in the
+  // default view so its anchor adjustments can't fight the snap.
+  const snapIfScrolled = useCallback(
+    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+      if (isDefaultView && e.nativeEvent.contentOffset.y > 4) {
+        listRef.current?.scrollToOffset({ offset: -100, animated: true });
+      }
+    },
+    [isDefaultView],
+  );
 
   const onAdd = async () => {
     const text = draftText.trim();
@@ -340,9 +346,9 @@ export default function Today() {
           keyExtractor={(item) => item.key}
           getItemType={(item) => item.kind}
           showsVerticalScrollIndicator={false}
-          decelerationRate={isDefaultView ? 0 : "normal"}
-          onScrollEndDrag={snapToTop}
-          onMomentumScrollEnd={snapToTop}
+          maintainVisibleContentPosition={isDefaultView ? { disabled: true } : undefined}
+          onScrollEndDrag={snapIfScrolled}
+          onMomentumScrollEnd={snapIfScrolled}
           ListHeaderComponent={statsArea}
           renderItem={({ item }) => {
             if (item.kind === "header") {
