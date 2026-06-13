@@ -400,38 +400,65 @@ export const heatmapForProfile = query({
 });
 
 /**
- * Per-day activity for a single habit over the last 365 days. Powers the
- * MiniHeatmap on the habit detail screen.
+ * Per-day activity for ALL of the caller's active habits over the last 365
+ * days, in a single round trip. Powers the per-habit heatmap shown when a
+ * habit is selected on the Today screen.
+ *
+ * Today subscribes to this once on mount and indexes into the result by
+ * habitId on selection, so the data is already present at tap time — no
+ * in-flight `undefined` window that would flash an all-empty heatmap mid
+ * fade-in (COM-144). Every active habit gets an entry, including those with
+ * zero drops, so selecting them yields a correct empty heatmap rather than a
+ * missing one.
  */
-export const heatmapForHabit = query({
-  args: { habitId: v.id("habits") },
+export const heatmapsForAllHabits = query({
+  args: {},
   returns: v.array(
     v.object({
-      dayKey: v.string(),
-      total: v.number(),
-      habits: v.array(v.object({ habitId: v.id("habits"), color: v.string() })),
+      habitId: v.id("habits"),
+      entries: v.array(heatmapEntryShape),
     }),
   ),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const me = await requireCallerProfile(ctx);
-    const habit = await ctx.db.get(args.habitId);
-    if (!habit || habit.ownerId !== me._id) return [];
+    const habits = await ctx.db
+      .query("habits")
+      .withIndex("by_owner_archived", (q) => q.eq("ownerId", me._id).eq("archived", false))
+      .collect();
+    if (habits.length === 0) return [];
+
     const sinceMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
     const sinceDayKey = dayKeyInTimezone(sinceMs, me.timezone);
+    // One scan of the caller's drops; grouped in-memory by habit below.
     const drops = await ctx.db
       .query("drops")
       .withIndex("by_owner_day", (q) => q.eq("ownerId", me._id).gte("dayKey", sinceDayKey))
       .collect();
-    const countByDay = new Map<string, number>();
-    for (const d of drops.filter((d) => d.habitId === args.habitId)) {
-      countByDay.set(d.dayKey, (countByDay.get(d.dayKey) ?? 0) + 1);
+
+    // habitId -> (dayKey -> count)
+    const countByHabitDay = new Map<string, Map<string, number>>();
+    for (const habit of habits) {
+      countByHabitDay.set(habit._id, new Map());
     }
-    const color = resolveHabitColor(args.habitId, habit.color);
-    return [...countByDay.entries()].map(([dayKey, total]) => ({
-      dayKey,
-      total,
-      habits: [{ habitId: args.habitId, color }],
-    }));
+    for (const d of drops) {
+      if (!d.habitId) continue;
+      const dayMap = countByHabitDay.get(d.habitId);
+      if (!dayMap) continue; // drop belongs to an archived/deleted habit
+      dayMap.set(d.dayKey, (dayMap.get(d.dayKey) ?? 0) + 1);
+    }
+
+    return habits.map((habit) => {
+      const color = resolveHabitColor(habit._id, habit.color);
+      const dayMap = countByHabitDay.get(habit._id)!;
+      return {
+        habitId: habit._id,
+        entries: [...dayMap.entries()].map(([dayKey, total]) => ({
+          dayKey,
+          total,
+          habits: [{ habitId: habit._id, color }],
+        })),
+      };
+    });
   },
 });
 

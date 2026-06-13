@@ -114,9 +114,14 @@ export default function Today() {
     }, 800);
   };
 
-  const habitHeatmapData = useQuery(
-    api.drops.heatmapForHabit,
-    selectedHabitId ? { habitId: selectedHabitId } : "skip",
+  // Prefetched once on mount for every active habit (max 3), so selecting a
+  // habit is a pure client-side lookup with the data already present — no
+  // in-flight query window that would flash an all-empty heatmap mid fade-in
+  // (COM-144). `undefined` only until this first load lands.
+  const habitHeatmaps = useQuery(api.drops.heatmapsForAllHabits, {});
+  const habitHeatmapData = useMemo(
+    () => habitHeatmaps?.find((h) => h.habitId === selectedHabitId)?.entries,
+    [habitHeatmaps, selectedHabitId],
   );
 
   const selectedHabit = useMemo(
