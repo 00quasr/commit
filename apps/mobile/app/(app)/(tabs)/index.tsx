@@ -861,9 +861,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   emptyScroll: { flexGrow: 1, paddingBottom: 120 },
-  // overflow:hidden clips the rubber-band translateY so the list (heatmap card etc.)
-  // can't draw over the header above it (title, "N habits due", friends/profile).
-  listWrap: { flex: 1, overflow: "hidden" },
+  // zIndex/elevation lift the list above the header so when it's pulled up the
+  // heatmap card draws OVER the header (title, "N habits due", friends/profile)
+  // instead of being covered by it. overflow stays visible so nothing is clipped.
+  listWrap: { flex: 1, zIndex: 1, elevation: 1 },
   list: { paddingBottom: 180 },
   sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   sectionTitle: {
