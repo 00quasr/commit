@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "app.commit.mobile",
+      "backgroundColor": "#050505",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#050505"

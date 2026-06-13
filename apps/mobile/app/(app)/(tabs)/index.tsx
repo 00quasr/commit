@@ -5,8 +5,8 @@ import { fonts, habitColors } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useMemo, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -83,6 +83,34 @@ export default function Today() {
   // 1 = a habit is selected (habit card + action bar shown). Drives every
   // selection transition on the UI thread via Reanimated worklets.
   const selectionAnim = useSharedValue(0);
+
+  // Synchronous guard against rapid repeated taps stacking duplicate screens.
+  // Lock is cleared when Today regains focus (user navigated back) — more robust
+  // than a fixed timeout, which would allow a second push if taps span > 600ms.
+  const navLockRef = useRef(false);
+  const navLockAtRef = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      // Clear the lock when Today genuinely regains focus (user navigated back),
+      // but ignore the transient focus event Android's native-stack fires on the
+      // previous screen *during* a card slide-in — that arrives within a few
+      // hundred ms of the push and would otherwise reset the lock mid tap-burst,
+      // letting a second tap stack a duplicate screen (Android-only; iOS doesn't
+      // emit it). A real return is always well after this window.
+      if (Date.now() - navLockAtRef.current > 500) navLockRef.current = false;
+    }, []),
+  );
+  const navigateOnce = (href: Parameters<typeof router.push>[0]) => {
+    if (navLockRef.current) return;
+    navLockRef.current = true;
+    navLockAtRef.current = Date.now();
+    router.push(href);
+    // Safety fallback so the button can never get permanently stuck if the
+    // focus-based reset is somehow missed.
+    setTimeout(() => {
+      navLockRef.current = false;
+    }, 800);
+  };
 
   const habitHeatmapData = useQuery(
     api.drops.heatmapForHabit,
@@ -245,7 +273,7 @@ export default function Today() {
           <Text style={styles.title}>Today</Text>
           <View style={styles.headerActions}>
             <Pressable
-              onPress={() => router.push("/friends")}
+              onPress={() => navigateOnce("/friends")}
               style={({ pressed }) => [styles.friendsButton, pressed && { opacity: 0.7 }]}
               hitSlop={8}
             >
@@ -253,7 +281,7 @@ export default function Today() {
               {incomingCount > 0 ? <View style={styles.badge} /> : null}
             </Pressable>
             <Pressable
-              onPress={() => router.push(me?.username ? `/u/${me.username}` : "/profile")}
+              onPress={() => me?.username && navigateOnce(`/u/${me.username}`)}
               style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
               hitSlop={8}
             >
