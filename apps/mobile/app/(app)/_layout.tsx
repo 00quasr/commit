@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { accountDeletion } from "@/lib/account-deletion";
 import { ChooseUsername } from "@/components/ChooseUsername";
-import { theme } from "@/lib/theme";
 
 export default function AppLayout() {
   const { isLoaded, isSignedIn, signOut } = useAuth();
@@ -52,7 +51,7 @@ export default function AppLayout() {
     return <ChooseUsername />;
   }
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.bg } }}>
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen
         name="profile"
