@@ -1,6 +1,6 @@
 import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { fonts, habitColors } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
@@ -219,6 +219,17 @@ export default function Today() {
     [sections],
   );
 
+  // Snap-back-to-top behavior for the default Today view (COM-115). Whenever the
+  // user lifts their finger while no habit is selected, the list is pulled back to
+  // the top — a magnetic resting position. When a habit is selected the detail view
+  // is shown and scrolling behaves normally, so we leave the list alone there.
+  const listRef = useRef<FlashListRef<(typeof listData)[number]>>(null);
+  const snapToTop = useCallback(() => {
+    if (selectedHabitId === null) {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }
+  }, [selectedHabitId]);
+
   const onAdd = async () => {
     const text = draftText.trim();
     if (!text || busy) return;
@@ -316,10 +327,13 @@ export default function Today() {
         </ScrollView>
       ) : (
         <FlashList
+          ref={listRef}
           data={listData}
           keyExtractor={(item) => item.key}
           getItemType={(item) => item.kind}
           showsVerticalScrollIndicator={false}
+          onScrollEndDrag={snapToTop}
+          onMomentumScrollEnd={snapToTop}
           ListHeaderComponent={statsArea}
           renderItem={({ item }) => {
             if (item.kind === "header") {
