@@ -6,10 +6,9 @@ import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,7 +17,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { KeyboardAvoidingView, KeyboardProvider } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import Animated, {
   type SharedValue,
   interpolate,
@@ -55,6 +54,7 @@ const WEEKDAYS: Array<{ label: string; day: number }> = [
 ];
 
 const BAR_SLIDE_DIST = 200;
+const SHEET_SLIDE_DIST = 600;
 
 export default function Today() {
   const me = useQuery(api.profiles.me);
@@ -74,6 +74,9 @@ export default function Today() {
   const [draftCustomDays, setDraftCustomDays] = useState<number[]>([1]);
   const [draftColor, setDraftColor] = useState<string>(habitColors[0]);
   const [busy, setBusy] = useState(false);
+
+  const textInputRef = useRef<TextInput>(null);
+  const sheetAnim = useSharedValue(0);
 
   const [selectedHabitId, setSelectedHabitId] = useState<Id<"habits"> | null>(null);
   // 0 = no habit selected (cumulative card + bottom bar shown),
@@ -110,6 +113,30 @@ export default function Today() {
   // slides up into its place. Derived on the UI thread and handed to BottomBar
   // as a shared value so it stays decoupled from BAR_SLIDE_DIST.
   const bottomBarTranslateY = useDerivedValue(() => selectionAnim.value * BAR_SLIDE_DIST);
+
+  const sheetBackdropStyle = useAnimatedStyle(() => ({
+    opacity: sheetAnim.value,
+  }));
+
+  const sheetSlideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(sheetAnim.value, [0, 1], [SHEET_SLIDE_DIST, 0]) }],
+  }));
+
+  const openAddSheet = () => {
+    // Start the Reanimated worklet before the state update, same as
+    // selectHabit below — otherwise the setShowAdd re-render can delay when
+    // the slide-up animation actually starts on Android.
+    sheetAnim.value = withTiming(1, { duration: 220 });
+    setShowAdd(true);
+    setTimeout(() => textInputRef.current?.focus(), 80);
+  };
+
+  const closeAddSheet = () => {
+    textInputRef.current?.blur();
+    sheetAnim.value = withTiming(0, { duration: 220 }, (finished) => {
+      if (finished) runOnJS(setShowAdd)(false);
+    });
+  };
 
   const hideSelection = () => {
     selectionAnim.value = withTiming(0, { duration: 220 }, (finished) => {
@@ -181,7 +208,7 @@ export default function Today() {
       setDraftCycle(1);
       setDraftCustomDays([1]);
       setDraftColor(habitColors[0]);
-      setShowAdd(false);
+      closeAddSheet();
     } finally {
       setBusy(false);
     }
@@ -313,7 +340,7 @@ export default function Today() {
       )}
 
       <BottomBar
-        onAdd={() => setShowAdd(true)}
+        onAdd={openAddSheet}
         disabled={atMax}
         hint={atMax ? "Max. 3 habits. Archive one to add a new one." : undefined}
         translateY={bottomBarTranslateY}
@@ -333,104 +360,104 @@ export default function Today() {
         />
       )}
 
-      <Modal visible={showAdd} animationType="slide" transparent>
-        {/* RN Modal renders in a separate hierarchy on iOS; the root KeyboardProvider
-            doesn't reach it, so re-provide one here for KeyboardAvoidingView to work. */}
-        <KeyboardProvider>
-          <KeyboardAvoidingView style={styles.modalRoot} behavior="padding">
-            <Pressable style={styles.backdrop} onPress={() => setShowAdd(false)} />
-            <View style={styles.sheet}>
-              <Text style={styles.sheetTitle}>New commitment</Text>
+      {/* Sheet overlay — always mounted so the Reanimated animation starts on the UI
+          thread before any JS-side mounting work, eliminating the Android lag */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents={showAdd ? "auto" : "none"}>
+        <Animated.View style={[styles.overlayBackdrop, sheetBackdropStyle]}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeAddSheet} />
+        </Animated.View>
+        <KeyboardAvoidingView style={styles.overlayKAV} behavior="padding" pointerEvents="box-none">
+          <Animated.View style={[styles.sheet, sheetSlideStyle]}>
+            <Text style={styles.sheetTitle}>New commitment</Text>
 
-              <TextInput
-                style={styles.input}
-                value={draftText}
-                onChangeText={setDraftText}
-                placeholder="What do you want to keep doing?"
-                placeholderTextColor={theme.text.muted}
-                autoFocus
-                maxLength={280}
-                multiline
-              />
+            <TextInput
+              ref={textInputRef}
+              style={styles.input}
+              value={draftText}
+              onChangeText={setDraftText}
+              placeholder="What do you want to keep doing?"
+              placeholderTextColor={theme.text.muted}
+              maxLength={280}
+              multiline
+            />
 
-              <Text style={styles.fieldLabel}>Cycle</Text>
-              <View style={styles.chipRow}>
-                {CYCLE_PRESETS.map((c) => (
-                  <Pressable
-                    key={c.days}
-                    style={[styles.chip, draftCycle === c.days && styles.chipActive]}
-                    onPress={() => setDraftCycle(c.days)}
-                  >
-                    <Text style={[styles.chipText, draftCycle === c.days && styles.chipTextActive]}>
-                      {c.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              {draftCycle === CUSTOM_CYCLE_SENTINEL && (
-                <View style={styles.dayRow}>
-                  {WEEKDAYS.map(({ label, day }) => {
-                    const active = draftCustomDays.includes(day);
-                    return (
-                      <Pressable
-                        key={day}
-                        style={[styles.dayChip, active && styles.dayChipActive]}
-                        onPress={() =>
-                          setDraftCustomDays((prev) =>
-                            active ? prev.filter((d) => d !== day) : [...prev, day],
-                          )
-                        }
-                      >
-                        <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
-                          {label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
-
-              <Text style={styles.fieldLabel}>Color</Text>
-              <View style={styles.colorRow}>
-                {habitColors.map((color) => (
-                  <Pressable
-                    key={color}
-                    onPress={() => setDraftColor(color)}
-                    style={[
-                      styles.colorSwatch,
-                      { backgroundColor: color },
-                      draftColor === color && styles.colorSwatchActive,
-                    ]}
-                  />
-                ))}
-              </View>
-
-              <View style={styles.sheetButtons}>
-                <Pressable style={styles.cancel} onPress={() => setShowAdd(false)}>
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </Pressable>
+            <Text style={styles.fieldLabel}>Cycle</Text>
+            <View style={styles.chipRow}>
+              {CYCLE_PRESETS.map((c) => (
                 <Pressable
-                  style={[
-                    styles.add,
-                    (!draftText.trim() ||
-                      busy ||
-                      (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)) &&
-                      styles.addDisabled,
-                  ]}
-                  onPress={() => void onAdd()}
-                  disabled={
-                    !draftText.trim() ||
-                    busy ||
-                    (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)
-                  }
+                  key={c.days}
+                  style={[styles.chip, draftCycle === c.days && styles.chipActive]}
+                  onPress={() => setDraftCycle(c.days)}
                 >
-                  <Text style={styles.addText}>Add</Text>
+                  <Text style={[styles.chipText, draftCycle === c.days && styles.chipTextActive]}>
+                    {c.label}
+                  </Text>
                 </Pressable>
-              </View>
+              ))}
             </View>
-          </KeyboardAvoidingView>
-        </KeyboardProvider>
-      </Modal>
+            {draftCycle === CUSTOM_CYCLE_SENTINEL && (
+              <View style={styles.dayRow}>
+                {WEEKDAYS.map(({ label, day }) => {
+                  const active = draftCustomDays.includes(day);
+                  return (
+                    <Pressable
+                      key={day}
+                      style={[styles.dayChip, active && styles.dayChipActive]}
+                      onPress={() =>
+                        setDraftCustomDays((prev) =>
+                          active ? prev.filter((d) => d !== day) : [...prev, day],
+                        )
+                      }
+                    >
+                      <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            <Text style={styles.fieldLabel}>Color</Text>
+            <View style={styles.colorRow}>
+              {habitColors.map((color) => (
+                <Pressable
+                  key={color}
+                  onPress={() => setDraftColor(color)}
+                  style={[
+                    styles.colorSwatch,
+                    { backgroundColor: color },
+                    draftColor === color && styles.colorSwatchActive,
+                  ]}
+                />
+              ))}
+            </View>
+
+            <View style={styles.sheetButtons}>
+              <Pressable style={styles.cancel} onPress={closeAddSheet}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.add,
+                  (!draftText.trim() ||
+                    busy ||
+                    (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)) &&
+                    styles.addDisabled,
+                ]}
+                onPress={() => void onAdd()}
+                disabled={
+                  !draftText.trim() ||
+                  busy ||
+                  (draftCycle === CUSTOM_CYCLE_SENTINEL && draftCustomDays.length === 0)
+                }
+              >
+                <Text style={styles.addText}>Add</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -805,8 +832,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
-  modalRoot: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
+  overlayBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
+  overlayKAV: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
   sheet: {
     backgroundColor: "#0e0e0e",
     borderTopLeftRadius: 24,
