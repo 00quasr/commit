@@ -1,6 +1,6 @@
 import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
-import { FlashList, type FlashListRef } from "@shopify/flash-list";
+import { FlashList } from "@shopify/flash-list";
 import { fonts, habitColors } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
@@ -25,8 +25,10 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
@@ -224,77 +226,37 @@ export default function Today() {
   // the top — a magnetic resting position. When a habit is selected the detail view
   // is shown and scrolling behaves normally, so we leave the list alone there.
   //
-  // Driven off onScroll (which FlashList forwards reliably) plus drag-state, NOT off
-  // onMomentumScrollEnd. Earlier momentum-based versions stuck on fast/repeated
-  // flicks because onMomentumScrollEnd fires unreliably on Android and is dropped
-  // entirely when a fling is interrupted by the next flick — so the snap never ran.
-  //
-  // The hard part is that a native fling can't be killed on FlashList v2 (Android
-  // ignores decelerationRate), so it fights our programmatic scroll: right after a
-  // release the fling carries the list further AWAY from the top before our snap can
-  // win. So we watch scroll direction:
-  //   - Whenever a non-drag frame shows the list moving away from the top (offset
-  //     rising) we (re)issue the snap — this overrides the fling no matter how many
-  //     times it tries to run, which is what fixes the "stuck" on fast flicks.
-  //   - While our own snap is animating the list TOWARD the top (offset falling) we
-  //     don't re-issue it, otherwise each frame would restart the animation and it
-  //     would crawl / never arrive.
-  //   - onScrollEndDrag covers a zero-velocity release (no momentum frames follow).
-  //   - A new drag cancels the in-flight snap so the user can scroll freely.
-  //   - scrollToOffset({offset:-100}) overshoots because offset:0 lands ~1px short
-  //     of the true top on FlashList v2; maintainVisibleContentPosition (on by
-  //     default) is disabled so its anchor adjustments can't fight the snap.
+  // Magnetic "pull back to top" for the default Today view (COM-115). Every
+  // scroll-event-based attempt (scrollToOffset on drag/momentum end) fought
+  // FlashList v2's native fling, which can't be disabled on Android — so on fast or
+  // repeated flicks the fling kept winning and the list stuck mid-scroll. Instead we
+  // disable FlashList's own scroll in the default view and drive a small rubber-band
+  // translateY entirely on the UI thread: a gesture-handler Pan tracks the finger
+  // (with resistance) and a Reanimated spring snaps it back to 0 on release. There is
+  // no native momentum involved, so nothing can strand the list off the top. When a
+  // habit is selected the gesture is disabled and FlashList scrolls normally.
   const isDefaultView = selectedHabitId === null;
-  const listRef = useRef<FlashListRef<(typeof listData)[number]>>(null);
-  const draggingRef = useRef(false);
-  const snappingRef = useRef(false);
-  const lastYRef = useRef(0);
-  const SNAP_EPSILON = 4; // residual px tolerance — below this the list counts as "at top"
-
-  const settleToTop = useCallback(
-    (y: number) => {
-      if (!isDefaultView) return;
-      if (y <= SNAP_EPSILON) {
-        snappingRef.current = false; // reached the top — re-arm for the next scroll
-        lastYRef.current = 0;
-        return;
-      }
-      const movingAwayFromTop = y > lastYRef.current + 1;
-      lastYRef.current = y;
-      // Skip only while our own snap is actively pulling toward the top; a fling
-      // moving away always re-triggers so it can't strand the list mid-scroll.
-      if (snappingRef.current && !movingAwayFromTop) return;
-      snappingRef.current = true;
-      listRef.current?.scrollToOffset({ offset: -100, animated: true });
-    },
-    [isDefaultView],
+  const pullY = useSharedValue(0);
+  const pullGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(isDefaultView)
+        // Only take over for clear vertical drags; horizontal yields to the row
+        // Swipeables and a still finger yields to row taps.
+        .activeOffsetY([-12, 12])
+        .failOffsetX([-12, 12])
+        .onUpdate((e) => {
+          "worklet";
+          // Resistance factor keeps the list feeling tethered to the top.
+          pullY.value = e.translationY * 0.4;
+        })
+        .onFinalize(() => {
+          "worklet";
+          pullY.value = withSpring(0, { damping: 22, stiffness: 240, mass: 0.6 });
+        }),
+    [isDefaultView, pullY],
   );
-
-  const onListScrollBeginDrag = useCallback(
-    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
-      draggingRef.current = true;
-      snappingRef.current = false; // a new touch cancels any in-flight snap
-      lastYRef.current = e.nativeEvent.contentOffset.y;
-    },
-    [],
-  );
-
-  const onListScrollEndDrag = useCallback(
-    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
-      draggingRef.current = false;
-      lastYRef.current = e.nativeEvent.contentOffset.y;
-      settleToTop(e.nativeEvent.contentOffset.y);
-    },
-    [settleToTop],
-  );
-
-  const onListScroll = useCallback(
-    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
-      if (draggingRef.current) lastYRef.current = e.nativeEvent.contentOffset.y;
-      else settleToTop(e.nativeEvent.contentOffset.y);
-    },
-    [settleToTop],
-  );
+  const pullStyle = useAnimatedStyle(() => ({ transform: [{ translateY: pullY.value }] }));
 
   const onAdd = async () => {
     const text = draftText.trim();
@@ -392,62 +354,61 @@ export default function Today() {
           </View>
         </ScrollView>
       ) : (
-        <FlashList
-          ref={listRef}
-          data={listData}
-          keyExtractor={(item) => item.key}
-          getItemType={(item) => item.kind}
-          showsVerticalScrollIndicator={false}
-          maintainVisibleContentPosition={isDefaultView ? { disabled: true } : undefined}
-          scrollEventThrottle={16}
-          onScroll={onListScroll}
-          onScrollBeginDrag={onListScrollBeginDrag}
-          onScrollEndDrag={onListScrollEndDrag}
-          ListHeaderComponent={statsArea}
-          renderItem={({ item }) => {
-            if (item.kind === "header") {
-              return (
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>{item.title.toUpperCase()}</Text>
-                </View>
-              );
-            }
-            const habit = item.habit;
-            const doneToday =
-              item.sectionTitle === "Not due today" && habit.lastDropDayKey !== undefined;
-            return (
-              <>
-                {item.firstInSection ? null : <View style={styles.sep} />}
-                <Swipeable
-                  renderRightActions={() => (
-                    <View style={styles.archiveAction}>
-                      <Text style={styles.archiveText}>Archive</Text>
+        <GestureDetector gesture={pullGesture}>
+          <Animated.View style={[styles.listWrap, pullStyle]}>
+            <FlashList
+              data={listData}
+              keyExtractor={(item) => item.key}
+              getItemType={(item) => item.kind}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={!isDefaultView}
+              ListHeaderComponent={statsArea}
+              renderItem={({ item }) => {
+                if (item.kind === "header") {
+                  return (
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>{item.title.toUpperCase()}</Text>
                     </View>
-                  )}
-                  onSwipeableRightOpen={() => {
-                    void archiveHabit({ habitId: habit._id });
-                  }}
-                  rightThreshold={48}
-                  friction={1.6}
-                >
-                  <HabitRow
-                    text={habit.text}
-                    cycleDays={habit.cycleDays}
-                    customDays={habit.customDays}
-                    color={habit.color}
-                    doneToday={doneToday}
-                    onPress={() => selectHabit(habit._id)}
-                    onLongPress={() => {
-                      startDropDraft(habit._id);
-                      router.push("/drop/camera");
-                    }}
-                  />
-                </Swipeable>
-              </>
-            );
-          }}
-          contentContainerStyle={styles.list}
-        />
+                  );
+                }
+                const habit = item.habit;
+                const doneToday =
+                  item.sectionTitle === "Not due today" && habit.lastDropDayKey !== undefined;
+                return (
+                  <>
+                    {item.firstInSection ? null : <View style={styles.sep} />}
+                    <Swipeable
+                      renderRightActions={() => (
+                        <View style={styles.archiveAction}>
+                          <Text style={styles.archiveText}>Archive</Text>
+                        </View>
+                      )}
+                      onSwipeableRightOpen={() => {
+                        void archiveHabit({ habitId: habit._id });
+                      }}
+                      rightThreshold={48}
+                      friction={1.6}
+                    >
+                      <HabitRow
+                        text={habit.text}
+                        cycleDays={habit.cycleDays}
+                        customDays={habit.customDays}
+                        color={habit.color}
+                        doneToday={doneToday}
+                        onPress={() => selectHabit(habit._id)}
+                        onLongPress={() => {
+                          startDropDraft(habit._id);
+                          router.push("/drop/camera");
+                        }}
+                      />
+                    </Swipeable>
+                  </>
+                );
+              }}
+              contentContainerStyle={styles.list}
+            />
+          </Animated.View>
+        </GestureDetector>
       )}
 
       <BottomBar
@@ -900,6 +861,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   emptyScroll: { flexGrow: 1, paddingBottom: 120 },
+  listWrap: { flex: 1 },
   list: { paddingBottom: 180 },
   sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   sectionTitle: {
