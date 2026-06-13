@@ -5,6 +5,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
@@ -30,12 +31,14 @@ export default function RootLayout() {
     // primitive used downstream (Today screen swipe-to-archive). Expo Go's host
     // does NOT add this automatically on SDK 54, despite earlier assumptions.
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-          <StatusBar style="light" />
-          <Slot />
-        </ConvexProviderWithClerk>
-      </ClerkProvider>
+      <KeyboardProvider>
+        <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+          <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+            <StatusBar style="light" />
+            <Slot />
+          </ConvexProviderWithClerk>
+        </ClerkProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

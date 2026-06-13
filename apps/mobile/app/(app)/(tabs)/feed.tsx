@@ -1,18 +1,11 @@
 import { api } from "@commit/convex/api";
+import { FlashList, type FlashListRef, type ViewToken } from "@shopify/flash-list";
 import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { router } from "expo-router";
 import { useCallback, useMemo, useRef } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type ViewToken,
-} from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ActivityEventCard } from "@/components/ActivityEventCard";
 import { DropCard } from "@/components/DropCard";
@@ -40,7 +33,7 @@ export default function Feed() {
   const events = useQuery(api.activityEvents.feedForUser, {});
   const markSeen = useMutation(api.views.markSeen);
   const seenLocally = useRef(new Set<string>());
-  const listRef = useRef<FlatList>(null);
+  const listRef = useRef<FlashListRef<FeedItem>>(null);
 
   const merged = useMemo<FeedItem[]>(() => {
     if (!result || result.locked) return [];
@@ -60,7 +53,7 @@ export default function Feed() {
   }, [result, events]);
 
   const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    ({ viewableItems }: { viewableItems: ViewToken<FeedItem>[] }) => {
       for (const item of viewableItems) {
         const entry = item.item as FeedItem;
         if (entry.type !== "drop") continue;
@@ -116,11 +109,12 @@ export default function Feed() {
         </Text>
       </View>
 
-      <FlatList
+      <FlashList
         ref={listRef}
         showsVerticalScrollIndicator={false}
         data={merged}
         keyExtractor={(item) => item.key}
+        getItemType={(item) => item.type}
         renderItem={({ item, index }) =>
           item.type === "drop" ? (
             <DropCard

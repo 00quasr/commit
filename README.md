@@ -1,5 +1,7 @@
 # commit
 
+<img width="2912" height="1966" alt="Screenshot 2026-06-12 at 10-52-35 commit — show your work  see theirs" src="https://github.com/user-attachments/assets/1f4c5207-f07f-43b6-b6af-44b1c4a1ae71" />
+
 > Habit tracker with BeReal-style proof.\
 > Set a goal, prove you did it, see what your circle shipped today.
 

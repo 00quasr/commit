@@ -1,5 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { api } from "@commit/convex/api";
+import { FlashList } from "@shopify/flash-list";
 import { fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
@@ -8,10 +9,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +17,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAvoidingView, KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "@/lib/theme";
 import { PRIVACY_URL, TERMS_URL } from "@/lib/constants";
@@ -272,54 +271,57 @@ function UsernameEditor({
       onRequestClose={onClose}
       onShow={onShow}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.modalBackdrop}
-      >
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Edit username</Text>
-          <TextInput
-            value={value}
-            onChangeText={(t) => {
-              setValue(t);
-              if (error) setError(null);
-            }}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoFocus
-            maxLength={20}
-            placeholder="username"
-            placeholderTextColor={theme.text.muted}
-            style={styles.modalInput}
-          />
-          <Text style={error ? styles.modalError : styles.modalHelp}>{error ?? USERNAME_HELP}</Text>
-          <View style={styles.modalActions}>
-            <Pressable
-              onPress={onClose}
-              disabled={busy}
-              style={({ pressed }) => [
-                styles.modalButton,
-                styles.modalButtonGhost,
-                pressed && { opacity: 0.6 },
-              ]}
-            >
-              <Text style={styles.modalButtonGhostText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => void onSave()}
-              disabled={busy || value.trim().length === 0}
-              style={({ pressed }) => [
-                styles.modalButton,
-                styles.modalButtonPrimary,
-                (pressed || busy || value.trim().length === 0) && { opacity: 0.6 },
-              ]}
-            >
-              <Text style={styles.modalButtonPrimaryText}>{busy ? "Saving…" : "Save"}</Text>
-            </Pressable>
+      {/* RN Modal renders in a separate hierarchy on iOS; the root KeyboardProvider
+          doesn't reach it, so re-provide one here for KeyboardAvoidingView to work. */}
+      <KeyboardProvider>
+        <KeyboardAvoidingView behavior="padding" style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Edit username</Text>
+            <TextInput
+              value={value}
+              onChangeText={(t) => {
+                setValue(t);
+                if (error) setError(null);
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+              maxLength={20}
+              placeholder="username"
+              placeholderTextColor={theme.text.muted}
+              style={styles.modalInput}
+            />
+            <Text style={error ? styles.modalError : styles.modalHelp}>
+              {error ?? USERNAME_HELP}
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={onClose}
+                disabled={busy}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  styles.modalButtonGhost,
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <Text style={styles.modalButtonGhostText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void onSave()}
+                disabled={busy || value.trim().length === 0}
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  styles.modalButtonPrimary,
+                  (pressed || busy || value.trim().length === 0) && { opacity: 0.6 },
+                ]}
+              >
+                <Text style={styles.modalButtonPrimaryText}>{busy ? "Saving…" : "Save"}</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </KeyboardProvider>
     </Modal>
   );
 }
@@ -439,11 +441,10 @@ function TimezonePicker({
           style={styles.tzSearch}
         />
 
-        <FlatList
+        <FlashList
           data={visibleZones}
           keyExtractor={(item) => item}
           keyboardShouldPersistTaps="handled"
-          initialNumToRender={30}
           renderItem={({ item }) => {
             const isCurrent = item === current;
             const { city, region } = parseTimezone(item);
