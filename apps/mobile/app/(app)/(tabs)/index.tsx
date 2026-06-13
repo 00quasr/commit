@@ -121,8 +121,11 @@ export default function Today() {
   }));
 
   const openAddSheet = () => {
+    // Start the Reanimated worklet before the state update, same as
+    // selectHabit below — otherwise the setShowAdd re-render can delay when
+    // the slide-up animation actually starts on Android.
+    sheetAnim.value = withTiming(1, { duration: 220 });
     setShowAdd(true);
-    sheetAnim.value = withTiming(1, { duration: 280 });
     setTimeout(() => textInputRef.current?.focus(), 80);
   };
 
