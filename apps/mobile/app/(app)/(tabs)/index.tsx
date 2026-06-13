@@ -223,6 +223,9 @@ export default function Today() {
   // user lifts their finger while no habit is selected, the list is pulled back to
   // the top — a magnetic resting position. When a habit is selected the detail view
   // is shown and scrolling behaves normally, so we leave the list alone there.
+  // Re-asserted on onMomentumScrollBegin too: a flick starts a native fling
+  // immediately after release, which can override the onScrollEndDrag snap before
+  // it lands — re-issuing it as the fling begins makes the snap win reliably.
   const listRef = useRef<FlashListRef<(typeof listData)[number]>>(null);
   const snapToTop = useCallback(() => {
     if (selectedHabitId === null) {
@@ -333,6 +336,7 @@ export default function Today() {
           getItemType={(item) => item.kind}
           showsVerticalScrollIndicator={false}
           onScrollEndDrag={snapToTop}
+          onMomentumScrollBegin={snapToTop}
           onMomentumScrollEnd={snapToTop}
           ListHeaderComponent={statsArea}
           renderItem={({ item }) => {
