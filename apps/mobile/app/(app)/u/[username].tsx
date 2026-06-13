@@ -20,7 +20,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Heatmap } from "@/components/Heatmap";
 import { MemoriesGrid } from "@/components/MemoriesGrid";
 
@@ -29,6 +29,7 @@ const CARD_MARGIN_H = 20;
 const CARD_PADDING_H = 16;
 
 export default function UserProfile() {
+  const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const heatmapWidth = screenWidth - CARD_MARGIN_H * 2 - CARD_PADDING_H * 2;
   const { username: raw } = useLocalSearchParams<{ username: string }>();
@@ -85,21 +86,21 @@ export default function UserProfile() {
 
   if (target === undefined || me === undefined) {
     return (
-      <SafeAreaView style={[styles.root, styles.center]} edges={["top"]}>
+      <View style={[styles.root, styles.center, { paddingTop: insets.top }]}>
         <ActivityIndicator color={theme.text.primary} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (target === null) {
     return (
-      <SafeAreaView style={styles.root} edges={["top"]}>
+      <View style={[styles.root, { paddingTop: insets.top }]}>
         <TopBar />
         <View style={[styles.center, { flex: 1, paddingHorizontal: 32 }]}>
           <Text style={styles.notFoundTitle}>User not found</Text>
           <Text style={styles.notFoundHint}>No one with the handle @{username}.</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -225,7 +226,7 @@ export default function UserProfile() {
   );
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
       <TopBar showSettings={me?._id === target._id} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -370,7 +371,7 @@ export default function UserProfile() {
           onConfirm={(uri) => void onCropConfirm(uri)}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
