@@ -7,15 +7,13 @@ import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDropDraft } from "@/lib/dropDraft";
 
@@ -99,35 +97,34 @@ export default function Compose() {
         </Pressable>
       </View>
 
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          {photoUri && (
-            <View style={styles.photoWrap}>
-              <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
-            </View>
-          )}
+        {photoUri && (
+          <View style={styles.photoWrap}>
+            <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+          </View>
+        )}
 
-          <Text style={styles.fieldLabel}>Caption</Text>
-          <TextInput
-            style={styles.input}
-            value={caption}
-            onChangeText={setCaption}
-            placeholder="What did you do?"
-            placeholderTextColor="#555"
-            autoFocus={!photoUri}
-            maxLength={MAX_CAPTION + 20}
-            multiline
-          />
-          <Text style={[styles.charCount, captionOver && styles.charCountOver]}>
-            {caption.length}/{MAX_CAPTION}
-          </Text>
+        <Text style={styles.fieldLabel}>Caption</Text>
+        <TextInput
+          style={styles.input}
+          value={caption}
+          onChangeText={setCaption}
+          placeholder="What did you do?"
+          placeholderTextColor="#555"
+          autoFocus={!photoUri}
+          maxLength={MAX_CAPTION + 20}
+          multiline
+        />
+        <Text style={[styles.charCount, captionOver && styles.charCountOver]}>
+          {caption.length}/{MAX_CAPTION}
+        </Text>
 
-          {error && <Text style={styles.error}>{error}</Text>}
-        </ScrollView>
-      </KeyboardAvoidingView>
+        {error && <Text style={styles.error}>{error}</Text>}
+      </KeyboardAwareScrollView>
 
       <View style={styles.footer}>
         <Pressable
