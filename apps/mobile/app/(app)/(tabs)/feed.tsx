@@ -86,10 +86,12 @@ export default function Feed() {
           <View style={styles.lockedIconWrap}>
             <Ionicons name="lock-closed" size={28} color="#666" />
           </View>
-          <Text style={styles.lockedCount}>{result.blurredCount}</Text>
-          <Text style={styles.lockedLabel}>
-            {result.blurredCount === 1 ? "friend dropped today" : "friends dropped today"}
-          </Text>
+          <Text style={styles.lockedTitle}>Feed locked</Text>
+          {result.blurredCount > 0 ? (
+            <Text style={styles.lockedLabel}>
+              {result.blurredCount} {result.blurredCount === 1 ? "friend" : "friends"} dropped today
+            </Text>
+          ) : null}
           <Text style={styles.lockedHint}>Drop something to unlock the feed.</Text>
           <Pressable
             style={({ pressed }) => [styles.dropCta, pressed && { opacity: 0.7 }]}
@@ -176,14 +178,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 20,
   },
-  lockedCount: {
+  lockedTitle: {
     color: colors.fg,
-    fontSize: 72,
+    fontSize: 22,
     fontFamily: fonts.sans,
     fontWeight: "700",
-    fontVariant: ["tabular-nums"],
   },
-  lockedLabel: { color: "#888", fontSize: 16, fontFamily: fonts.sans, marginTop: 4 },
+  lockedLabel: { color: "#888", fontSize: 15, fontFamily: fonts.sans, marginTop: 8 },
   lockedHint: {
     color: "#666",
     fontSize: 14,
