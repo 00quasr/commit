@@ -1,6 +1,7 @@
 import { fonts } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { TouchableOpacity } from "react-native-gesture-handler";
 
 export interface HabitRowProps {
   text: string;
@@ -37,8 +38,9 @@ export function HabitRow({
 }: HabitRowProps) {
   const accentColor = color ?? theme.text.muted;
   return (
-    <Pressable
-      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+    <TouchableOpacity
+      style={styles.row}
+      activeOpacity={0.7}
       onPress={onPress}
       onLongPress={onLongPress}
     >
@@ -58,7 +60,7 @@ export function HabitRow({
         </Text>
         <Text style={styles.meta}>{cycleLabel(cycleDays, customDays)}</Text>
       </View>
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
