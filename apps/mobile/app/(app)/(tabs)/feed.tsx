@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@commit/convex/api";
 import { FlashList, type FlashListRef, type ViewToken } from "@shopify/flash-list";
 import { colors, fonts } from "@commit/ui-tokens";
@@ -82,11 +83,16 @@ export default function Feed() {
           <Text style={styles.title}>Feed</Text>
         </View>
         <View style={styles.lockedCenter}>
-          <Text style={styles.lockedCount}>{result.blurredCount}</Text>
-          <Text style={styles.lockedLabel}>
-            {result.blurredCount === 1 ? "friend dropped today" : "friends dropped today"}
-          </Text>
-          <Text style={styles.lockedHint}>Drop something to see their proof.</Text>
+          <View style={styles.lockedIconWrap}>
+            <Ionicons name="lock-closed" size={28} color="#666" />
+          </View>
+          <Text style={styles.lockedTitle}>Feed locked</Text>
+          {result.blurredCount > 0 ? (
+            <Text style={styles.lockedLabel}>
+              {result.blurredCount} {result.blurredCount === 1 ? "friend" : "friends"} dropped today
+            </Text>
+          ) : null}
+          <Text style={styles.lockedHint}>Drop something to unlock the feed.</Text>
           <Pressable
             style={({ pressed }) => [styles.dropCta, pressed && { opacity: 0.7 }]}
             onPress={() => router.push("/(tabs)")}
@@ -163,14 +169,22 @@ const styles = StyleSheet.create({
   },
   // Locked state
   lockedCenter: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 },
-  lockedCount: {
+  lockedIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  lockedTitle: {
     color: colors.fg,
-    fontSize: 96,
+    fontSize: 22,
     fontFamily: fonts.sans,
     fontWeight: "700",
-    fontVariant: ["tabular-nums"],
   },
-  lockedLabel: { color: "#888", fontSize: 16, fontFamily: fonts.sans, marginTop: 4 },
+  lockedLabel: { color: "#888", fontSize: 15, fontFamily: fonts.sans, marginTop: 8 },
   lockedHint: {
     color: "#666",
     fontSize: 14,

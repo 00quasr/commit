@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
 import { fonts } from "@commit/ui-tokens";
@@ -376,26 +377,27 @@ export default function UserProfile() {
 function TopBar({ showSettings = false }: { showSettings?: boolean }) {
   return (
     <View style={styles.topBar}>
-      {showSettings ? (
+      <View />
+      <View style={styles.topBarRight}>
+        {showSettings ? (
+          <Pressable
+            onPress={() => router.push("/(app)/settings")}
+            style={({ pressed }) => [styles.settingsButton, pressed && { opacity: 0.6 }]}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+          >
+            <Ionicons name="settings-outline" size={22} color={theme.text.secondary} />
+          </Pressable>
+        ) : null}
         <Pressable
-          onPress={() => router.push("/(app)/settings")}
-          style={({ pressed }) => [styles.settingsButton, pressed && { opacity: 0.6 }]}
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.6 }]}
           hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Settings"
         >
-          <Text style={styles.settingsGlyph}>⚙</Text>
+          <Text style={styles.backText}>✕</Text>
         </Pressable>
-      ) : (
-        <View style={styles.settingsButton} />
-      )}
-      <Pressable
-        onPress={() => router.back()}
-        style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.6 }]}
-        hitSlop={12}
-      >
-        <Text style={styles.backText}>✕</Text>
-      </Pressable>
+      </View>
     </View>
   );
 }
@@ -411,6 +413,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
   },
+  topBarRight: { flexDirection: "row", alignItems: "center", gap: 4 },
   backButton: { padding: 4 },
   backText: { color: theme.text.tertiary, fontSize: 18 },
   settingsButton: {
@@ -419,7 +422,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  settingsGlyph: { color: theme.text.secondary, fontSize: 20 },
   scroll: { paddingTop: 8, paddingBottom: 80 },
   notFoundTitle: {
     color: theme.text.primary,
