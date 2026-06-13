@@ -223,15 +223,20 @@ export default function Today() {
   // user lifts their finger while no habit is selected, the list is pulled back to
   // the top — a magnetic resting position. When a habit is selected the detail view
   // is shown and scrolling behaves normally, so we leave the list alone there.
-  // Re-asserted on onMomentumScrollBegin too: a flick starts a native fling
-  // immediately after release, which can override the onScrollEndDrag snap before
-  // it lands — re-issuing it as the fling begins makes the snap win reliably.
+  //
+  // The snap is paired with decelerationRate={0} below (default view only): killing
+  // the post-release fling makes the list stop the instant the finger lifts, so our
+  // animated scrollToOffset(0) runs unopposed. Without it, the native fling races
+  // the programmatic scroll and intermittently wins, leaving the list stuck partway
+  // (the Android smoothScrollTo-during-fling quirk). With no fling there are no
+  // momentum events, but onMomentumScrollEnd stays wired as a harmless safety net.
+  const isDefaultView = selectedHabitId === null;
   const listRef = useRef<FlashListRef<(typeof listData)[number]>>(null);
   const snapToTop = useCallback(() => {
-    if (selectedHabitId === null) {
+    if (isDefaultView) {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }
-  }, [selectedHabitId]);
+  }, [isDefaultView]);
 
   const onAdd = async () => {
     const text = draftText.trim();
@@ -335,8 +340,8 @@ export default function Today() {
           keyExtractor={(item) => item.key}
           getItemType={(item) => item.kind}
           showsVerticalScrollIndicator={false}
+          decelerationRate={isDefaultView ? 0 : "normal"}
           onScrollEndDrag={snapToTop}
-          onMomentumScrollBegin={snapToTop}
           onMomentumScrollEnd={snapToTop}
           ListHeaderComponent={statsArea}
           renderItem={({ item }) => {
