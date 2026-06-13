@@ -5,7 +5,7 @@ import { theme } from "@/lib/theme";
 import { useQuery } from "convex/react";
 import { router, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DropCard } from "@/components/DropCard";
 
 function formatDayKey(dayKey: string): string {
@@ -20,12 +20,13 @@ function formatDayKey(dayKey: string): string {
 }
 
 export default function DayDetail() {
+  const insets = useSafeAreaInsets();
   const { dayKey } = useLocalSearchParams<{ dayKey: string }>();
   const me = useQuery(api.profiles.me);
   const drops = useQuery(api.drops.forDay, me && dayKey ? { profileId: me._id, dayKey } : "skip");
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Text style={styles.title}>{dayKey ? formatDayKey(dayKey) : ""}</Text>
         <Pressable
@@ -62,7 +63,7 @@ export default function DayDetail() {
           )}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

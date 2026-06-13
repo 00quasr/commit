@@ -6,10 +6,11 @@ import { theme } from "@/lib/theme";
 import { useQuery } from "convex/react";
 import { router, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DropCard } from "@/components/DropCard";
 
 export default function HabitDrops() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const habitId = id as Id<"habits">;
 
@@ -19,7 +20,7 @@ export default function HabitDrops() {
   const habit = allHabits?.find((h) => h._id === habitId);
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Text style={styles.title} numberOfLines={1}>
           {habit?.text ?? "Habit drops"}
@@ -58,7 +59,7 @@ export default function HabitDrops() {
           )}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
