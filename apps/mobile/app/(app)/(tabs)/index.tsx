@@ -227,23 +227,28 @@ export default function Today() {
   // Driven off onScroll (which FlashList forwards reliably) plus drag-state, NOT off
   // onMomentumScrollEnd. Earlier momentum-based versions stuck on fast/repeated
   // flicks because onMomentumScrollEnd fires unreliably on Android and is dropped
-  // entirely when a fling is interrupted by the next flick — so the snap for that
-  // fling never ran. Here, the first scroll frame after release (finger up, fling
-  // running) triggers the snap, overriding the fling almost immediately:
-  //   - onScrollEndDrag handles a slow release with no momentum (no later frames).
-  //   - onScroll handles a fling: as soon as a non-drag frame reports an offset off
-  //     the top, we take over.
-  //   - snappingRef collapses the programmatic scroll's own frames into one snap
-  //     (it would otherwise re-trigger every frame); it clears once back near the
-  //     top, or when a new drag starts (which cancels an in-flight snap).
+  // entirely when a fling is interrupted by the next flick — so the snap never ran.
+  //
+  // The hard part is that a native fling can't be killed on FlashList v2 (Android
+  // ignores decelerationRate), so it fights our programmatic scroll: right after a
+  // release the fling carries the list further AWAY from the top before our snap can
+  // win. So we watch scroll direction:
+  //   - Whenever a non-drag frame shows the list moving away from the top (offset
+  //     rising) we (re)issue the snap — this overrides the fling no matter how many
+  //     times it tries to run, which is what fixes the "stuck" on fast flicks.
+  //   - While our own snap is animating the list TOWARD the top (offset falling) we
+  //     don't re-issue it, otherwise each frame would restart the animation and it
+  //     would crawl / never arrive.
+  //   - onScrollEndDrag covers a zero-velocity release (no momentum frames follow).
+  //   - A new drag cancels the in-flight snap so the user can scroll freely.
   //   - scrollToOffset({offset:-100}) overshoots because offset:0 lands ~1px short
-  //     of the true top on FlashList v2.
-  //   - maintainVisibleContentPosition (on by default in FlashList v2) is disabled
-  //     so its anchor adjustments can't fight the snap.
+  //     of the true top on FlashList v2; maintainVisibleContentPosition (on by
+  //     default) is disabled so its anchor adjustments can't fight the snap.
   const isDefaultView = selectedHabitId === null;
   const listRef = useRef<FlashListRef<(typeof listData)[number]>>(null);
   const draggingRef = useRef(false);
   const snappingRef = useRef(false);
+  const lastYRef = useRef(0);
   const SNAP_EPSILON = 4; // residual px tolerance — below this the list counts as "at top"
 
   const settleToTop = useCallback(
@@ -251,23 +256,33 @@ export default function Today() {
       if (!isDefaultView) return;
       if (y <= SNAP_EPSILON) {
         snappingRef.current = false; // reached the top — re-arm for the next scroll
+        lastYRef.current = 0;
         return;
       }
-      if (snappingRef.current) return; // a snap is already animating; don't restack it
+      const movingAwayFromTop = y > lastYRef.current + 1;
+      lastYRef.current = y;
+      // Skip only while our own snap is actively pulling toward the top; a fling
+      // moving away always re-triggers so it can't strand the list mid-scroll.
+      if (snappingRef.current && !movingAwayFromTop) return;
       snappingRef.current = true;
       listRef.current?.scrollToOffset({ offset: -100, animated: true });
     },
     [isDefaultView],
   );
 
-  const onListScrollBeginDrag = useCallback(() => {
-    draggingRef.current = true;
-    snappingRef.current = false; // a new touch cancels any in-flight snap
-  }, []);
+  const onListScrollBeginDrag = useCallback(
+    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+      draggingRef.current = true;
+      snappingRef.current = false; // a new touch cancels any in-flight snap
+      lastYRef.current = e.nativeEvent.contentOffset.y;
+    },
+    [],
+  );
 
   const onListScrollEndDrag = useCallback(
     (e: { nativeEvent: { contentOffset: { y: number } } }) => {
       draggingRef.current = false;
+      lastYRef.current = e.nativeEvent.contentOffset.y;
       settleToTop(e.nativeEvent.contentOffset.y);
     },
     [settleToTop],
@@ -275,7 +290,8 @@ export default function Today() {
 
   const onListScroll = useCallback(
     (e: { nativeEvent: { contentOffset: { y: number } } }) => {
-      if (!draggingRef.current) settleToTop(e.nativeEvent.contentOffset.y);
+      if (draggingRef.current) lastYRef.current = e.nativeEvent.contentOffset.y;
+      else settleToTop(e.nativeEvent.contentOffset.y);
     },
     [settleToTop],
   );
