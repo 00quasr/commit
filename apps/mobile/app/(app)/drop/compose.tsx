@@ -2,11 +2,11 @@ import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
 import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation } from "convex/react";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -104,7 +104,7 @@ export default function Compose() {
       >
         {photoUri && (
           <View style={styles.photoWrap}>
-            <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+            <Image source={{ uri: photoUri }} style={styles.photo} contentFit="cover" />
           </View>
         )}
 
