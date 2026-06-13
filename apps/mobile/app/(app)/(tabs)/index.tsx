@@ -861,7 +861,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   emptyScroll: { flexGrow: 1, paddingBottom: 120 },
-  listWrap: { flex: 1 },
+  // overflow:hidden clips the rubber-band translateY so the list (heatmap card etc.)
+  // can't draw over the header above it (title, "N habits due", friends/profile).
+  listWrap: { flex: 1, overflow: "hidden" },
   list: { paddingBottom: 180 },
   sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   sectionTitle: {
