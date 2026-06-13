@@ -223,25 +223,61 @@ export default function Today() {
   // user lifts their finger while no habit is selected, the list is pulled back to
   // the top — a magnetic resting position. When a habit is selected the detail view
   // is shown and scrolling behaves normally, so we leave the list alone there.
+  //
+  // Driven off onScroll (which FlashList forwards reliably) plus drag-state, NOT off
+  // onMomentumScrollEnd. Earlier momentum-based versions stuck on fast/repeated
+  // flicks because onMomentumScrollEnd fires unreliably on Android and is dropped
+  // entirely when a fling is interrupted by the next flick — so the snap for that
+  // fling never ran. Here, the first scroll frame after release (finger up, fling
+  // running) triggers the snap, overriding the fling almost immediately:
+  //   - onScrollEndDrag handles a slow release with no momentum (no later frames).
+  //   - onScroll handles a fling: as soon as a non-drag frame reports an offset off
+  //     the top, we take over.
+  //   - snappingRef collapses the programmatic scroll's own frames into one snap
+  //     (it would otherwise re-trigger every frame); it clears once back near the
+  //     top, or when a new drag starts (which cancels an in-flight snap).
+  //   - scrollToOffset({offset:-100}) overshoots because offset:0 lands ~1px short
+  //     of the true top on FlashList v2.
+  //   - maintainVisibleContentPosition (on by default in FlashList v2) is disabled
+  //     so its anchor adjustments can't fight the snap.
   const isDefaultView = selectedHabitId === null;
   const listRef = useRef<FlashListRef<(typeof listData)[number]>>(null);
-  // Two Android quirks made an earlier version stick near the top:
-  //   1. A programmatic animated scrollToOffset({offset:0}) lands ~1px short of 0
-  //      on FlashList v2, never exactly 0. We overshoot to a negative offset so the
-  //      ScrollView clamps to the true top.
-  //   2. That programmatic scroll emits its own momentum-end event, so re-snapping
-  //      unconditionally from onMomentumScrollEnd fed back into itself, looping near
-  //      the top forever. We guard on the event's current offset and only snap while
-  //      the list is still meaningfully scrolled, which also still catches a fling.
-  // maintainVisibleContentPosition (on by default in FlashList v2) is disabled in the
-  // default view so its anchor adjustments can't fight the snap.
-  const snapIfScrolled = useCallback(
-    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
-      if (isDefaultView && e.nativeEvent.contentOffset.y > 4) {
-        listRef.current?.scrollToOffset({ offset: -100, animated: true });
+  const draggingRef = useRef(false);
+  const snappingRef = useRef(false);
+  const SNAP_EPSILON = 4; // residual px tolerance — below this the list counts as "at top"
+
+  const settleToTop = useCallback(
+    (y: number) => {
+      if (!isDefaultView) return;
+      if (y <= SNAP_EPSILON) {
+        snappingRef.current = false; // reached the top — re-arm for the next scroll
+        return;
       }
+      if (snappingRef.current) return; // a snap is already animating; don't restack it
+      snappingRef.current = true;
+      listRef.current?.scrollToOffset({ offset: -100, animated: true });
     },
     [isDefaultView],
+  );
+
+  const onListScrollBeginDrag = useCallback(() => {
+    draggingRef.current = true;
+    snappingRef.current = false; // a new touch cancels any in-flight snap
+  }, []);
+
+  const onListScrollEndDrag = useCallback(
+    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+      draggingRef.current = false;
+      settleToTop(e.nativeEvent.contentOffset.y);
+    },
+    [settleToTop],
+  );
+
+  const onListScroll = useCallback(
+    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+      if (!draggingRef.current) settleToTop(e.nativeEvent.contentOffset.y);
+    },
+    [settleToTop],
   );
 
   const onAdd = async () => {
@@ -347,8 +383,10 @@ export default function Today() {
           getItemType={(item) => item.kind}
           showsVerticalScrollIndicator={false}
           maintainVisibleContentPosition={isDefaultView ? { disabled: true } : undefined}
-          onScrollEndDrag={snapIfScrolled}
-          onMomentumScrollEnd={snapIfScrolled}
+          scrollEventThrottle={16}
+          onScroll={onListScroll}
+          onScrollBeginDrag={onListScrollBeginDrag}
+          onScrollEndDrag={onListScrollEndDrag}
           ListHeaderComponent={statsArea}
           renderItem={({ item }) => {
             if (item.kind === "header") {
