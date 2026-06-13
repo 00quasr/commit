@@ -9,7 +9,6 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Modal,
   Pressable,
   ScrollView,
