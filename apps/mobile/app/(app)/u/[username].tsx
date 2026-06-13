@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
 import { fonts } from "@commit/ui-tokens";
@@ -384,7 +385,7 @@ function TopBar({ showSettings = false }: { showSettings?: boolean }) {
           accessibilityRole="button"
           accessibilityLabel="Settings"
         >
-          <Text style={styles.settingsGlyph}>⚙</Text>
+          <Ionicons name="settings-outline" size={22} color={theme.text.secondary} />
         </Pressable>
       ) : (
         <View style={styles.settingsButton} />
@@ -418,8 +419,8 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: -4,
   },
-  settingsGlyph: { color: theme.text.secondary, fontSize: 20 },
   scroll: { paddingTop: 8, paddingBottom: 80 },
   notFoundTitle: {
     color: theme.text.primary,
