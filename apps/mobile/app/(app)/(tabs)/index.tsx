@@ -221,23 +221,11 @@ export default function Today() {
     [sections],
   );
 
-  // Magnetic "pull back to top" for the default Today view (COM-115). Every
-  // scroll-event-based attempt (scrollToOffset on drag/momentum end) fought
-  // FlashList v2's native fling, which can't be disabled on Android — so on fast or
-  // repeated flicks the fling kept winning and the list stuck mid-scroll. Instead we
-  // disable FlashList's own scroll in the default view and drive a small rubber-band
-  // translateY entirely on the UI thread: a gesture-handler Pan tracks the finger
-  // (with resistance) and a Reanimated spring snaps it back to 0 on release. There is
-  // no native momentum involved, so nothing can strand the list off the top. When a
-  // habit is selected the gesture is disabled and FlashList scrolls normally.
-  //
-  // The list renders as a full-screen layer ON TOP of the header (declared after it),
-  // with the list content padded down by the measured header height so the heatmap
-  // rests just below the header. Pulling up then slides the heatmap OVER the header
-  // within the list's own bounds, so it reliably draws above the title/subtitle (z-order
-  // is unambiguous in a shared layer instead of relying on cross-sibling overlap). The
-  // interactive header buttons sit in their own top layer so they stay tappable; they
-  // fade out as the list is pulled so the heatmap appears to cover them too.
+  // Magnetic "pull back to top" for the default Today view (COM-115): the whole screen
+  // content (header + heatmap + rows, wrapped in one pulled Animated.View) is dragged
+  // as a unit and springs back. A gesture-handler Pan drives a Reanimated translateY on
+  // the UI thread; FlashList's own scroll is disabled here (the pull handles movement)
+  // and re-enabled when a habit is selected, where this gesture is off.
   const isDefaultView = selectedHabitId === null;
   const pullY = useSharedValue(0);
   const pullGesture = useMemo(
