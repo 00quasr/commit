@@ -1,5 +1,6 @@
 import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
+import { dayKeyInTimezone, isDueToday } from "@commit/domain";
 import { FlashList } from "@shopify/flash-list";
 import { fonts, habitColors } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
@@ -9,6 +10,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -62,7 +64,6 @@ export default function Today() {
   const me = useQuery(api.profiles.me);
   const stats = useQuery(api.userStats.forCaller, {});
   const heatmapData = useQuery(api.drops.heatmapForProfile, me ? { profileId: me._id } : "skip");
-  const dueHabits = useQuery(api.habits.dueToday, {});
   const allHabits = useQuery(api.habits.list, {});
   const createHabit = useMutation(api.habits.create);
   const archiveHabit = useMutation(api.habits.archive);
@@ -79,6 +80,22 @@ export default function Today() {
 
   const textInputRef = useRef<TextInput>(null);
   const sheetAnim = useSharedValue(0);
+
+  // Drives the smooth reveal/hide of the weekday picker when "Custom days" is
+  // toggled. The sheet is bottom-anchored, so animating the row's measured
+  // height (not just opacity) lets the sheet grow/shrink without the content
+  // below snapping into place.
+  const customDaysProgress = useSharedValue(0);
+  const dayRowHeight = useSharedValue(0);
+  const dayRowStyle = useAnimatedStyle(() => ({
+    height: dayRowHeight.value * customDaysProgress.value,
+    opacity: customDaysProgress.value,
+  }));
+  useEffect(() => {
+    customDaysProgress.value = withTiming(draftCycle === CUSTOM_CYCLE_SENTINEL ? 1 : 0, {
+      duration: 220,
+    });
+  }, [draftCycle, customDaysProgress]);
 
   const [selectedHabitId, setSelectedHabitId] = useState<Id<"habits"> | null>(null);
   // Set by selectHabit when selecting from the deselected state; the effect
@@ -226,15 +243,55 @@ export default function Today() {
     }
   }, [selectedHabitId, selectionAnim]);
 
+  // Today's dayKey in the caller's timezone. Used both for the "due today" /
+  // "not due today" split below and to decide whether a habit was dropped
+  // *today* (the row's "done" checkmark). Computed in state (not a plain
+  // useMemo) and refreshed on a timer and on app foreground — the Convex
+  // `dueToday` query only recomputes when its underlying data changes, so
+  // without this the due list stayed stale across a midnight rollover until
+  // the app was force-restarted.
+  const getTodayDayKey = useCallback(
+    () =>
+      dayKeyInTimezone(
+        Date.now(),
+        me?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ),
+    [me?.timezone],
+  );
+  const [todayDayKey, setTodayDayKey] = useState(getTodayDayKey);
+
+  useEffect(() => {
+    setTodayDayKey(getTodayDayKey());
+    const interval = setInterval(() => setTodayDayKey(getTodayDayKey()), 60_000);
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") setTodayDayKey(getTodayDayKey());
+    });
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [getTodayDayKey]);
+
   const sections = useMemo(() => {
-    if (!dueHabits || !allHabits) return [];
-    const dueIds = new Set(dueHabits.map((h) => h._id));
+    if (!allHabits) return [];
+    const due = allHabits.filter((h) =>
+      isDueToday({
+        cycleDays: h.cycleDays,
+        ...(h.customDays !== undefined && { customDays: h.customDays }),
+        habitCreatedDayKey: h.createdDayKey,
+        lastDropDayKey: h.lastDropDayKey,
+        todayDayKey,
+      }),
+    );
+    const dueIds = new Set(due.map((h) => h._id));
     const notDue = allHabits.filter((h) => !dueIds.has(h._id));
     return [
-      { title: "Due today", data: dueHabits },
+      { title: "Due today", data: due },
       { title: "Not due today", data: notDue },
     ].filter((s) => s.data.length > 0);
-  }, [dueHabits, allHabits]);
+  }, [allHabits, todayDayKey]);
+
+  const dueCount = sections.find((s) => s.title === "Due today")?.data.length ?? 0;
 
   // FlashList recycles a single flat array, so the SectionList's sections are
   // flattened into typed `header`/`row` entries. `firstInSection` lets each row
@@ -317,7 +374,7 @@ export default function Today() {
     }
   };
 
-  if (dueHabits === undefined || allHabits === undefined) {
+  if (allHabits === undefined) {
     return (
       <View style={[styles.root, styles.center]}>
         <ActivityIndicator color={theme.text.primary} />
@@ -385,9 +442,9 @@ export default function Today() {
             <Text style={styles.subtitle}>
               {isEmpty
                 ? "Add the first thing you want to keep doing."
-                : dueHabits.length === 0
+                : dueCount === 0
                   ? "Nothing due today. Come back tomorrow."
-                  : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
+                  : `${dueCount} ${dueCount === 1 ? "habit" : "habits"} due`}
             </Text>
           </View>
 
@@ -420,8 +477,10 @@ export default function Today() {
                   );
                 }
                 const habit = item.habit;
-                const doneToday =
-                  item.sectionTitle === "Not due today" && habit.lastDropDayKey !== undefined;
+                // "Done" means the habit was dropped *today*, not merely at some
+                // earlier point. A custom-day habit on an off day is "not due"
+                // but was not dropped today, so it must read as unchecked.
+                const doneToday = habit.lastDropDayKey === todayDayKey;
                 return (
                   <>
                     {item.firstInSection ? null : <View style={styles.sep} />}
@@ -515,8 +574,19 @@ export default function Today() {
                 </Pressable>
               ))}
             </View>
-            {draftCycle === CUSTOM_CYCLE_SENTINEL && (
-              <View style={styles.dayRow}>
+            {/* Always mounted so the weekday picker can animate in/out and be
+                measured; clipped to height 0 and made non-interactive when
+                "Custom days" isn't selected. */}
+            <Animated.View
+              style={[styles.dayRowCollapse, dayRowStyle]}
+              pointerEvents={draftCycle === CUSTOM_CYCLE_SENTINEL ? "auto" : "none"}
+            >
+              <View
+                style={styles.dayRow}
+                onLayout={(e) => {
+                  dayRowHeight.value = e.nativeEvent.layout.height;
+                }}
+              >
                 {WEEKDAYS.map(({ label, day }) => {
                   const active = draftCustomDays.includes(day);
                   return (
@@ -536,7 +606,7 @@ export default function Today() {
                   );
                 })}
               </View>
-            )}
+            </Animated.View>
 
             <Text style={styles.fieldLabel}>Color</Text>
             <View style={styles.colorRow}>
@@ -989,7 +1059,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chipRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  dayRow: { flexDirection: "row", gap: 6, marginTop: 10 },
+  dayRowCollapse: { overflow: "hidden" },
+  // paddingTop (not marginTop) so the gap is part of the measured/clipped height.
+  dayRow: { flexDirection: "row", gap: 6, paddingTop: 10 },
   dayChip: {
     flex: 1,
     aspectRatio: 1,
