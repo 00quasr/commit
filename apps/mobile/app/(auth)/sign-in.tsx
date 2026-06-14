@@ -4,6 +4,7 @@ import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { colors, fonts } from "@commit/ui-tokens";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -40,6 +41,7 @@ export default function SignInScreen() {
   const [busy, setBusy] = useState(false);
   const [cooldownEndsAt, setCooldownEndsAt] = useState<number | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [codeSentToEmail, setCodeSentToEmail] = useState<string | null>(null);
   const isLoaded = signInLoaded && signUpLoaded;
 
   useEffect(() => {
@@ -91,7 +93,16 @@ export default function SignInScreen() {
   }, [startOAuthFlow, signOut]);
 
   const onSendCode = useCallback(async () => {
-    if (!isLoaded || !signIn || !signUp || cooldown > 0) return;
+    if (!isLoaded || !signIn || !signUp) return;
+    // A code was sent to this exact email recently and is still within the
+    // cooldown window. Don't spend a new send — just return to the verify stage
+    // so the user can enter the code they already received. This makes an
+    // accidental "Back" tap free (no 60s wait), since the original code is
+    // still valid.
+    if (cooldown > 0 && email === codeSentToEmail) {
+      setStage("code-sent");
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
@@ -107,6 +118,7 @@ export default function SignInScreen() {
       });
       setIsSignUp(false);
       setStage("code-sent");
+      setCodeSentToEmail(email);
       startCooldown();
     } catch (err: unknown) {
       // Stale Clerk session blocking a fresh sign-in attempt: clear and ask the user to retry.
@@ -127,6 +139,7 @@ export default function SignInScreen() {
           await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
           setIsSignUp(true);
           setStage("code-sent");
+          setCodeSentToEmail(email);
           startCooldown();
         } catch (signUpErr) {
           if (isSessionExistsError(signUpErr)) {
@@ -182,7 +195,17 @@ export default function SignInScreen() {
 
   const sendCodeDisabled = busy || cooldown > 0;
   const sendCodeLabel = cooldown > 0 ? `Resend code (${cooldown}s)` : "Resend code";
-  const emailCodeLabel = cooldown > 0 ? `Email me a code (${cooldown}s)` : "Email me a code";
+  // While a code sent to this exact email is still within its cooldown, the
+  // email button skips sending and just returns to the verify stage to enter
+  // it. If the email has changed, a send is still blocked by the cooldown, so
+  // show the remaining wait instead.
+  const codeUsableForEmail = cooldown > 0 && email === codeSentToEmail;
+  const emailCodeLabel = codeUsableForEmail
+    ? "Enter code"
+    : cooldown > 0
+      ? `Email me a code (${cooldown}s)`
+      : "Email me a code";
+  const emailButtonDisabled = busy || email.length === 0 || (cooldown > 0 && !codeUsableForEmail);
 
   // Defensive: the (auth) layout already redirects when signed in, but if Clerk's
   // useAuth() flips to signed-in after the screen mounts, send the user to the app
@@ -190,7 +213,7 @@ export default function SignInScreen() {
   if (isSignedIn) return <Redirect href="/(app)" />;
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView behavior="padding" style={styles.root}>
       <Text style={styles.title}>commit</Text>
       <Text style={styles.subtitle}>Stop drifting. Start finishing.</Text>
 
@@ -223,11 +246,11 @@ export default function SignInScreen() {
           />
           <Pressable
             onPress={() => void onSendCode()}
-            disabled={sendCodeDisabled || email.length === 0}
+            disabled={emailButtonDisabled}
             style={({ pressed }) => [
               styles.button,
               styles.buttonOutline,
-              { opacity: pressed || sendCodeDisabled || email.length === 0 ? 0.5 : 1 },
+              { opacity: pressed || emailButtonDisabled ? 0.5 : 1 },
             ]}
           >
             <Text style={styles.buttonOutlineText}>{emailCodeLabel}</Text>
@@ -258,37 +281,41 @@ export default function SignInScreen() {
           >
             <Text style={styles.buttonText}>Verify</Text>
           </Pressable>
-          <Pressable
-            onPress={() => void onSendCode()}
-            disabled={sendCodeDisabled}
-            style={({ pressed }) => [
-              styles.button,
-              styles.buttonOutline,
-              { opacity: pressed || sendCodeDisabled ? 0.5 : 1 },
-            ]}
-          >
-            <Text style={styles.buttonOutlineText}>{sendCodeLabel}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              setStage("idle");
-              setCode("");
-            }}
-            disabled={busy}
-            style={({ pressed }) => [
-              styles.button,
-              styles.buttonOutline,
-              { opacity: pressed || busy ? 0.5 : 1 },
-            ]}
-          >
-            <Text style={styles.buttonOutlineText}>Back</Text>
-          </Pressable>
+          <View style={styles.buttonRow}>
+            <Pressable
+              onPress={() => {
+                setStage("idle");
+                setCode("");
+              }}
+              disabled={busy}
+              style={({ pressed }) => [
+                styles.button,
+                styles.buttonOutline,
+                styles.buttonRowItem,
+                { opacity: pressed || busy ? 0.5 : 1 },
+              ]}
+            >
+              <Text style={styles.buttonOutlineText}>Back</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void onSendCode()}
+              disabled={sendCodeDisabled}
+              style={({ pressed }) => [
+                styles.button,
+                styles.buttonOutline,
+                styles.buttonRowItem,
+                { opacity: pressed || sendCodeDisabled ? 0.5 : 1 },
+              ]}
+            >
+              <Text style={styles.buttonOutlineText}>{sendCodeLabel}</Text>
+            </Pressable>
+          </View>
         </>
       )}
 
       {busy && <ActivityIndicator color={colors.fg} style={{ marginTop: 16 }} />}
       {error && <Text style={styles.error}>{error}</Text>}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -317,6 +344,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     marginVertical: 6,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  buttonRowItem: {
+    flex: 1,
   },
   buttonText: {
     color: colors.bg,
