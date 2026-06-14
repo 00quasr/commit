@@ -106,21 +106,24 @@ export default function Feed() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Feed</Text>
-        <Text style={styles.subtitle}>
-          {result.drops.length === 0
-            ? "Quiet today — nothing dropped yet."
-            : `${result.drops.length} ${result.drops.length === 1 ? "drop" : "drops"} from your circle`}
-        </Text>
-      </View>
-
       <FlashList
         ref={listRef}
         showsVerticalScrollIndicator={false}
         data={merged}
         keyExtractor={(item) => item.key}
         getItemType={(item) => item.type}
+        // Header lives inside the list so the whole content (title + subtitle +
+        // cards) scrolls together as one unit, matching the Today screen (COM-147).
+        ListHeaderComponent={
+          <View style={styles.listHeader}>
+            <Text style={styles.title}>Feed</Text>
+            <Text style={styles.subtitle}>
+              {result.drops.length === 0
+                ? "Quiet today — nothing dropped yet."
+                : `${result.drops.length} ${result.drops.length === 1 ? "drop" : "drops"} from your circle`}
+            </Text>
+          </View>
+        }
         renderItem={({ item, index }) =>
           item.type === "drop" ? (
             <DropCard
@@ -155,6 +158,10 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: "center", justifyContent: "center" },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
+  // In-list header (unlocked feed): scrolls with the cards. 12 + the list
+  // container's paddingHorizontal (8) = 20 from the screen edge, preserving the
+  // original header inset now that it lives inside the list.
+  listHeader: { paddingHorizontal: 12, paddingTop: 16, paddingBottom: 16 },
   title: { color: colors.fg, fontSize: 36, fontFamily: fonts.sans, fontWeight: "700" },
   subtitle: { color: "#666", fontSize: 14, fontFamily: fonts.sans, marginTop: 4 },
   list: { paddingHorizontal: 8, paddingBottom: 40 },
