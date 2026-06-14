@@ -706,7 +706,11 @@ function HabitActionBar({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   center: { alignItems: "center", justifyContent: "center" },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
+  // zIndex:0 here + zIndex:1 on listWrap establish an explicit stacking order so the
+  // pulled list (a transformed Reanimated layer) reliably draws OVER the header on
+  // Android. Without explicit zIndex on BOTH siblings, Android falls back to layer
+  // ordering and the header paints on top of the pulled heatmap.
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, zIndex: 0 },
   headerTop: {
     flexDirection: "row",
     alignItems: "center",
@@ -861,10 +865,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   emptyScroll: { flexGrow: 1, paddingBottom: 120 },
-  // zIndex/elevation lift the list above the header so when it's pulled up the
-  // heatmap card draws OVER the header (title, "N habits due", friends/profile)
-  // instead of being covered by it. overflow stays visible so nothing is clipped.
-  listWrap: { flex: 1, zIndex: 1, elevation: 1 },
+  // zIndex:1 (paired with zIndex:0 on the header) makes the pulled list draw OVER the
+  // header on Android, so the heatmap covers the title / "N habits due" / buttons when
+  // pulled up. No elevation: it added a shadow-based stacking context that only partly
+  // worked. overflow stays visible so the card isn't clipped at the wrapper edge.
+  listWrap: { flex: 1, zIndex: 1 },
   list: { paddingBottom: 180 },
   sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   sectionTitle: {
