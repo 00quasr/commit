@@ -6,7 +6,7 @@ import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
 import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -32,7 +32,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
-import { Heatmap } from "@/components/Heatmap";
+import { Heatmap, buildHeatmapColumns, type HeatmapColumns } from "@/components/Heatmap";
 import { HabitRow } from "@/components/HabitRow";
 import { PeopleIcon } from "@/components/icons";
 import { useDropDraft } from "@/lib/dropDraft";
@@ -81,6 +81,9 @@ export default function Today() {
   const sheetAnim = useSharedValue(0);
 
   const [selectedHabitId, setSelectedHabitId] = useState<Id<"habits"> | null>(null);
+  // Set by selectHabit when selecting from the deselected state; the effect
+  // below starts the fade-in once selectedHabitId has committed (see selectHabit).
+  const pendingSelectionRef = useRef(false);
   // 0 = no habit selected (cumulative card + bottom bar shown),
   // 1 = a habit is selected (habit card + action bar shown). Drives every
   // selection transition on the UI thread via Reanimated worklets.
@@ -114,9 +117,33 @@ export default function Today() {
     }, 800);
   };
 
-  const habitHeatmapData = useQuery(
-    api.drops.heatmapForHabit,
-    selectedHabitId ? { habitId: selectedHabitId } : "skip",
+  // Prefetched once on mount for every active habit (max 3), so selecting a
+  // habit is a pure client-side lookup with the data already present — no
+  // in-flight query window that would flash an all-empty heatmap mid fade-in
+  // (COM-144). `undefined` only until this first load lands.
+  const habitHeatmaps = useQuery(api.drops.heatmapsForAllHabits, {});
+  const habitHeatmapData = useMemo(
+    () => habitHeatmaps?.find((h) => h.habitId === selectedHabitId)?.entries,
+    [habitHeatmaps, selectedHabitId],
+  );
+  const timezone = me?.timezone ?? "UTC";
+  // Build every habit's grid once when habitHeatmaps lands, not on selection —
+  // buildHeatmapColumns (the expensive part of a Heatmap render) would otherwise
+  // run on the same frame as the selection animation, which is what made the
+  // habit-card stats feel stuttery when switching (COM-144).
+  const habitHeatmapColumnsById = useMemo(() => {
+    const map = new Map<string, HeatmapColumns>();
+    for (const h of habitHeatmaps ?? []) {
+      map.set(h.habitId, buildHeatmapColumns(h.entries, timezone, HEATMAP_COLS));
+    }
+    return map;
+  }, [habitHeatmaps, timezone]);
+  const habitHeatmapColumns = selectedHabitId
+    ? habitHeatmapColumnsById.get(selectedHabitId)
+    : undefined;
+  const cumulativeHeatmapColumns = useMemo(
+    () => buildHeatmapColumns(heatmapData ?? [], timezone, HEATMAP_COLS),
+    [heatmapData, timezone],
   );
 
   const selectedHabit = useMemo(
@@ -180,17 +207,24 @@ export default function Today() {
     } else if (selectedHabitId !== null) {
       setSelectedHabitId(id);
     } else {
-      // Reanimated runs this animation as a worklet on the UI thread, so it starts
-      // immediately regardless of when the (heavier) setSelectedHabitId re-render
-      // lands — no bridge "start" command to queue behind native UI updates. This
-      // is exactly the class of Android-only lag the migration away from Animated
-      // was meant to remove (see COM-107 / COM-114), so ordering no longer matters.
-      selectionAnim.value = withTiming(1, { duration: 220 });
+      // Starting selectionAnim here (before the setSelectedHabitId re-render
+      // commits) made the fade-in begin while displayHabit still pointed at
+      // allHabits[0] — briefly showing that habit's "Last Drop" instead of the
+      // one just tapped (COM-144). Defer the fade to the effect below, which
+      // fires once selectedHabitId (and therefore displayHabit) has committed.
+      pendingSelectionRef.current = true;
       setSelectedHabitId(id);
     }
   };
 
   const deselectHabit = hideSelection;
+
+  useEffect(() => {
+    if (pendingSelectionRef.current && selectedHabitId !== null) {
+      pendingSelectionRef.current = false;
+      selectionAnim.value = withTiming(1, { duration: 220 });
+    }
+  }, [selectedHabitId, selectionAnim]);
 
   const sections = useMemo(() => {
     if (!dueHabits || !allHabits) return [];
@@ -228,24 +262,35 @@ export default function Today() {
   // and re-enabled when a habit is selected, where this gesture is off.
   const isDefaultView = selectedHabitId === null;
   const pullY = useSharedValue(0);
+  // Gates the gesture via a shared value read inside the worklets, rather than
+  // `.enabled(isDefaultView)` + a useMemo dependency — toggling `.enabled()` on
+  // selection recreates the Gesture.Pan object, which forces GestureDetector to
+  // detach/reattach the gesture on the native side. That reattach lands on the
+  // same frame as the selection's Reanimated transition and was the stutter when
+  // selecting/deselecting a habit (COM-144).
+  const pullEnabled = useSharedValue(isDefaultView);
+  useEffect(() => {
+    pullEnabled.value = isDefaultView;
+  }, [isDefaultView, pullEnabled]);
   const pullGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(isDefaultView)
         // Only take over for clear vertical drags; horizontal yields to the row
         // Swipeables and a still finger yields to row taps.
         .activeOffsetY([-12, 12])
         .failOffsetX([-12, 12])
         .onUpdate((e) => {
           "worklet";
+          if (!pullEnabled.value) return;
           // Resistance factor keeps the list feeling tethered to the top.
           pullY.value = e.translationY * 0.4;
         })
         .onFinalize(() => {
           "worklet";
+          if (!pullEnabled.value) return;
           pullY.value = withSpring(0, { damping: 22, stiffness: 240, mass: 0.6 });
         }),
-    [isDefaultView, pullY],
+    [pullY, pullEnabled],
   );
   const pullStyle = useAnimatedStyle(() => ({ transform: [{ translateY: pullY.value }] }));
 
@@ -286,11 +331,10 @@ export default function Today() {
   const statsArea = (
     <StatsArea
       stats={stats}
-      cumulativeHeatmapData={heatmapData ?? []}
-      habitHeatmapData={habitHeatmapData}
+      cumulativeHeatmapColumns={cumulativeHeatmapColumns}
+      habitHeatmapColumns={habitHeatmapColumns}
       displayHabit={displayHabit}
       habitTotalDrops={habitTotalDrops}
-      timezone={me?.timezone ?? "UTC"}
       selectionAnim={selectionAnim}
       isHabitSelected={selectedHabitId !== null}
     />
@@ -541,8 +585,10 @@ export default function Today() {
 const HEATMAP_COLS = 22;
 const CARD_MARGIN_H = 16;
 const CARD_PADDING_H = 16;
+// Fallback grid while a habit's precomputed columns aren't ready yet (e.g. brief
+// window before heatmapsForAllHabits resolves on first mount).
+const EMPTY_HEATMAP_COLUMNS = buildHeatmapColumns([], "UTC", HEATMAP_COLS);
 
-type HeatmapEntry = { dayKey: string; total: number; habits: { habitId: string; color: string }[] };
 type HabitLike = {
   _id: Id<"habits">;
   text: string;
@@ -553,20 +599,18 @@ type HabitLike = {
 
 function StatsArea({
   stats,
-  cumulativeHeatmapData,
-  habitHeatmapData,
+  cumulativeHeatmapColumns,
+  habitHeatmapColumns,
   displayHabit,
   habitTotalDrops,
-  timezone,
   selectionAnim,
   isHabitSelected,
 }: {
   stats: { streak: number; totalDrops: number } | null | undefined;
-  cumulativeHeatmapData: HeatmapEntry[];
-  habitHeatmapData: HeatmapEntry[] | undefined;
+  cumulativeHeatmapColumns: HeatmapColumns;
+  habitHeatmapColumns: HeatmapColumns | undefined;
   displayHabit: HabitLike | null;
   habitTotalDrops: number | null;
-  timezone: string;
   selectionAnim: SharedValue<number>;
   isHabitSelected: boolean;
 }) {
@@ -590,8 +634,7 @@ function StatsArea({
               <Text style={styles.cardHeaderLabel}>YOUR COMMITMENT</Text>
             </View>
             <Heatmap
-              data={cumulativeHeatmapData}
-              timezone={timezone}
+              columns={cumulativeHeatmapColumns}
               width={heatmapWidth}
               cols={HEATMAP_COLS}
               paddingH={0}
@@ -624,8 +667,7 @@ function StatsArea({
                 </Text>
               </View>
               <Heatmap
-                data={habitHeatmapData ?? []}
-                timezone={timezone}
+                columns={habitHeatmapColumns ?? EMPTY_HEATMAP_COLUMNS}
                 width={heatmapWidth}
                 cols={HEATMAP_COLS}
                 paddingH={0}

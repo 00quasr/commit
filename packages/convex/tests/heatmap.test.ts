@@ -69,6 +69,69 @@ describe("drops.heatmapForProfile", () => {
   });
 });
 
+describe("drops.heatmapsForAllHabits", () => {
+  test("returns empty array when the caller has no habits", async () => {
+    const t = makeTest();
+    await seedAlice(t);
+
+    const result = await t.withIdentity(asAlice).query(api.drops.heatmapsForAllHabits, {});
+    expect(result).toEqual([]);
+  });
+
+  test("includes an entry for every active habit, even with zero drops", async () => {
+    const t = makeTest();
+    await seedAlice(t);
+
+    const habitA = await t
+      .withIdentity(asAlice)
+      .mutation(api.habits.create, { text: "Run", cycleDays: 1, color: "#aaa" });
+    const habitB = await t
+      .withIdentity(asAlice)
+      .mutation(api.habits.create, { text: "Read", cycleDays: 1, color: "#bbb" });
+
+    const result = await t.withIdentity(asAlice).query(api.drops.heatmapsForAllHabits, {});
+    const byHabit = new Map(result.map((r) => [r.habitId, r.entries]));
+    expect(byHabit.get(habitA)).toEqual([]);
+    expect(byHabit.get(habitB)).toEqual([]);
+  });
+
+  test("aggregates per-habit drop counts per dayKey", async () => {
+    const t = makeTest();
+    await seedAlice(t);
+
+    const habitA = await t
+      .withIdentity(asAlice)
+      .mutation(api.habits.create, { text: "Run", cycleDays: 1, color: "#aaa" });
+    const habitB = await t
+      .withIdentity(asAlice)
+      .mutation(api.habits.create, { text: "Read", cycleDays: 1, color: "#bbb" });
+
+    vi.useFakeTimers().setSystemTime(new Date("2026-05-07T08:00:00Z"));
+    await t.withIdentity(asAlice).mutation(api.drops.create, { ...baseDropArgs, habitId: habitA });
+    vi.setSystemTime(new Date("2026-05-07T20:00:00Z"));
+    await t.withIdentity(asAlice).mutation(api.drops.create, { ...baseDropArgs, habitId: habitA });
+    vi.setSystemTime(new Date("2026-05-08T12:00:00Z"));
+    await t.withIdentity(asAlice).mutation(api.drops.create, { ...baseDropArgs, habitId: habitB });
+
+    const result = await t.withIdentity(asAlice).query(api.drops.heatmapsForAllHabits, {});
+    const byHabit = new Map(result.map((r) => [r.habitId, r.entries]));
+
+    const a = new Map((byHabit.get(habitA) ?? []).map((e) => [e.dayKey, e.total]));
+    expect(a.get("2026-05-07")).toBe(2);
+    expect(a.has("2026-05-08")).toBe(false);
+
+    const b = new Map((byHabit.get(habitB) ?? []).map((e) => [e.dayKey, e.total]));
+    expect(b.get("2026-05-08")).toBe(1);
+    expect(b.has("2026-05-07")).toBe(false);
+  });
+
+  test("rejects unauthenticated caller", async () => {
+    const t = makeTest();
+    await seedAlice(t);
+    await expect(t.query(api.drops.heatmapsForAllHabits, {})).rejects.toThrow(/Unauthenticated/);
+  });
+});
+
 describe("drops.recentForProfile", () => {
   test("returns own drops including private, newest first", async () => {
     const t = makeTest();

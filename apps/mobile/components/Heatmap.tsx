@@ -1,4 +1,5 @@
 import { dayKeyInTimezone } from "@commit/domain";
+import { memo, useMemo } from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
 
 const DEFAULT_GAP = 3;
@@ -20,17 +21,53 @@ interface HabitEntry {
   color: string;
 }
 
+export type HeatmapColumns = Array<Array<{ dayKey: string; total: number; habits: HabitEntry[] }>>;
+
+/**
+ * Builds the cols×ROWS grid from raw day entries. Pulled out of the component so
+ * callers with several heatmaps (Today's cumulative + per-habit cards) can build
+ * all of them once when the underlying data arrives and pass the result via the
+ * `columns` prop — keeping the (only) expensive part of a Heatmap render off the
+ * critical path of a selection-switch re-render (COM-144).
+ */
+export function buildHeatmapColumns(
+  data: Array<{ dayKey: string; total: number; habits: HabitEntry[] }>,
+  timezone: string,
+  cols: number = DEFAULT_COLS,
+): HeatmapColumns {
+  const byDay = new Map(data.map((d) => [d.dayKey, d]));
+  const todayKey = dayKeyInTimezone(Date.now(), timezone);
+  const totalCells = ROWS * cols;
+  const startKey = addDays(todayKey, -(totalCells - 1));
+
+  const result: HeatmapColumns = [];
+  for (let col = 0; col < cols; col++) {
+    const week: HeatmapColumns[number] = [];
+    for (let row = 0; row < ROWS; row++) {
+      const idx = col * ROWS + row;
+      const dayKey = addDays(startKey, idx);
+      week.push(byDay.get(dayKey) ?? { dayKey, total: 0, habits: [] });
+    }
+    result.push(week);
+  }
+  return result;
+}
+
 export interface HeatmapProps {
-  data: Array<{ dayKey: string; total: number; habits: HabitEntry[] }>;
-  timezone: string;
+  data?: Array<{ dayKey: string; total: number; habits: HabitEntry[] }>;
+  /** Precomputed grid (see `buildHeatmapColumns`). Takes precedence over `data`. */
+  columns?: HeatmapColumns;
+  /** Required when `columns` isn't provided, since it's needed to compute the grid. */
+  timezone?: string;
   width?: number;
   cols?: number;
   paddingH?: number;
   gap?: number;
 }
 
-export function Heatmap({
+function HeatmapComponent({
   data,
+  columns: columnsProp,
   timezone,
   width,
   cols = DEFAULT_COLS,
@@ -41,22 +78,14 @@ export function Heatmap({
   const containerWidth = width ?? screenWidth;
   const cellSize = (containerWidth - paddingH * 2 - (cols - 1) * gap) / cols;
 
-  const byDay = new Map(data.map((d) => [d.dayKey, d]));
-  const todayKey = dayKeyInTimezone(Date.now(), timezone);
-
-  const totalCells = ROWS * cols;
-  const startKey = addDays(todayKey, -(totalCells - 1));
-
-  const columns: Array<Array<{ dayKey: string; total: number; habits: HabitEntry[] }>> = [];
-  for (let col = 0; col < cols; col++) {
-    const week: Array<{ dayKey: string; total: number; habits: HabitEntry[] }> = [];
-    for (let row = 0; row < ROWS; row++) {
-      const idx = col * ROWS + row;
-      const dayKey = addDays(startKey, idx);
-      week.push(byDay.get(dayKey) ?? { dayKey, total: 0, habits: [] });
-    }
-    columns.push(week);
-  }
+  // Rebuilding the day Map and the cols×ROWS grid is the expensive part of a
+  // render; memoize it so a parent re-render (or unrelated data arriving) does
+  // not regenerate all the cells mid-animation on Android (COM-144). Callers that
+  // already precomputed this (via `buildHeatmapColumns`) pass it as `columns`.
+  const columns = useMemo(
+    () => columnsProp ?? buildHeatmapColumns(data ?? [], timezone ?? "UTC", cols),
+    [columnsProp, data, timezone, cols],
+  );
 
   const cellStyle = { width: cellSize, height: cellSize, borderRadius: Math.max(1, cellSize / 4) };
 
@@ -84,6 +113,10 @@ export function Heatmap({
     </View>
   );
 }
+
+// Memoized so a parent re-render with unchanged props (e.g. Today re-rendering
+// while a habit's data is unrelated) does not rebuild the grid (COM-144).
+export const Heatmap = memo(HeatmapComponent);
 
 const styles = StyleSheet.create({
   wrap: {},
