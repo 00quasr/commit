@@ -221,11 +221,6 @@ export default function Today() {
     [sections],
   );
 
-  // Snap-back-to-top behavior for the default Today view (COM-115). Whenever the
-  // user lifts their finger while no habit is selected, the list is pulled back to
-  // the top — a magnetic resting position. When a habit is selected the detail view
-  // is shown and scrolling behaves normally, so we leave the list alone there.
-  //
   // Magnetic "pull back to top" for the default Today view (COM-115). Every
   // scroll-event-based attempt (scrollToOffset on drag/momentum end) fought
   // FlashList v2's native fling, which can't be disabled on Android — so on fast or
@@ -235,6 +230,14 @@ export default function Today() {
   // (with resistance) and a Reanimated spring snaps it back to 0 on release. There is
   // no native momentum involved, so nothing can strand the list off the top. When a
   // habit is selected the gesture is disabled and FlashList scrolls normally.
+  //
+  // The list renders as a full-screen layer ON TOP of the header (declared after it),
+  // with the list content padded down by the measured header height so the heatmap
+  // rests just below the header. Pulling up then slides the heatmap OVER the header
+  // within the list's own bounds, so it reliably draws above the title/subtitle (z-order
+  // is unambiguous in a shared layer instead of relying on cross-sibling overlap). The
+  // interactive header buttons sit in their own top layer so they stay tappable; they
+  // fade out as the list is pulled so the heatmap appears to cover them too.
   const isDefaultView = selectedHabitId === null;
   const pullY = useSharedValue(0);
   const pullGesture = useMemo(
@@ -307,55 +310,68 @@ export default function Today() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>Today</Text>
-          <View style={styles.headerActions}>
-            <Pressable
-              onPress={() => navigateOnce("/friends")}
-              style={({ pressed }) => [styles.friendsButton, pressed && { opacity: 0.7 }]}
-              hitSlop={8}
-            >
-              <PeopleIcon size={18} color={theme.text.primary} />
-              {incomingCount > 0 ? <View style={styles.badge} /> : null}
-            </Pressable>
-            <Pressable
-              onPress={() => me?.username && navigateOnce(`/u/${me.username}`)}
-              style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
-              hitSlop={8}
-            >
-              {me?.avatarUrl ? (
-                <Image source={{ uri: me.avatarUrl }} style={styles.avatar} contentFit="cover" />
-              ) : (
-                <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Text style={styles.avatarLetter}>
-                    {me?.username?.charAt(0).toUpperCase() ?? "?"}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
+      {/* Everything (header + heatmap + rows) lives in one pulled layer that
+          translates together and springs back — a magnetic overscroll bounce. Because
+          nothing overlaps anything else, there's no cross-layer z-order/z-fighting to
+          fight on Android (which is why earlier "heatmap covers the fixed header"
+          attempts failed). */}
+      <GestureDetector gesture={pullGesture}>
+        <Animated.View style={[styles.pullContainer, pullStyle]}>
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
+              <Text style={styles.title}>Today</Text>
+              <View style={styles.headerActions}>
+                <Pressable
+                  onPress={() => navigateOnce("/friends")}
+                  style={({ pressed }) => [styles.friendsButton, pressed && { opacity: 0.7 }]}
+                  hitSlop={8}
+                >
+                  <PeopleIcon size={18} color={theme.text.primary} />
+                  {incomingCount > 0 ? <View style={styles.badge} /> : null}
+                </Pressable>
+                <Pressable
+                  onPress={() => me?.username && navigateOnce(`/u/${me.username}`)}
+                  style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
+                  hitSlop={8}
+                >
+                  {me?.avatarUrl ? (
+                    <Image
+                      source={{ uri: me.avatarUrl }}
+                      style={styles.avatar}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={[styles.avatar, styles.avatarFallback]}>
+                      <Text style={styles.avatarLetter}>
+                        {me?.username?.charAt(0).toUpperCase() ?? "?"}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+            <Text style={styles.subtitle}>
+              {isEmpty
+                ? "Add the first thing you want to keep doing."
+                : dueHabits.length === 0
+                  ? "Nothing due today. Come back tomorrow."
+                  : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
+            </Text>
           </View>
-        </View>
-        <Text style={styles.subtitle}>
-          {isEmpty
-            ? "Add the first thing you want to keep doing."
-            : dueHabits.length === 0
-              ? "Nothing due today. Come back tomorrow."
-              : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
-        </Text>
-      </View>
 
-      {isEmpty ? (
-        <ScrollView contentContainerStyle={styles.emptyScroll} showsVerticalScrollIndicator={false}>
-          {statsArea}
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyTitle}>Quiet start.</Text>
-            <Text style={styles.emptyHint}>Tap + to commit to your first habit.</Text>
-          </View>
-        </ScrollView>
-      ) : (
-        <GestureDetector gesture={pullGesture}>
-          <Animated.View style={[styles.listWrap, pullStyle]}>
+          {isEmpty ? (
+            <ScrollView
+              contentContainerStyle={styles.emptyScroll}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={false}
+            >
+              {statsArea}
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyTitle}>Quiet start.</Text>
+                <Text style={styles.emptyHint}>Tap + to commit to your first habit.</Text>
+              </View>
+            </ScrollView>
+          ) : (
             <FlashList
               data={listData}
               keyExtractor={(item) => item.key}
@@ -407,9 +423,9 @@ export default function Today() {
               }}
               contentContainerStyle={styles.list}
             />
-          </Animated.View>
-        </GestureDetector>
-      )}
+          )}
+        </Animated.View>
+      </GestureDetector>
 
       <BottomBar
         onAdd={openAddSheet}
@@ -706,11 +722,9 @@ function HabitActionBar({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   center: { alignItems: "center", justifyContent: "center" },
-  // zIndex:0 here + zIndex:1 on listWrap establish an explicit stacking order so the
-  // pulled list (a transformed Reanimated layer) reliably draws OVER the header on
-  // Android. Without explicit zIndex on BOTH siblings, Android falls back to layer
-  // ordering and the header paints on top of the pulled heatmap.
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, zIndex: 0 },
+  // Wraps the whole screen content so it can be pulled/sprung as one unit.
+  pullContainer: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
   headerTop: {
     flexDirection: "row",
     alignItems: "center",
@@ -865,11 +879,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   emptyScroll: { flexGrow: 1, paddingBottom: 120 },
-  // zIndex:1 (paired with zIndex:0 on the header) makes the pulled list draw OVER the
-  // header on Android, so the heatmap covers the title / "N habits due" / buttons when
-  // pulled up. No elevation: it added a shadow-based stacking context that only partly
-  // worked. overflow stays visible so the card isn't clipped at the wrapper edge.
-  listWrap: { flex: 1, zIndex: 1 },
   list: { paddingBottom: 180 },
   sectionHeader: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   sectionTitle: {
