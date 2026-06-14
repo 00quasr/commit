@@ -1,6 +1,6 @@
 import { api } from "@commit/convex/api";
 import type { Id } from "@commit/convex/dataModel";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { fonts, habitColors } from "@commit/ui-tokens";
 import { theme } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
@@ -269,8 +269,16 @@ export default function Today() {
   // same frame as the selection's Reanimated transition and was the stutter when
   // selecting/deselecting a habit (COM-144).
   const pullEnabled = useSharedValue(isDefaultView);
+  const listRef = useRef<FlashListRef<(typeof listData)[number]>>(null);
   useEffect(() => {
     pullEnabled.value = isDefaultView;
+    // Returning from the habit detail view can leave FlashList scrolled away from
+    // the top (scrolling is enabled while a habit is selected). The pull gesture
+    // only translates the wrapper, so without resetting the list's own scroll
+    // offset back to 0 here, the snap-back looks inert (COM-145).
+    if (isDefaultView) {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }
   }, [isDefaultView, pullEnabled]);
   const pullGesture = useMemo(
     () =>
@@ -405,6 +413,7 @@ export default function Today() {
             </ScrollView>
           ) : (
             <FlashList
+              ref={listRef}
               data={listData}
               keyExtractor={(item) => item.key}
               getItemType={(item) => item.kind}
