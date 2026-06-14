@@ -25,8 +25,10 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomBar } from "@/components/BottomBar";
@@ -219,6 +221,34 @@ export default function Today() {
     [sections],
   );
 
+  // Magnetic "pull back to top" for the default Today view (COM-115): the whole screen
+  // content (header + heatmap + rows, wrapped in one pulled Animated.View) is dragged
+  // as a unit and springs back. A gesture-handler Pan drives a Reanimated translateY on
+  // the UI thread; FlashList's own scroll is disabled here (the pull handles movement)
+  // and re-enabled when a habit is selected, where this gesture is off.
+  const isDefaultView = selectedHabitId === null;
+  const pullY = useSharedValue(0);
+  const pullGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(isDefaultView)
+        // Only take over for clear vertical drags; horizontal yields to the row
+        // Swipeables and a still finger yields to row taps.
+        .activeOffsetY([-12, 12])
+        .failOffsetX([-12, 12])
+        .onUpdate((e) => {
+          "worklet";
+          // Resistance factor keeps the list feeling tethered to the top.
+          pullY.value = e.translationY * 0.4;
+        })
+        .onFinalize(() => {
+          "worklet";
+          pullY.value = withSpring(0, { damping: 22, stiffness: 240, mass: 0.6 });
+        }),
+    [isDefaultView, pullY],
+  );
+  const pullStyle = useAnimatedStyle(() => ({ transform: [{ translateY: pullY.value }] }));
+
   const onAdd = async () => {
     const text = draftText.trim();
     if (!text || busy) return;
@@ -268,104 +298,122 @@ export default function Today() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>Today</Text>
-          <View style={styles.headerActions}>
-            <Pressable
-              onPress={() => navigateOnce("/friends")}
-              style={({ pressed }) => [styles.friendsButton, pressed && { opacity: 0.7 }]}
-              hitSlop={8}
-            >
-              <PeopleIcon size={18} color={theme.text.primary} />
-              {incomingCount > 0 ? <View style={styles.badge} /> : null}
-            </Pressable>
-            <Pressable
-              onPress={() => me?.username && navigateOnce(`/u/${me.username}`)}
-              style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
-              hitSlop={8}
-            >
-              {me?.avatarUrl ? (
-                <Image source={{ uri: me.avatarUrl }} style={styles.avatar} contentFit="cover" />
-              ) : (
-                <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Text style={styles.avatarLetter}>
-                    {me?.username?.charAt(0).toUpperCase() ?? "?"}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
-        </View>
-        <Text style={styles.subtitle}>
-          {isEmpty
-            ? "Add the first thing you want to keep doing."
-            : dueHabits.length === 0
-              ? "Nothing due today. Come back tomorrow."
-              : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
-        </Text>
-      </View>
-
-      {isEmpty ? (
-        <ScrollView contentContainerStyle={styles.emptyScroll} showsVerticalScrollIndicator={false}>
-          {statsArea}
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyTitle}>Quiet start.</Text>
-            <Text style={styles.emptyHint}>Tap + to commit to your first habit.</Text>
-          </View>
-        </ScrollView>
-      ) : (
-        <FlashList
-          data={listData}
-          keyExtractor={(item) => item.key}
-          getItemType={(item) => item.kind}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={statsArea}
-          renderItem={({ item }) => {
-            if (item.kind === "header") {
-              return (
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>{item.title.toUpperCase()}</Text>
-                </View>
-              );
-            }
-            const habit = item.habit;
-            const doneToday =
-              item.sectionTitle === "Not due today" && habit.lastDropDayKey !== undefined;
-            return (
-              <>
-                {item.firstInSection ? null : <View style={styles.sep} />}
-                <Swipeable
-                  renderRightActions={() => (
-                    <View style={styles.archiveAction}>
-                      <Text style={styles.archiveText}>Archive</Text>
+      {/* Everything (header + heatmap + rows) lives in one pulled layer that
+          translates together and springs back — a magnetic overscroll bounce. Because
+          nothing overlaps anything else, there's no cross-layer z-order/z-fighting to
+          fight on Android (which is why earlier "heatmap covers the fixed header"
+          attempts failed). */}
+      <GestureDetector gesture={pullGesture}>
+        <Animated.View style={[styles.pullContainer, pullStyle]}>
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
+              <Text style={styles.title}>Today</Text>
+              <View style={styles.headerActions}>
+                <Pressable
+                  onPress={() => navigateOnce("/friends")}
+                  style={({ pressed }) => [styles.friendsButton, pressed && { opacity: 0.7 }]}
+                  hitSlop={8}
+                >
+                  <PeopleIcon size={18} color={theme.text.primary} />
+                  {incomingCount > 0 ? <View style={styles.badge} /> : null}
+                </Pressable>
+                <Pressable
+                  onPress={() => me?.username && navigateOnce(`/u/${me.username}`)}
+                  style={({ pressed }) => [styles.avatarButton, pressed && { opacity: 0.7 }]}
+                  hitSlop={8}
+                >
+                  {me?.avatarUrl ? (
+                    <Image
+                      source={{ uri: me.avatarUrl }}
+                      style={styles.avatar}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={[styles.avatar, styles.avatarFallback]}>
+                      <Text style={styles.avatarLetter}>
+                        {me?.username?.charAt(0).toUpperCase() ?? "?"}
+                      </Text>
                     </View>
                   )}
-                  onSwipeableRightOpen={() => {
-                    void archiveHabit({ habitId: habit._id });
-                  }}
-                  rightThreshold={48}
-                  friction={1.6}
-                >
-                  <HabitRow
-                    text={habit.text}
-                    cycleDays={habit.cycleDays}
-                    customDays={habit.customDays}
-                    color={habit.color}
-                    doneToday={doneToday}
-                    onPress={() => selectHabit(habit._id)}
-                    onLongPress={() => {
-                      startDropDraft(habit._id);
-                      router.push("/drop/camera");
-                    }}
-                  />
-                </Swipeable>
-              </>
-            );
-          }}
-          contentContainerStyle={styles.list}
-        />
-      )}
+                </Pressable>
+              </View>
+            </View>
+            <Text style={styles.subtitle}>
+              {isEmpty
+                ? "Add the first thing you want to keep doing."
+                : dueHabits.length === 0
+                  ? "Nothing due today. Come back tomorrow."
+                  : `${dueHabits.length} ${dueHabits.length === 1 ? "habit" : "habits"} due`}
+            </Text>
+          </View>
+
+          {isEmpty ? (
+            <ScrollView
+              contentContainerStyle={styles.emptyScroll}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={false}
+            >
+              {statsArea}
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyTitle}>Quiet start.</Text>
+                <Text style={styles.emptyHint}>Tap + to commit to your first habit.</Text>
+              </View>
+            </ScrollView>
+          ) : (
+            <FlashList
+              data={listData}
+              keyExtractor={(item) => item.key}
+              getItemType={(item) => item.kind}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={!isDefaultView}
+              ListHeaderComponent={statsArea}
+              renderItem={({ item }) => {
+                if (item.kind === "header") {
+                  return (
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>{item.title.toUpperCase()}</Text>
+                    </View>
+                  );
+                }
+                const habit = item.habit;
+                const doneToday =
+                  item.sectionTitle === "Not due today" && habit.lastDropDayKey !== undefined;
+                return (
+                  <>
+                    {item.firstInSection ? null : <View style={styles.sep} />}
+                    <Swipeable
+                      renderRightActions={() => (
+                        <View style={styles.archiveAction}>
+                          <Text style={styles.archiveText}>Archive</Text>
+                        </View>
+                      )}
+                      onSwipeableRightOpen={() => {
+                        void archiveHabit({ habitId: habit._id });
+                      }}
+                      rightThreshold={48}
+                      friction={1.6}
+                    >
+                      <HabitRow
+                        text={habit.text}
+                        cycleDays={habit.cycleDays}
+                        customDays={habit.customDays}
+                        color={habit.color}
+                        doneToday={doneToday}
+                        onPress={() => selectHabit(habit._id)}
+                        onLongPress={() => {
+                          startDropDraft(habit._id);
+                          router.push("/drop/camera");
+                        }}
+                      />
+                    </Swipeable>
+                  </>
+                );
+              }}
+              contentContainerStyle={styles.list}
+            />
+          )}
+        </Animated.View>
+      </GestureDetector>
 
       <BottomBar
         onAdd={openAddSheet}
@@ -662,6 +710,8 @@ function HabitActionBar({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   center: { alignItems: "center", justifyContent: "center" },
+  // Wraps the whole screen content so it can be pulled/sprung as one unit.
+  pullContainer: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
   headerTop: {
     flexDirection: "row",
