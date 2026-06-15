@@ -1,26 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@commit/convex/api";
-import { FlashList, type FlashListRef, type ViewToken } from "@shopify/flash-list";
+import {
+  FlashList,
+  type FlashListRef,
+  type ListRenderItemInfo,
+  type ViewToken,
+} from "@shopify/flash-list";
 import { colors, fonts } from "@commit/ui-tokens";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { router } from "expo-router";
 import { useCallback, useMemo, useRef } from "react";
-import {
-  ActivityIndicator,
-  type LayoutChangeEvent,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import Animated, {
+  cancelAnimation,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ActivityEventCard } from "@/components/ActivityEventCard";
 import { DropCard } from "@/components/DropCard";
+
+// Reanimated-wrapped FlashList so the scroll offset is tracked on the UI thread
+// (useAnimatedScrollHandler), which the overscroll gesture reads synchronously —
+// a JS-thread onScroll lags under load and made the gesture read a stale position.
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as typeof FlashList;
 
 type DropsResult = FunctionReturnType<typeof api.drops.feedForUser>;
 type UnlockedDrops = Extract<DropsResult, { locked: false }>;
@@ -38,6 +45,16 @@ function imagePriorityForIndex(index: number): "low" | "normal" | "high" {
   if (index < 2) return "high";
   if (index < 6) return "normal";
   return "low";
+}
+
+// Stable element so it isn't recreated on every Feed re-render (e.g. live updates).
+function FeedEmpty() {
+  return (
+    <View style={styles.emptyWrap}>
+      <Text style={styles.empty}>No drops yet today.</Text>
+      <Text style={styles.emptyHint}>Friends&apos; drops appear here in real time.</Text>
+    </View>
+  );
 }
 
 export default function Feed() {
@@ -79,65 +96,107 @@ export default function Feed() {
     [markSeen],
   );
 
+  // Stable list callbacks so FlashList doesn't re-render all items when Feed
+  // re-renders (live Convex updates can land while the user is scrolling).
+  const keyExtractor = useCallback((item: FeedItem) => item.key, []);
+  const getItemType = useCallback((item: FeedItem) => item.type, []);
+  const renderItem = useCallback(
+    ({ item, index }: ListRenderItemInfo<FeedItem>) =>
+      item.type === "drop" ? (
+        <DropCard
+          drop={item.item.drop}
+          author={item.item.author}
+          photoUrl={item.item.photoUrl}
+          authorHeatmap={item.item.authorHeatmap}
+          habitColor={item.item.habitColor}
+          habitText={item.item.habitText}
+          scrollRef={listRef}
+          imagePriority={imagePriorityForIndex(index)}
+        />
+      ) : (
+        <ActivityEventCard event={item.item} />
+      ),
+    [],
+  );
+
   // Magnetic rubber-band overscroll for the whole feed (COM-147), matching the
   // Today screen's feel: the list scrolls normally, but pulling past the top or
   // bottom edge drags the whole content (header included — it's the list header)
-  // with resistance and springs back on release. Android has no native bounce, so
-  // a Pan gesture drives a Reanimated translateY on the UI thread; it runs
-  // simultaneously with the list's native scroll and only translates at the edges.
+  // with resistance and springs back on release. Android has no native bounce, so a
+  // Pan gesture drives a Reanimated translateY on the UI thread.
   //
-  // Top vs bottom edge is computed from independently tracked heights (content via
-  // onContentSizeChange, viewport via onLayout, offset via onScroll) — FlashList's
-  // onScroll event does not carry reliable contentSize/layoutMeasurement, which is
-  // why deriving "at bottom" from the scroll event alone never fired.
+  // The Pan uses manualActivation: it stays passive so the FlashList scrolls 100%
+  // normally (any auto-activating / simultaneous setup starves FlashList v2's scroll
+  // on this stack). It only activates — taking over from the scroll — once the finger
+  // is at an edge AND has pulled outward past a small threshold. The translate is
+  // applied directly to the list's own `style` (single layer, no wrapper view) to
+  // keep the bounce->scroll hand-off as smooth as possible.
+  //
+  // scrollY and maxScroll are read on the UI thread straight from the scroll event
+  // (authoritative + lag-free), so the edge checks in the gesture worklet are exact.
   const pullY = useSharedValue(0);
   const scrollY = useSharedValue(0);
-  const contentH = useSharedValue(0);
-  const viewportH = useSharedValue(0);
-  const onScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      scrollY.value = e.nativeEvent.contentOffset.y;
-    },
-    [scrollY],
-  );
-  const onContentSizeChange = useCallback(
-    (_w: number, h: number) => {
-      contentH.value = h;
-    },
-    [contentH],
-  );
-  const onListLayout = useCallback(
-    (e: LayoutChangeEvent) => {
-      viewportH.value = e.nativeEvent.layout.height;
-    },
-    [viewportH],
-  );
-  const nativeGesture = useMemo(() => Gesture.Native(), []);
+  const maxScroll = useSharedValue(0);
+  const startTouchY = useSharedValue(0);
+  // translationY at the moment the gesture activates, plus the pullY value at that
+  // moment — together they let a fresh pull continue seamlessly from wherever the
+  // previous spring-back currently is (no reset/snap, no activation pop).
+  const activationTranslation = useSharedValue(0);
+  const pullBase = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+    maxScroll.value = e.contentSize.height - e.layoutMeasurement.height;
+  });
   const pullGesture = useMemo(
     () =>
       Gesture.Pan()
-        // Only take over for clear vertical drags; horizontal/taps pass through.
-        .activeOffsetY([-12, 12])
+        .manualActivation(true)
         .failOffsetX([-12, 12])
-        // Run alongside the list's own scroll so normal scrolling still works.
-        .simultaneousWithExternalGesture(nativeGesture)
+        .onTouchesDown((e) => {
+          "worklet";
+          startTouchY.value = e.allTouches[0]?.y ?? 0;
+        })
+        .onTouchesMove((e, state) => {
+          "worklet";
+          const y = e.allTouches[0]?.y ?? startTouchY.value;
+          // Net pull since the finger went down (not frame-to-frame, which jittered).
+          const disp = y - startTouchY.value;
+          const THRESHOLD = 8;
+          const atTop = scrollY.value <= 0;
+          // "At bottom" only once there is real scrollable content (maxScroll > 1).
+          const atBottom = maxScroll.value > 1 && scrollY.value >= maxScroll.value - 2;
+          // Take over only on a deliberate outward pull at an edge: down at the top,
+          // up at the bottom. A normal scroll has the opposite/zero direction here.
+          if ((atTop && disp > THRESHOLD) || (atBottom && disp < -THRESHOLD)) {
+            state.activate();
+          }
+        })
+        .onStart((e) => {
+          "worklet";
+          // Take manual control from any in-flight spring-back and anchor the bounce
+          // to the CURRENT pullY + translation. A re-pull therefore continues exactly
+          // where the spring was (perfectly continuous, no pop and no reset snap).
+          cancelAnimation(pullY);
+          pullBase.value = pullY.value;
+          activationTranslation.value = e.translationY;
+        })
         .onUpdate((e) => {
           "worklet";
-          const max = contentH.value - viewportH.value;
-          const atTop = scrollY.value <= 0;
-          const atBottom = max <= 0 ? true : scrollY.value >= max - 2;
-          const overscrollDown = e.translationY > 0 && atTop;
-          const overscrollUp = e.translationY < 0 && atBottom;
-          // Resistance factor keeps the content feeling tethered to the edges.
-          pullY.value = overscrollDown || overscrollUp ? e.translationY * 0.4 : 0;
+          // Resistance factor keeps the content feeling tethered to the edge.
+          pullY.value = pullBase.value + (e.translationY - activationTranslation.value) * 0.4;
         })
         .onFinalize(() => {
           "worklet";
+          // Same spring as the Today screen so the feel is identical.
           pullY.value = withSpring(0, { damping: 22, stiffness: 240, mass: 0.6 });
         }),
-    [pullY, scrollY, contentH, viewportH, nativeGesture],
+    [pullY, scrollY, maxScroll, startTouchY, activationTranslation, pullBase],
   );
-  const pullStyle = useAnimatedStyle(() => ({ transform: [{ translateY: pullY.value }] }));
+  // Applied to the FlashList's own container style — single compositing layer.
+  const pullStyle = useAnimatedStyle(() => ({
+    flex: 1,
+    transform: [{ translateY: pullY.value }],
+  }));
 
   if (result === undefined) {
     return (
@@ -178,60 +237,33 @@ export default function Feed() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <GestureDetector gesture={pullGesture}>
-        <Animated.View style={[styles.pullContainer, pullStyle]}>
-          <GestureDetector gesture={nativeGesture}>
-            <FlashList
-              ref={listRef}
-              showsVerticalScrollIndicator={false}
-              onScroll={onScroll}
-              scrollEventThrottle={16}
-              onContentSizeChange={onContentSizeChange}
-              onLayout={onListLayout}
-              data={merged}
-              keyExtractor={(item) => item.key}
-              getItemType={(item) => item.type}
-              // Header lives inside the list so the whole content (title +
-              // subtitle + cards) scrolls together as one unit, matching Today.
-              ListHeaderComponent={
-                <View style={styles.listHeader}>
-                  <Text style={styles.title}>Feed</Text>
-                  <Text style={styles.subtitle}>
-                    {result.drops.length === 0
-                      ? "Quiet today — nothing dropped yet."
-                      : `${result.drops.length} ${result.drops.length === 1 ? "drop" : "drops"} from your circle`}
-                  </Text>
-                </View>
-              }
-              renderItem={({ item, index }) =>
-                item.type === "drop" ? (
-                  <DropCard
-                    drop={item.item.drop}
-                    author={item.item.author}
-                    photoUrl={item.item.photoUrl}
-                    authorHeatmap={item.item.authorHeatmap}
-                    habitColor={item.item.habitColor}
-                    habitText={item.item.habitText}
-                    scrollRef={listRef}
-                    imagePriority={imagePriorityForIndex(index)}
-                  />
-                ) : (
-                  <ActivityEventCard event={item.item} />
-                )
-              }
-              contentContainerStyle={styles.list}
-              onViewableItemsChanged={onViewableItemsChanged}
-              viewabilityConfig={{ itemVisiblePercentThreshold: 60, minimumViewTime: 800 }}
-              ListEmptyComponent={() => (
-                <View style={styles.emptyWrap}>
-                  <Text style={styles.empty}>No drops yet today.</Text>
-                  <Text style={styles.emptyHint}>
-                    Friends&apos; drops appear here in real time.
-                  </Text>
-                </View>
-              )}
-            />
-          </GestureDetector>
-        </Animated.View>
+        <AnimatedFlashList
+          ref={listRef}
+          style={pullStyle}
+          showsVerticalScrollIndicator={false}
+          onScroll={scrollHandler}
+          scrollEventThrottle={1}
+          data={merged}
+          keyExtractor={keyExtractor}
+          getItemType={getItemType}
+          // Header lives inside the list so the whole content (title + subtitle +
+          // cards) scrolls together as one unit, matching Today.
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              <Text style={styles.title}>Feed</Text>
+              <Text style={styles.subtitle}>
+                {result.drops.length === 0
+                  ? "Quiet today — nothing dropped yet."
+                  : `${result.drops.length} ${result.drops.length === 1 ? "drop" : "drops"} from your circle`}
+              </Text>
+            </View>
+          }
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={{ itemVisiblePercentThreshold: 60, minimumViewTime: 800 }}
+          ListEmptyComponent={FeedEmpty}
+        />
       </GestureDetector>
     </SafeAreaView>
   );
@@ -240,8 +272,6 @@ export default function Feed() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: "center", justifyContent: "center" },
-  // Wraps the list so it can be pulled/sprung as one unit (rubber-band overscroll).
-  pullContainer: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
   // In-list header (unlocked feed): scrolls with the cards. 12 + the list
   // container's paddingHorizontal (8) = 20 from the screen edge, preserving the
