@@ -39,12 +39,6 @@
         }
       ],
       [
-        "expo-audio",
-        {
-          "microphonePermission": "Allow commit to access your microphone for 30-second voice memos on your drops."
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "Allow commit to access your photos so you can set a profile picture."
