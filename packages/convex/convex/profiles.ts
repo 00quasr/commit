@@ -5,7 +5,6 @@ import { requireCallerProfile, resolveProfile } from "./_helpers";
 const profileShape = v.object({
   _id: v.id("profiles"),
   _creationTime: v.number(),
-  clerkUserId: v.string(),
   username: v.string(),
   usernameLower: v.optional(v.string()),
   avatarUrl: v.optional(v.string()),
@@ -153,6 +152,10 @@ export const searchByUsernamePrefix = query({
   args: { prefix: v.string(), limit: v.optional(v.number()) },
   returns: v.array(profileShape),
   handler: async (ctx, args) => {
+    // Require auth — anonymous prefix search lets anyone enumerate the whole
+    // username directory, which is the harvest vector behind COM-136. The
+    // friends-screen search field always runs signed-in.
+    const me = await requireCallerProfile(ctx);
     const lower = args.prefix.replace(/^@/, "").trim().toLowerCase();
     if (!lower) return [];
     const limit = Math.min(args.limit ?? SEARCH_LIMIT_DEFAULT, SEARCH_LIMIT_MAX);
@@ -160,9 +163,6 @@ export const searchByUsernamePrefix = query({
     // [lower, lower + "￿"). Convex withIndex gte/lt yields exactly that
     // range from the by_username_lower index.
     const upper = lower + "￿";
-    // Exclude the caller from results so "add friend" never points at self.
-    // Unauthenticated callers (no identity) still see results, just no exclusion.
-    const identity = await ctx.auth.getUserIdentity();
     // Over-fetch by 1 so excluding self still returns `limit` rows when self
     // matches the prefix.
     const rows = await ctx.db
@@ -171,7 +171,8 @@ export const searchByUsernamePrefix = query({
         q.gte("usernameLower", lower).lt("usernameLower", upper),
       )
       .take(limit + 1);
-    const filtered = identity ? rows.filter((p) => p.clerkUserId !== identity.subject) : rows;
+    // Exclude the caller so "add friend" never points at self.
+    const filtered = rows.filter((p) => p._id !== me._id);
     return Promise.all(filtered.slice(0, limit).map((p) => resolveProfile(ctx, p)));
   },
 });

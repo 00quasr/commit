@@ -11,7 +11,8 @@ export async function resolveProfile(ctx: QueryCtx, profile: Doc<"profiles">) {
   return {
     _id: profile._id,
     _creationTime: profile._creationTime,
-    clerkUserId: profile.clerkUserId,
+    // clerkUserId is the stable Clerk auth subject — internal only, never
+    // returned to clients (COM-136). The client reads _id/username/avatarUrl.
     username: profile.username,
     ...(profile.usernameLower !== undefined ? { usernameLower: profile.usernameLower } : {}),
     ...(avatarUrl !== undefined ? { avatarUrl } : {}),

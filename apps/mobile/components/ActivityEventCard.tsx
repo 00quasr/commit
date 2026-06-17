@@ -10,7 +10,8 @@ export interface ActivityEventCardProps {
     _id: Id<"activityEvents">;
     kind: "habit_created" | "streak_milestone";
     createdAt: number;
-    author: Doc<"profiles">;
+    // Resolved, client-safe profile (no clerkUserId/avatarFileId) — COM-136.
+    author: Omit<Doc<"profiles">, "clerkUserId" | "avatarFileId">;
     habit: {
       habitId: Id<"habits">;
       text: string;
